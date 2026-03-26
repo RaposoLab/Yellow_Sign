@@ -102,6 +102,17 @@ CLASS_SPRITE_FILES = {
     "mad_prophet": "transparent-luck-basedClass.png",
 }
 
+# Path type → icon filename for exploration path choices
+PATH_ICON_FILES = {
+    "combat": "Enemy_Ahead_F.png",
+    "shop": "Shop_Ahead_F.png",
+    "rest": "Rest_Ahead_F.jfif",
+    "loot": "Item_Ahead.png",
+    "event": "Decision_Ahead.png",
+    "trap": "Decision_Ahead.png",
+    "boss": "Boss_Ahead_F.png",
+}
+
 
 # ═══════════════════════════════════════════
 # ASSET LOADER
@@ -230,6 +241,19 @@ class Assets:
                         self.images[f"stat_{stat_key}_{size_suffix}"] = img
                     except Exception as e:
                         print(f"Warning: failed to load {path}: {e}")
+
+        # --- Path choice icons (for explore screen) ---
+        for ptype, filename in PATH_ICON_FILES.items():
+            path = os.path.join(ASSETS_DIR, filename)
+            if os.path.exists(path):
+                try:
+                    img = pygame.image.load(path).convert_alpha()
+                    self.images[f"path_{ptype}"] = pygame.transform.scale(img, (64, 64))
+                    print(f"  ✓ Path icon loaded: {ptype} ({filename})")
+                except Exception as e:
+                    print(f"Warning: failed to load path icon {path}: {e}")
+            else:
+                print(f"Warning: path icon not found: {path}")
 
         # --- Fonts ---
         self._load_fonts()
@@ -1186,12 +1210,12 @@ class ExploreScreen(Screen):
         self._build_buttons()
 
     def _build_buttons(self):
-        bw, bh = 600, 56
+        bw, bh = 620, 80
         cx = SCREEN_W // 2
         start_y = 350
         self.path_buttons = []
         for i in range(len(self.paths)):
-            self.path_buttons.append(pygame.Rect(cx - bw // 2, start_y + i * 68, bw, bh))
+            self.path_buttons.append(pygame.Rect(cx - bw // 2, start_y + i * 92, bw, bh))
 
         # Command buttons
         self.cmd_buttons = {
@@ -1291,10 +1315,40 @@ class ExploreScreen(Screen):
             draw_text_with_glow(surface, "Choose your path:", self.assets.fonts["body"],
                       C.INK, SCREEN_W // 2, 325, align="center")
             for i, (path, btn) in enumerate(zip(self.paths, self.path_buttons)):
-                label = f"{path['icon']}  {path['name']}  — {path['desc']}"
-                label = fit_text(self.assets.fonts["body"], label, btn.w - 20)
-                draw_ornate_button(surface, btn, label,
-                                   self.assets.fonts["body"], hover=(i == self.hover_idx), color=C.PARCHMENT_EDGE)
+                hovered = (i == self.hover_idx)
+                ptype = path["type"]
+
+                # Draw parchment button background
+                draw_ornate_button(surface, btn, "", self.assets.fonts["body"],
+                                   hover=hovered, color=C.PARCHMENT_EDGE)
+
+                # Icon on the left side of the button
+                icon_key = f"path_{ptype}"
+                icon = self.assets.images.get(icon_key)
+                icon_x = btn.x + 10
+                icon_y = btn.y + (btn.height - 64) // 2
+                if icon:
+                    surface.blit(icon, (icon_x, icon_y))
+
+                # Text area: to the right of icon
+                text_x = icon_x + 74  # 64 icon + 10 gap
+                text_max_w = btn.x + btn.width - text_x - 10
+
+                # Line 1: path name (bold-ish via larger font or just body font)
+                name_text = path["name"]
+                name_font = self.assets.fonts["body"]
+                name_text = fit_text(name_font, name_text, text_max_w)
+                name_y = btn.y + 12
+                draw_text_with_glow(surface, name_text, name_font,
+                                    C.INK, text_x, name_y, align="left")
+
+                # Line 2: elaborated description
+                desc_text = path.get("desc2", path["desc"])
+                desc_font = self.assets.fonts["small"]
+                desc_text = fit_text(desc_font, desc_text, text_max_w)
+                desc_y = btn.y + 40
+                draw_text_with_glow(surface, desc_text, desc_font,
+                                    C.INK_LIGHT, text_x, desc_y, align="left")
 
         # Bottom commands
         cmd_names = list(self.cmd_buttons.keys())

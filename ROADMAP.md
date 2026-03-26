@@ -93,3 +93,13 @@ Last updated: 2026-03-26 23:58
 
 ### Pending
 - Further text spacing polish if needed (exploration, equipment, general cleanup)
+
+### ✅ Step 14: Exploration Path Icons + Two-Line Descriptions (Session 9 — 2026-03-27)
+- Added 6 new path choice icons: Enemy_Ahead_F.png, Boss_Ahead_F.png, Shop_Ahead_F.png, Item_Ahead.png, Rest_Ahead_F.jfif, Decision_Ahead.png
+- PATH_ICON_FILES mapping in pygame_game.py: combat→Enemy, shop→Shop, rest→Rest, loot→Item, event/trap→Decision, boss→Boss
+- All 6 icons loaded at 64×64 in Assets.load() as `path_{type}` keys
+- PATH_TEMPLATES updated with `desc2` field — two-line descriptions for each path (10 templates)
+- ExploreScreen redesigned: buttons 600×56 → 620×80, spacing 68→92px
+- Each path button now shows: 64px icon (left) + path name (line 1, body font, INK) + elaborated description (line 2, small font, INK_LIGHT)
+- draw_ornate_button used for background, icon + text drawn on top
+- 41 total image assets now (36 original + 6 new path icons - 1 overlap = 41 unique)

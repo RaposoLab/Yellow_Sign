@@ -19,12 +19,12 @@ game/
 ├── main.py               ← Terminal-based entry point (separate)
 ├── ROADMAP.md            ← Visual overhaul progress tracker
 ├── GAME_MEMORY.md        ← This file
-├── images/               ← ALL sprite/background/icon assets (36 files)
+├── images/               ← ALL sprite/background/icon assets (41 files)
 ├── fonts/                ← Custom fonts (CinzelDecorative, Cinzel)
 └── saves/                ← Save files directory (auto-created)
 ```
 
-## Image Assets (36 files in images/)
+## Image Assets (41 files in images/)
 ### Backgrounds
 - `Dungeon_background.jfif` — dungeon floors 1-19 (1376×768 JPEG)
 - `Game_Over_Screen.jfif` — game over (1024×1024 JPEG)
@@ -51,6 +51,14 @@ game/
 - `transparent-Text-box-Sample.png` — UI design reference (1200×896 RGBA)
 - `Ingame_Font.jpg` — font style reference screenshot
 
+### Path Choice Icons (6) — Loaded at 64×64 in Assets
+- `Enemy_Ahead_F.png` — combat rooms (1024×1024 RGBA)
+- `Boss_Ahead_F.png` — boss room (1024×1024 RGBA, loaded for future use)
+- `Shop_Ahead_F.png` — shop rooms (578×432 RGBA)
+- `Item_Ahead.png` — loot rooms (1024×1024 RGBA)
+- `Rest_Ahead_F.jfif` — safe/rest rooms (1200×896 RGB)
+- `Decision_Ahead.png` — events & traps (1024×1024 RGBA)
+
 ## Key Technical Notes
 - CinzelDecorative-Regular.ttf + Cinzel.ttf downloaded to `fonts/` — Victorian/occult title + body fonts active
 - `fit_text()` and `draw_text_fitted()` for pixel-width text truncation
@@ -64,6 +72,7 @@ game/
 - ✅ Step 11: Removed stat icons from combat skill buttons (kept in level-up + stats)
 - ✅ Step 12: Parchment Text Box Overhaul — all content panels now use procedural aged parchment texture with ornate gold frames, ink-colored text with glow effects, improved readability across all screens
 - ✅ Step 13: Asset Restore + Spacing Fix — all 36 assets restored, fonts downloaded, stat icon variants generated, spacing fixes across Game Over / Explore / Shop / Event / Loot screens
+- ✅ Step 14: Exploration Path Icons + Two-Line Descriptions — 6 new path choice icons loaded at 64×64, PATH_TEMPLATES expanded with desc2, ExploreScreen redesigned with icon + name + description per path button
 
 ## Crash Prevention Protocol
 1. ONE task per prompt
