@@ -103,3 +103,10 @@ Last updated: 2026-03-26 23:58
 - Each path button now shows: 64px icon (left) + path name (line 1, body font, INK) + elaborated description (line 2, small font, INK_LIGHT)
 - draw_ornate_button used for background, icon + text drawn on top
 - 41 total image assets now (36 original + 6 new path icons - 1 overlap = 41 unique)
+
+### ✅ Step 15: Side-by-Side Path Layout + Bigger Icons (Session 9 — 2026-03-27)
+- Path icons scaled from 64×64 to 150×150
+- Layout changed from stacked vertical to side-by-side (left/right cards)
+- Each card: 560×260, icon centered on top, name + wrapped description below
+- "Choose your path:" uses title_sm font for bolder header
+- Description text word-wrapped for readability

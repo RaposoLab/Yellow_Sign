@@ -248,7 +248,7 @@ class Assets:
             if os.path.exists(path):
                 try:
                     img = pygame.image.load(path).convert_alpha()
-                    self.images[f"path_{ptype}"] = pygame.transform.scale(img, (64, 64))
+                    self.images[f"path_{ptype}"] = pygame.transform.scale(img, (150, 150))
                     print(f"  ✓ Path icon loaded: {ptype} ({filename})")
                 except Exception as e:
                     print(f"Warning: failed to load path icon {path}: {e}")
@@ -1210,12 +1210,19 @@ class ExploreScreen(Screen):
         self._build_buttons()
 
     def _build_buttons(self):
-        bw, bh = 620, 80
-        cx = SCREEN_W // 2
-        start_y = 350
+        # Side-by-side layout: left and right cards
+        card_w, card_h = 560, 260
+        gap = 40
+        left_x = SCREEN_W // 2 - card_w - gap // 2
+        right_x = SCREEN_W // 2 + gap // 2
+        start_y = 340
         self.path_buttons = []
+        positions = [(left_x, start_y), (right_x, start_y)]
         for i in range(len(self.paths)):
-            self.path_buttons.append(pygame.Rect(cx - bw // 2, start_y + i * 92, bw, bh))
+            if i < len(positions):
+                self.path_buttons.append(pygame.Rect(positions[i][0], positions[i][1], card_w, card_h))
+            else:
+                self.path_buttons.append(pygame.Rect(positions[0][0], start_y, card_w, card_h))
 
         # Command buttons
         self.cmd_buttons = {
@@ -1310,45 +1317,45 @@ class ExploreScreen(Screen):
         draw_text_wrapped_glow(surface, self.narrative, self.assets.fonts["small"],
                           C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22)
 
-        # Path choices
+        # Path choices — side by side cards
         if self.paths:
-            draw_text_with_glow(surface, "Choose your path:", self.assets.fonts["body"],
-                      C.INK, SCREEN_W // 2, 325, align="center")
+            draw_text_with_glow(surface, "Choose your path:", self.assets.fonts["title_sm"],
+                      C.INK, SCREEN_W // 2, 315, align="center")
             for i, (path, btn) in enumerate(zip(self.paths, self.path_buttons)):
                 hovered = (i == self.hover_idx)
                 ptype = path["type"]
 
-                # Draw parchment button background
+                # Draw parchment card background
                 draw_ornate_button(surface, btn, "", self.assets.fonts["body"],
                                    hover=hovered, color=C.PARCHMENT_EDGE)
 
-                # Icon on the left side of the button
+                # Icon on top-center of the card
                 icon_key = f"path_{ptype}"
                 icon = self.assets.images.get(icon_key)
-                icon_x = btn.x + 10
-                icon_y = btn.y + (btn.height - 64) // 2
+                icon_size = 150
+                icon_x = btn.x + (btn.width - icon_size) // 2
+                icon_y = btn.y + 12
                 if icon:
                     surface.blit(icon, (icon_x, icon_y))
 
-                # Text area: to the right of icon
-                text_x = icon_x + 74  # 64 icon + 10 gap
-                text_max_w = btn.x + btn.width - text_x - 10
+                # Text area: below the icon, centered
+                text_center_x = btn.x + btn.width // 2
+                text_max_w = btn.width - 40
+                text_top = icon_y + icon_size + 8
 
-                # Line 1: path name (bold-ish via larger font or just body font)
+                # Line 1: path name
                 name_text = path["name"]
                 name_font = self.assets.fonts["body"]
                 name_text = fit_text(name_font, name_text, text_max_w)
-                name_y = btn.y + 12
                 draw_text_with_glow(surface, name_text, name_font,
-                                    C.INK, text_x, name_y, align="left")
+                                    C.INK, text_center_x, text_top, align="center")
 
-                # Line 2: elaborated description
+                # Line 2: elaborated description (wrapped if needed)
                 desc_text = path.get("desc2", path["desc"])
                 desc_font = self.assets.fonts["small"]
-                desc_text = fit_text(desc_font, desc_text, text_max_w)
-                desc_y = btn.y + 40
-                draw_text_with_glow(surface, desc_text, desc_font,
-                                    C.INK_LIGHT, text_x, desc_y, align="left")
+                desc_y = text_top + 24
+                draw_text_wrapped_glow(surface, desc_text, desc_font,
+                                       C.INK_LIGHT, btn.x + 20, desc_y, text_max_w, line_height=18)
 
         # Bottom commands
         cmd_names = list(self.cmd_buttons.keys())
