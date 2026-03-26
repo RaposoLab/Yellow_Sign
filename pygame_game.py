@@ -86,11 +86,20 @@ class C:
 
 # Class-specific colors
 CLASS_COLORS = {
-    "scholar": C.ELDRITCH,
-    "brute": C.CRIMSON,
+    "scholar": (180, 100, 230),    # bright violet — was ELDRITCH (too dark)
+    "brute": (220, 50, 50),        # bright crimson — was CRIMSON (too dark)
     "warden": C.FROST,
     "shadowblade": C.MIST,
     "mad_prophet": C.MADNESS,
+}
+
+# Each class's thematic primary stat (used for icon display, not derived from max)
+CLASS_PRIMARY_STAT = {
+    "scholar": "int",
+    "brute": "str",
+    "warden": "wis",
+    "shadowblade": "agi",
+    "mad_prophet": "luck",
 }
 
 # Map class_id → sprite filename
@@ -1087,7 +1096,7 @@ class ClassSelectScreen(Screen):
         ry = 90
 
         # Class name with primary stat icon
-        primary_stat = max(cls["base_stats"], key=cls["base_stats"].get)
+        primary_stat = CLASS_PRIMARY_STAT.get(cid, max(cls["base_stats"], key=cls["base_stats"].get))
         stat_icon = self.assets.images.get(f"stat_{primary_stat}_48")
         name_text = cls["name"].upper()
         name_w = self.assets.fonts["title_sm"].size(name_text)[0]
