@@ -1234,6 +1234,7 @@ class ExploreScreen(Screen):
                 self.path_buttons.append(pygame.Rect(positions[0][0], start_y, card_w, card_h))
 
         # Command buttons
+        cx = SCREEN_W // 2
         self.cmd_buttons = {
             "inventory": pygame.Rect(cx - 310, SCREEN_H - 70, 120, 40),
             "stats": pygame.Rect(cx - 120, SCREEN_H - 70, 120, 40),
