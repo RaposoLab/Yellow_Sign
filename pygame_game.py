@@ -95,6 +95,13 @@ class Game:
         self.current_screen = self.screens["title"]
         self.current_screen.enter()
 
+        # Screen transition state (fade-to-black)
+        self.transition = None  # None, "fadeOut", "fadeIn"
+        self.transition_timer = 0
+        self.transition_duration = 0.3  # seconds per phase
+        self._pending_screen = None
+        self._transition_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+
     def toggle_fullscreen(self):
         """Toggle between fullscreen and windowed mode."""
         self.fullscreen = not self.fullscreen
@@ -119,25 +126,56 @@ class Game:
         return bg
 
     def switch_screen(self, name):
-        if name in self.screens:
+        if name not in self.screens:
+            return
+        if self.transition is not None:
+            # Already transitioning — force complete immediately
+            self._finish_transition(name)
+            return
+        self.transition = "fadeOut"
+        self.transition_timer = 0
+        self._pending_screen = name
+
+    def _finish_transition(self, name=None):
+        """Immediately complete a pending or forced transition."""
+        target = name or self._pending_screen
+        if target and target in self.screens:
             self._prev_screen_name = getattr(self, '_current_screen_name', "title")
-            self._current_screen_name = name
-            self.current_screen = self.screens[name]
+            self._current_screen_name = target
+            self.current_screen = self.screens[target]
             self.current_screen.enter()
+        self.transition = None
+        self.transition_timer = 0
+        self._pending_screen = None
 
     def run(self):
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
 
+            # Handle transition timing
+            if self.transition:
+                self.transition_timer += dt
+                if self.transition == "fadeOut" and self.transition_timer >= self.transition_duration:
+                    # Fade-out complete — switch screen and start fade-in
+                    self._finish_transition()
+                    self.transition = "fadeIn"
+                    self.transition_timer = 0
+                elif self.transition == "fadeIn" and self.transition_timer >= self.transition_duration:
+                    # Fade-in complete
+                    self.transition = None
+                    self.transition_timer = 0
+
+            # During fade-out block input to the old screen
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
                     self.toggle_fullscreen()
-                else:
+                elif not self.transition:
                     self.current_screen.handle_event(event)
 
-            self.current_screen.update(dt)
+            if not self.transition or self.transition == "fadeIn":
+                self.current_screen.update(dt)
 
             # Draw background
             bg = self.get_bg()
@@ -146,6 +184,16 @@ class Game:
             else:
                 self.screen.fill(C.DARK_BG)
             self.current_screen.draw(self.screen)
+
+            # Draw transition overlay
+            if self.transition:
+                progress = min(1.0, self.transition_timer / self.transition_duration)
+                if self.transition == "fadeOut":
+                    alpha = int(255 * progress)
+                else:  # fadeIn
+                    alpha = int(255 * (1.0 - progress))
+                self._transition_surface.fill((0, 0, 0, alpha))
+                self.screen.blit(self._transition_surface, (0, 0))
 
             pygame.display.flip()
 
