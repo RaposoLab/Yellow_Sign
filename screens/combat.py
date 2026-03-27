@@ -4,7 +4,8 @@ import random
 from screens.base import Screen
 from engine import (player_use_skill, enemy_turn, check_boss_phase,
                     tick_player_buffs, process_status_effects,
-                    process_player_status_effects, generate_item, advance_floor)
+                    process_player_status_effects, generate_item, advance_floor,
+                    combat_run_attempt)
 
 class CombatScreen(Screen):
     def __init__(self, game):
