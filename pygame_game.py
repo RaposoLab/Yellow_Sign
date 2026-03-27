@@ -1128,7 +1128,7 @@ class ClassSelectScreen(Screen):
         draw_text_with_glow(surface, "— Starting Abilities —", self.assets.fonts["small"], C.PARCHMENT_EDGE, rx, ry)
         ry += 28
 
-        starting = [sk for sk in cls["skills"] if sk["unlock_lv"] == 1]
+        starting = [sk for sk in cls["skills"] if sk.get("starting", False)]
         self.ability_btns = []
         for sk in starting:
             btn = pygame.Rect(rx, ry, 280, 44)
@@ -1149,8 +1149,8 @@ class ClassSelectScreen(Screen):
         ry += 28
 
         future = sorted(
-            [sk for sk in cls["skills"] if sk["unlock_lv"] > 1],
-            key=lambda s: -s.get("power", 0)
+            [sk for sk in cls["skills"] if sk.get("tier", 1) == 1 and not sk.get("starting", False)],
+            key=lambda s: s.get("unlock_lv", 1)
         )[:3]
         self.future_btns = []
         for sk in future:

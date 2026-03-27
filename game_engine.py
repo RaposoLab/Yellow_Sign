@@ -97,6 +97,7 @@ class Skill:
         self.tier = data.get("tier", 1)
         self.category = data.get("category", "offensive")
         self.stat_priority = data.get("stat_priority", [])
+        self.starting = data.get("starting", False)
 
     def to_dict(self):
         return {
@@ -235,7 +236,7 @@ class GameState:
         self.max_hp = cls["hp_base"]
         self.hp = self.max_hp
         self.all_skills = [Skill(s) for s in cls["skills"]]
-        self.active_skills = [Skill(s) for s in cls["skills"] if s["unlock_lv"] <= 1]
+        self.active_skills = [Skill(s) for s in cls["skills"] if s.get("starting", False)]
         self.recalc_stats()
         self.hp = self.max_hp
 
