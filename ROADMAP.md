@@ -1,7 +1,7 @@
 # Visual Overhaul Roadmap
 
-## Status: ✅ COMPLETE + Ongoing Polish
-Last updated: 2026-03-26 23:58
+## Status: ✅ COMPLETE + Code Refactoring
+Last updated: 2026-03-28 06:08
 
 ## Workflow
 **ONE task per prompt. Save code + roadmap + memory after each step.**
@@ -116,3 +116,46 @@ Last updated: 2026-03-26 23:58
 - Regenerated all luck icon size variants (32/36/48/64)
 - Path cards use draw_parchment_panel directly (no draw_ornate_button with empty text)
 - Explicit gold/yellow border on hover, separate glow layer
+
+### ✅ Step 17: Code Refactoring — Package Split (Session 10 — 2026-03-28)
+- Split `game_data.py` (650 lines) → `data/` package (6 files):
+  - `constants.py` (45 lines) — MAX_ACTIVE_SKILLS, sprite/icon mappings
+  - `classes.py` (308 lines) — 5 classes + ~40 skills each
+  - `enemies.py` (86 lines) — enemy pool + boss
+  - `items.py` (65 lines) — rarity, prefixes, equipment templates
+  - `events.py` (97 lines) — floor events + traps
+  - `narratives.py` (56 lines) — floor stories + path templates
+- Split `game_engine.py` (1361 lines) → `engine/` package (3 files):
+  - `models.py` (372 lines) — Item, Skill, StatusEffect, Enemy, GameState
+  - `combat.py` (823 lines) — damage calc, item gen, status effects
+  - `world.py` (175 lines) — floor progression, events, shop
+- Both packages use `__init__.py` for backward-compatible re-exports
+- `pygame_game.py` kept as single file (splitting UI = high risk, low reward)
+- Removed `main.py` (depended on nonexistent `ui` module)
+- Removed unused imports from `pygame_game.py`: ENEMIES, PATH_TEMPLATES, get_floor_narrative
+
+### ✅ Step 18: ClassSelectScreen Crash Fix (Session 10 — 2026-03-28)
+- Fixed AttributeError: `ability_btns` and `future_btns` not initialized in `__init__`
+- These lists were created in `draw()` but accessed in `handle_event()` before first draw
+- Added `self.ability_btns = []` and `self.future_btns = []` to `__init__`
+
+### ✅ Step 19: 38 Broken Buff Types Fixed (Session 10 — 2026-03-28)
+- Buff system audit: 67 buff types defined in skills, only 13 had working logic
+- Added `_get_buff_defense_bonus(state, is_phys)` — handles 11 DEF/mDEF buffs:
+  thoughtform, ironSkin, chant, innerFire, mDefUp, wardAura, hallowed, fortress, bulwark, umbralAegis, dreamShell
+- Added `_get_buff_evasion_bonus(state)` — handles 5 EVA buffs:
+  smokeScreen, dreamVeil, evasionUp, dreamShell, umbralAegis
+- `apply_damage_to_player()` now handles:
+  - EVA buff bonuses (stacking with base evasion stat)
+  - DEF/mDEF buff bonuses (percentage increase to damage reduction)
+  - divineInterv: nullify N attacks (decrement stacks on proc)
+  - ethereal: invulnerable while buff active
+  - flicker: 50% dodge per stack (decrement on proc)
+  - mirrorImg: 30% damage reduction
+  - undyingPact: can't die while active (like undying)
+  - finalStand: invulnerable while active
+  - bloodAura: 10% lifesteal on damage taken
+  - retribAura: reflect 30% damage back to enemy
+- `calc_player_damage()`: ethereal gives 2.5x damage, consumed after attack
+- `tick_player_buffs()`: added regen5 (5% HP/turn), calmMind (-3 MAD/turn)
+- Full integration test suite passed

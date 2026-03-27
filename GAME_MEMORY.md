@@ -14,7 +14,6 @@
 game/
 ├── pygame_game.py        ← Main graphical game (THE FILE WE EDIT) — 3157 lines
 ├── save_system.py        ← Save/load functionality (JSON, 5 slots)
-├── main.py               ← Terminal entry point (NOTE: needs ui.py, not included)
 ├── data/                 ← Game data package (replaces old game_data.py)
 │   ├── __init__.py       ← Re-exports everything
 │   ├── constants.py      ← MAX_ACTIVE_SKILLS, sprite/icon mappings
@@ -26,7 +25,7 @@ game/
 ├── engine/               ← Game logic package (replaces old game_engine.py)
 │   ├── __init__.py       ← Re-exports everything
 │   ├── models.py         ← Item, Skill, StatusEffect, Enemy, GameState (372 lines)
-│   ├── combat.py         ← Combat system, item generation, damage calc (823 lines)
+│   ├── combat.py         ← Combat system, item generation, damage calc (835 lines)
 │   └── world.py          ← Floor progression, events, traps, shop (175 lines)
 ├── ROADMAP.md            ← Visual overhaul progress tracker
 ├── GAME_MEMORY.md        ← This file
@@ -92,9 +91,62 @@ game/
 - Split `game_engine.py` (1361 lines) → `engine/` package (3 logic files + init)
 - `pygame_game.py` kept as single file (splitting UI code = high risk, low reward)
 - All imports updated: `from data import ...` / `from engine import ...`
-- `main.py` still references broken `ui` module (separate issue, not addressed)
+- `main.py` removed (depended on nonexistent `ui` module, was dead code)
 - Backward-compatible: `data/__init__.py` and `engine/__init__.py` re-export everything
 - Old `game_data.py` and `game_engine.py` removed
+- Fixed ClassSelectScreen crash: `ability_btns`/`future_btns` not initialized in `__init__`
+- Fixed 38 broken buff types (see Buff System section below)
+
+## Buff System (engine/combat.py)
+67 buff types defined across 5 classes. Most are simple "store name + duration" with effects checked elsewhere:
+
+### Defensive Buffs (handled by `_get_buff_defense_bonus` + `_get_buff_evasion_bonus`)
+- **EVA buffs**: smokeScreen(+25), dreamVeil(+35), evasionUp(+40), dreamShell(+50), umbralAegis(+60)
+- **pDEF buffs**: thoughtform(+30), ironSkin(+60), chant(+20), innerFire(+15), hallowed(+40), fortress(+80), bulwark(+60), umbralAegis(+40)
+- **mDEF buffs**: thoughtform(+30), ironSkin(+30), mDefUp(+50), chant(+20), wardAura(+30), innerFire(+15), hallowed(+40), fortress(+80), bulwark(+60), dreamShell(+80)
+
+### Special Defensive (handled in `apply_damage_to_player`)
+- divineInterv: nullify next N attacks (stacks decrement on proc)
+- ethereal: invulnerable while active, +150% damage on next attack (consumed)
+- flicker: 50% dodge chance per stack (decrement on proc)
+- mirrorImg: 30% damage reduction
+- undying/undyingPact: can't die (set HP to 1)
+- finalStand: invulnerable
+- bloodAura: 10% lifesteal on damage taken
+- retribAura: reflect 30% damage to attacker
+
+### Damage Buffs (checked in `calc_player_damage`)
+- rage: +60% damage
+- atkCritUp: +40% damage, +20% crit
+- warpTime: +20% damage
+- madPower: +25% damage
+- darkPact: +30% damage
+- shadowMeld: +100% damage
+- eclipse: +30% damage
+- ethereal: +150% damage (consumed after attack)
+
+### Tick Effects (handled in `tick_player_buffs`)
+- regen: heal 8% HP/turn
+- regen5: heal 5% HP/turn
+- oath: heal 10% HP/turn
+- calmMind: -3 MAD/turn
+
+### Stat Buffs (via temp_stats, handled in `tick_player_buffs` expire cleanup)
+- permIntWis: INT+6, WIS+4
+- permAtk2: STR+5
+- permWisStr: WIS+6, STR+4
+- permAgiLuk: AGI+7, LUCK+4
+- permAll1: all stats +4
+- thickSkull: STR+4, WIS+3
+- perseverance: WIS+4, STR+3
+- shadowBless: AGI+4, LUCK+3
+- randStat2: random 2 stats +3
+
+### Utility Buffs (checked in `player_use_skill`)
+- resetCds: reset all cooldowns
+- bloodRitual: -15% HP, +50 XP
+- madImmune: madness no longer causes death
+- permCrit10: +25% crit (cleaned on expire)
 
 ## Crash Prevention Protocol
 1. ONE task per prompt
@@ -102,6 +154,12 @@ game/
 3. Save ROADMAP.md after EVERY step
 4. Save GAME_MEMORY.md after EVERY step with new learnings
 5. Verify syntax with `python3 -c "import py_compile; py_compile.compile(...)"`
+
+## Known Issues / Future Work
+- Some buff types still unimplemented (bladeAura, copyAttack, skipCombat, realityAnchor, etc.) — low priority, not used by any current skill
+- `player_use_skill()` is 300+ lines of if/elif — consider refactoring into handler functions per skill type
+- `draw_text_with_glow()` renders text 8+ times per call — performance bottleneck, consider caching
+- No automated tests — one bad number in skill dict can break combat silently
 
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page
