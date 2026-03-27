@@ -14,7 +14,7 @@ import pygame
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from shared import (
-    C, SCREEN_W, SCREEN_H, FPS, Assets,
+    C, SCREEN_W, SCREEN_H, FPS, Assets, draw_hud,
     draw_text, draw_text_wrapped, fit_text, draw_text_fitted,
     draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button,
     draw_gold_divider, hp_color, mad_color, rarity_color,
@@ -28,68 +28,6 @@ from screens import (
     TrapResultScreen, CombatResultScreen, LevelUpScreen, GameOverScreen,
     VictoryScreen, StatsScreen, SaveScreen, LoadScreen,
 )
-
-def draw_hud(surface, s, assets):
-    """Draw the persistent HUD bar at the top with ornate styling."""
-    # Background bar
-    hud_h = 120
-    hud_surf = pygame.Surface((SCREEN_W, hud_h), pygame.SRCALPHA)
-    hud_surf.fill((12, 6, 24, 220))
-    surface.blit(hud_surf, (0, 0))
-    # Gold trim bottom border
-    pygame.draw.line(surface, C.GOLD_TRIM, (10, hud_h - 2), (SCREEN_W - 10, hud_h - 2), 2)
-    pygame.draw.line(surface, C.GOLD_DIM, (10, hud_h - 5), (SCREEN_W - 10, hud_h - 5), 1)
-
-    # Class + Floor + Level
-    icon = CLASS_ICONS.get(s.class_id, "?")
-    class_color = CLASS_COLORS.get(s.class_id, C.YELLOW)
-    draw_text(surface, f"{icon} {s.class_name}", assets.fonts["body"], class_color, 15, 8)
-    depth_names = ["The Asylum", "The Depths Below", "The Descent", "Approaching the Threshold", "The Spiral"]
-    depth_idx = min(s.floor * len(depth_names) // s.max_floor, len(depth_names) - 1)
-    draw_text(surface, depth_names[depth_idx], assets.fonts["body"], C.YELLOW, 420, 8)
-    draw_text(surface, f"Lv.{s.level}", assets.fonts["body"], C.BONE, 680, 8)
-
-    # HP bar
-    draw_text(surface, "HP", assets.fonts["small"], C.BONE, 15, 42)
-    draw_bar(surface, 55, 42, 250, 20, s.hp, s.max_hp, hp_color(s.hp, s.max_hp))
-    draw_text(surface, f"{s.hp}/{s.max_hp}", assets.fonts["tiny"],
-              hp_color(s.hp, s.max_hp), 315, 44)
-    if s.shield > 0:
-        draw_text(surface, f"Shield:{int(s.shield)}", assets.fonts["tiny"], C.SHIELD_BLUE, 410, 44)
-
-    # XP bar
-    draw_text(surface, "XP", assets.fonts["small"], C.BONE, 15, 68)
-    draw_bar(surface, 55, 68, 250, 14, s.xp, s.xp_next, C.XP_PURPLE)
-    draw_text(surface, f"{s.xp}/{s.xp_next}", assets.fonts["tiny"], C.XP_PURPLE, 315, 68)
-
-    # Stats
-    stats_display = [
-        ("INT", s.stats.get("int", 0), C.ELDRITCH),
-        ("STR", s.stats.get("str", 0), C.CRIMSON),
-        ("AGI", s.stats.get("agi", 0), C.MIST),
-        ("WIS", s.stats.get("wis", 0), C.FROST),
-        ("LUK", s.luck, C.YELLOW),
-    ]
-    x = 480
-    for name, val, color in stats_display:
-        draw_text(surface, f"{name}:{val}", assets.fonts["tiny"], color, x, 42)
-        x += 60
-    draw_text(surface, f"ATK:{s.atk} DEF:{s.defense}", assets.fonts["tiny"], C.ASH, x, 42)
-
-    # Gold + Madness
-    draw_text(surface, f"Gold: {s.gold}g", assets.fonts["small"], C.GOLD, 480, 68)
-    draw_text(surface, f"Madness: {int(s.madness)}%", assets.fonts["small"],
-              mad_color(s.madness), 620, 68)
-
-    # Status effects
-    statuses = []
-    for st in s.statuses:
-        statuses.append(f"{st.type.upper()}:{st.duration}")
-    if s.barrier > 0:
-        statuses.append(f"BARRIER:x{s.barrier}")
-    if statuses:
-        draw_text(surface, " ".join(statuses), assets.fonts["tiny"], C.MADNESS, 480, 92)
-
 
 # ═══════════════════════════════════════════
 # MAIN GAME CLASS
