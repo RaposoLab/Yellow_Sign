@@ -1329,8 +1329,6 @@ class ExploreScreen(Screen):
 
         # Path choices — side by side cards
         if self.paths:
-            draw_text_with_glow(surface, "Choose your path:", self.assets.fonts["title_sm"],
-                      C.INK, SCREEN_W // 2, 315, align="center")
             for i, (path, btn) in enumerate(zip(self.paths, self.path_buttons)):
                 hovered = (i == self.hover_idx)
                 ptype = path["type"]
@@ -1955,6 +1953,9 @@ class RestScreen(Screen):
 
     def handle_event(self, event):
         s = self.game.state
+        # Don't accept new inputs while showing result
+        if self.result_timer > 0:
+            return
         self.update_hover(event, self.buttons)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for i, btn in enumerate(self.buttons):
@@ -2028,10 +2029,10 @@ class LootScreen(Screen):
         self.items = [generate_item(s.floor, luck=s.luck) for _ in range(count)]
         self.gold_found = 5 + random.randint(0, 10) + s.floor * 2
         s.gold += self.gold_found
-        bh = 60
+        bh = 80
         cx = SCREEN_W // 2
-        self.pick_buttons = [pygame.Rect(cx - 200, 150 + i * 80, 400, bh) for i in range(len(self.items))]
-        self.leave_btn = pygame.Rect(cx - 100, 150 + len(self.items) * 80 + 15, 200, 40)
+        self.pick_buttons = [pygame.Rect(cx - 200, 180 + i * 100, 400, bh) for i in range(len(self.items))]
+        self.leave_btn = pygame.Rect(cx - 100, 180 + len(self.items) * 100 + 15, 200, 40)
 
     def handle_event(self, event):
         s = self.game.state
@@ -2052,30 +2053,28 @@ class LootScreen(Screen):
                 self.game.switch_screen("explore")
 
     def draw(self, surface):
-        panel_w, panel_h = 500, 180 + len(self.items) * 85
+        panel_w, panel_h = 500, 200 + len(self.items) * 105
         panel_x = SCREEN_W // 2 - panel_w // 2
-        draw_parchment_panel(surface, panel_x, 20, panel_w, min(panel_h, 520))
+        draw_parchment_panel(surface, panel_x, 20, panel_w, min(panel_h, 560))
 
         draw_text_with_glow(surface, "SALVAGE FOUND", self.assets.fonts["heading"],
                   C.PARCHMENT_EDGE, SCREEN_W // 2, 35, align="center")
+        draw_gold_divider(surface, SCREEN_W // 2 - 120, 70, 240)
         draw_text_with_glow(surface, f"+{self.gold_found} Gold", self.assets.fonts["body"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 70, align="center")
-        draw_gold_divider(surface, SCREEN_W // 2 - 120, 90, 240)
+                  C.PARCHMENT_EDGE, SCREEN_W // 2, 82, align="center")
 
         for i, (item, btn) in enumerate(zip(self.items, self.pick_buttons)):
             color = rarity_color(item.rarity)
             rd = RARITY_DATA[item.rarity]
             label = fit_text(self.assets.fonts["body"],
                              f"{item.name} ({item.slot.upper()}, {rd['name']})", btn.w - 20)
-            # Draw label higher to leave room for stats below
             draw_ornate_button(surface, btn, label,
                                self.assets.fonts["body"], hover=(i == self.hover_idx), color=color)
-            # Stats below the main label text inside button
+            # Stats inside button, below the name text
             stat_label = fit_text(self.assets.fonts["tiny"], item.stat_text(), btn.w - 30)
-            stat_y = btn.centery + self.assets.fonts["body"].get_height() // 2 + 2
-            if stat_y + self.assets.fonts["tiny"].get_height() <= btn.bottom - 4:
-                draw_text_with_glow(surface, stat_label, self.assets.fonts["tiny"],
-                          C.INK, btn.centerx, stat_y, align="center")
+            stat_y = btn.y + btn.h // 2 + 6
+            draw_text_with_glow(surface, stat_label, self.assets.fonts["tiny"],
+                      C.INK, btn.centerx, stat_y, align="center")
 
         leave_hover = (len(self.pick_buttons) == self.hover_idx)
         draw_ornate_button(surface, self.leave_btn, "Leave it", self.assets.fonts["body"],
@@ -2414,9 +2413,6 @@ class LevelUpScreen(Screen):
             for i, (sk, btn) in enumerate(zip(s.active_skills, self.replace_buttons)):
                 draw_ornate_button(surface, btn, f"{i+1}. {sk.name} — {sk.desc}",
                                    self.assets.fonts["small"], hover=(i == self.hover_idx), color=C.PARCHMENT_EDGE)
-                stat_icon = self.assets.images.get(f"stat_{sk.stat}_36")
-                if stat_icon:
-                    surface.blit(stat_icon, (btn.x + 4, btn.centery - 18))
             cancel_btn = self.replace_buttons[-1] if self.replace_buttons else None
             if cancel_btn:
                 draw_ornate_button(surface, cancel_btn, f"{len(s.active_skills)+1}. Cancel",
@@ -2431,10 +2427,6 @@ class LevelUpScreen(Screen):
             for i, (sk, btn) in enumerate(zip(s.pending_levelup_skills, self.skill_buttons)):
                 draw_ornate_button(surface, btn, f"[{i+1}] {sk.name}", self.assets.fonts["body"],
                                    hover=(i == self.hover_idx), color=C.PARCHMENT_EDGE)
-                # Stat icon on left side of button
-                stat_icon = self.assets.images.get(f"stat_{sk.stat}_36")
-                if stat_icon:
-                    surface.blit(stat_icon, (btn.x + 4, btn.centery - 18))
                 draw_text_with_glow(surface, sk.desc, self.assets.fonts["tiny"], C.INK,
                           btn.centerx, btn.bottom + 2, align="center")
 
@@ -2474,8 +2466,6 @@ class GameOverScreen(Screen):
                 self.game.switch_screen("title")
 
     def draw(self, surface):
-        s = self.game.state
-
         # The Game_Over_Screen background is already drawn by main loop
         draw_text_with_glow(surface, "GAME OVER", self.assets.fonts["title"],
                   C.CRIMSON, SCREEN_W // 2, 40, align="center")
@@ -2483,29 +2473,9 @@ class GameOverScreen(Screen):
         draw_text_wrapped_glow(surface, self.game.gameover_msg, self.assets.fonts["body"],
                           C.INK, SCREEN_W // 2 - 300, 140, 600)
 
-        # Stats in parchment panel
-        panel_w, panel_h = 380, 220
-        panel_x = SCREEN_W // 2 - panel_w // 2
-        draw_parchment_panel(surface, panel_x, 220, panel_w, panel_h)
-
-        stats = [
-            ("Floor reached", f"{s.floor}/{s.max_floor}"),
-            ("Level", str(s.level)),
-            ("Kills", str(s.kills)),
-            ("Rooms explored", str(s.rooms_explored)),
-            ("Madness", f"{int(s.madness)}%"),
-        ]
-        y = 235
-        for label, value in stats:
-            draw_text_with_glow(surface, f"{label}:", self.assets.fonts["body"], C.INK_LIGHT,
-                      SCREEN_W // 2 - 120, y, align="right")
-            draw_text_with_glow(surface, value, self.assets.fonts["body"], C.CRIMSON,
-                      SCREEN_W // 2 + 10, y)
-            y += 35
-
         cx = SCREEN_W // 2
-        self.restart_btn = pygame.Rect(cx - 170, 460, 160, 45)
-        self.menu_btn = pygame.Rect(cx + 10, 460, 160, 45)
+        self.restart_btn = pygame.Rect(cx - 170, 300, 160, 45)
+        self.menu_btn = pygame.Rect(cx + 10, 300, 160, 45)
         draw_ornate_button(surface, self.restart_btn, "[R] Retry", self.assets.fonts["body"],
                            hover=(0 == self.hover_idx), color=C.PARCHMENT_EDGE)
         draw_ornate_button(surface, self.menu_btn, "[Q] Menu", self.assets.fonts["body"],
@@ -2619,19 +2589,19 @@ class StatsScreen(Screen):
                   C.PARCHMENT_EDGE, SCREEN_W // 2, 22, align="center")
         draw_text_with_glow(surface, f"{CLASS_ICONS.get(s.class_id, '?')} {s.class_name}  —  Level {s.level}",
                   self.assets.fonts["body"], color, SCREEN_W // 2, 58, align="center")
-        draw_gold_divider(surface, SCREEN_W // 2 - 150, 82, 300)
+        draw_gold_divider(surface, SCREEN_W // 2 - 150, 84, 300)
 
         # Class sprite
         sprite = self.assets.get_class_sprite(s.class_id, "thumb")
         if sprite:
             big_sprite = pygame.transform.scale(sprite, (120, 120))
-            surface.blit(big_sprite, (50, 95))
+            surface.blit(big_sprite, (50, 100))
 
         # Core stats (left side)
         lx = 210
-        y = 95
+        y = 100
         draw_text_with_glow(surface, "Primary Stats", self.assets.fonts["body"], C.INK, lx - 20, y)
-        y += 30
+        y += 32
         stat_colors = {"int": C.ELDRITCH, "str": C.CRIMSON, "agi": C.MIST, "wis": C.FROST, "luck": C.PARCHMENT_EDGE}
         for stat_name in ["int", "str", "agi", "wis", "luck"]:
             val = s.stats.get(stat_name, 0)
@@ -2639,22 +2609,17 @@ class StatsScreen(Screen):
             bonus = val - base
             sc = stat_colors.get(stat_name, C.INK)
 
-            # Draw stat icon
-            icon = self.assets.images.get(f"stat_{stat_name}_64")
-            if icon:
-                surface.blit(icon, (lx - 20, y - 12))
-
             text = f"{stat_name.upper()}: {val}"
             if bonus > 0:
                 text += f"  ({base}+{bonus})"
-            draw_text_with_glow(surface, text, self.assets.fonts["body"], sc, lx + 56, y + 2)
-            y += 58
+            draw_text_with_glow(surface, text, self.assets.fonts["body"], sc, lx, y)
+            y += 42
 
         # Combat stats (right side)
         rx = SCREEN_W // 2 + 60
-        ry = 95
+        ry = 100
         draw_text_with_glow(surface, "Combat Stats", self.assets.fonts["body"], C.INK, rx, ry)
-        ry += 30
+        ry += 32
         combat_stats = [
             ("HP", f"{s.hp}/{s.max_hp}", hp_color(s.hp, s.max_hp)),
             ("ATK", str(s.atk), C.CRIMSON),
@@ -2670,7 +2635,7 @@ class StatsScreen(Screen):
             ry += 26
 
         # Progress & misc (below primary stats)
-        y += 20
+        y += 10
         draw_text_with_glow(surface, "Progress", self.assets.fonts["body"], C.INK, lx, y)
         y += 28
         draw_bar(surface, lx, y, 200, 14, s.xp, s.xp_next, C.XP_PURPLE)
@@ -2688,7 +2653,6 @@ class StatsScreen(Screen):
         ry += 15
         draw_text_with_glow(surface, "Madness", self.assets.fonts["body"], C.INK, rx, ry)
         ry += 28
-        mad_pct = s.madness / 100
         draw_bar(surface, rx, ry, 200, 14, s.madness, 100, mad_color(s.madness))
         draw_text_with_glow(surface, f"{int(s.madness)}%", self.assets.fonts["tiny"], mad_color(s.madness), rx + 210, ry)
         ry += 28
@@ -2704,18 +2668,21 @@ class StatsScreen(Screen):
                 draw_text_with_glow(surface, f"Barrier: x{s.barrier}", self.assets.fonts["small"], C.FROST, rx, ry)
                 ry += 24
 
-        # Active skills list
-        y += 20
-        draw_gold_divider(surface, 50, y, SCREEN_W - 110)
-        y += 10
+        # Active skills list — compact, inside the panel
+        skills_y = max(y, ry) + 8
+        draw_gold_divider(surface, 50, skills_y, SCREEN_W - 110)
+        skills_y += 10
         draw_text_with_glow(surface, f"Active Skills ({len(s.active_skills)}/{MAX_ACTIVE_SKILLS})",
-                  self.assets.fonts["body"], C.INK, 55, y)
-        y += 28
+                  self.assets.fonts["small"], C.INK, 55, skills_y)
+        skills_y += 24
+        max_y = SCREEN_H - 100  # keep within panel bounds
         for sk in s.active_skills:
-            label = f"  {sk.icon} {sk.name} — {sk.desc}"
+            if skills_y + 18 > max_y:
+                break
+            label = f"  {sk.name} — {sk.desc}"
             label = fit_text(self.assets.fonts["tiny"], label, SCREEN_W - 120)
-            draw_text_with_glow(surface, label, self.assets.fonts["tiny"], C.INK, 55, y)
-            y += 20
+            draw_text_with_glow(surface, label, self.assets.fonts["tiny"], C.INK, 55, skills_y)
+            skills_y += 18
 
         # Back button
         self.back_btn = pygame.Rect(SCREEN_W // 2 - 60, SCREEN_H - 65, 120, 40)
@@ -2838,8 +2805,8 @@ def draw_hud(surface, s, assets):
     draw_text(surface, f"{icon} {s.class_name}", assets.fonts["body"], class_color, 15, 8)
     depth_names = ["The Asylum", "The Depths Below", "The Descent", "Approaching the Threshold", "The Spiral"]
     depth_idx = min(s.floor * len(depth_names) // s.max_floor, len(depth_names) - 1)
-    draw_text(surface, depth_names[depth_idx], assets.fonts["body"], C.YELLOW, 350, 8)
-    draw_text(surface, f"Lv.{s.level}", assets.fonts["body"], C.BONE, 520, 8)
+    draw_text(surface, depth_names[depth_idx], assets.fonts["body"], C.YELLOW, 420, 8)
+    draw_text(surface, f"Lv.{s.level}", assets.fonts["body"], C.BONE, 680, 8)
 
     # HP bar
     draw_text(surface, "HP", assets.fonts["small"], C.BONE, 15, 42)
