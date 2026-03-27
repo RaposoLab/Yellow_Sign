@@ -172,9 +172,3 @@ class LevelUpScreen(Screen):
         else:
             draw_text_with_glow(surface, "Press any key to continue...", self.assets.fonts["small"],
                       C.INK_LIGHT, SCREEN_W // 2, 200, align="center")
-
-
-# ═══════════════════════════════════════════
-# GAME OVER SCREEN
-# ═══════════════════════════════════════════
-

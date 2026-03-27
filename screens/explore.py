@@ -187,9 +187,3 @@ class ExploreScreen(Screen):
             labels = {"inventory": "Inventory [I]", "stats": "Stats [T]", "save": "Save [S]", "menu": "Menu"}
             draw_ornate_button(surface, btn, labels[name], self.assets.fonts["small"],
                                hover=((len(self.path_buttons) + ci) == self.hover_idx), color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# COMBAT SCREEN
-# ═══════════════════════════════════════════
-

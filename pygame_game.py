@@ -120,6 +120,7 @@ class Game:
 
     def switch_screen(self, name):
         if name in self.screens:
+            self._prev_screen_name = getattr(self, '_current_screen_name', "title")
             self._current_screen_name = name
             self.current_screen = self.screens[name]
             self.current_screen.enter()

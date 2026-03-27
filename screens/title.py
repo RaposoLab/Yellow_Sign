@@ -124,11 +124,3 @@ class TitleScreen(Screen):
         # ── Footer ──
         draw_text(surface, "Ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn.",
                   self.assets.fonts["tiny"], C.ASH, SCREEN_W // 2, SCREEN_H - 28, align="center")
-
-
-# ═══════════════════════════════════════════
-# CLASS SELECT SCREEN
-# ═══════════════════════════════════════════
-# CLASS SELECT SCREEN (One class per page)
-# ═══════════════════════════════════════════
-

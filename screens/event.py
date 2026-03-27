@@ -84,9 +84,3 @@ class EventScreen(Screen):
             for i, (o, btn) in enumerate(zip(pe["outcomes"], self.outcome_buttons)):
                 draw_ornate_button(surface, btn, f"[{i+1}] {o['text']}",
                                    self.assets.fonts["body"], hover=(i == self.hover_idx), color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# TRAP RESULT SCREEN
-# ═══════════════════════════════════════════
-

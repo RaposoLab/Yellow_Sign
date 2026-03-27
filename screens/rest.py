@@ -80,9 +80,3 @@ class RestScreen(Screen):
         if self.result_msg:
             draw_text_with_glow(surface, self.result_msg, self.assets.fonts["body"],
                       C.MIST, SCREEN_W // 2, 560, align="center")
-
-
-# ═══════════════════════════════════════════
-# LOOT SCREEN
-# ═══════════════════════════════════════════
-

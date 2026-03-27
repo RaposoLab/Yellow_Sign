@@ -192,9 +192,3 @@ class ClassSelectScreen(Screen):
             sprite = self.assets.get_class_sprite(cid, "thumb")
             if sprite:
                 surface.blit(sprite, (52, card_y + 12))
-
-
-# ═══════════════════════════════════════════
-# EXPLORE SCREEN
-# ═══════════════════════════════════════════
-

@@ -29,9 +29,3 @@ class Screen:
                     break
         elif event.type == pygame.WINDOWLEAVE:
             self.hover_idx = -1
-
-
-# ═══════════════════════════════════════════
-# TITLE SCREEN
-# ═══════════════════════════════════════════
-

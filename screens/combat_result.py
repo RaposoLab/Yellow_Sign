@@ -109,9 +109,3 @@ class CombatResultScreen(Screen):
         else:
             draw_text_with_glow(surface, "Click or press any key to continue...",
                       self.assets.fonts["small"], C.INK_LIGHT, SCREEN_W // 2, 280, align="center")
-
-
-# ═══════════════════════════════════════════
-# LEVEL UP SCREEN
-# ═══════════════════════════════════════════
-

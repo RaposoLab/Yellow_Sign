@@ -29,9 +29,3 @@ class TrapResultScreen(Screen):
         self.continue_btn = pygame.Rect(SCREEN_W // 2 - 80, 345, 160, 35)
         draw_ornate_button(surface, self.continue_btn, "Continue", self.assets.fonts["small"],
                            hover=(self.hover_idx == 0), color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# COMBAT RESULT SCREEN
-# ═══════════════════════════════════════════
-

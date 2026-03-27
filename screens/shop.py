@@ -98,9 +98,3 @@ class ShopScreen(Screen):
             color = C.MIST if self.game.shop_msg_ok else C.CRIMSON
             draw_text_with_glow(surface, self.game.shop_message, self.assets.fonts["body"],
                       color, SCREEN_W // 2, y + 75, align="center")
-
-
-# ═══════════════════════════════════════════
-# REST SCREEN
-# ═══════════════════════════════════════════
-

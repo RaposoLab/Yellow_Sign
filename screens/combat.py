@@ -378,9 +378,3 @@ class CombatScreen(Screen):
         for dn in self.damage_numbers:
             text, x, y, color, timer, vy = dn
             draw_text(surface, text, self.assets.fonts["heading"], color, int(x) + ox, int(y) + oy)
-
-
-# ═══════════════════════════════════════════
-# INVENTORY SCREEN
-# ═══════════════════════════════════════════
-

@@ -178,9 +178,3 @@ class StatsScreen(Screen):
         self.back_btn = pygame.Rect(SCREEN_W // 2 - 60, SCREEN_H - 65, 120, 40)
         draw_ornate_button(surface, self.back_btn, "Back [Q]", self.assets.fonts["body"],
                            hover=(self.hover_idx == 0), color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# SAVE SCREEN
-# ═══════════════════════════════════════════
-

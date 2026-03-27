@@ -76,9 +76,3 @@ class VictoryScreen(Screen):
                            hover=(0 == self.hover_idx), color=C.PARCHMENT_EDGE)
         draw_ornate_button(surface, self.menu_btn, "[Q] Menu", self.assets.fonts["body"],
                            hover=(1 == self.hover_idx), color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# STATS SCREEN
-# ═══════════════════════════════════════════
-

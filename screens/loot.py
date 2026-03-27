@@ -88,9 +88,3 @@ class LootScreen(Screen):
         leave_hover = (len(self.pick_buttons) == self.hover_idx)
         draw_ornate_button(surface, self.leave_btn, "Leave it", self.assets.fonts["body"],
                            hover=leave_hover, color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# EVENT SCREEN
-# ═══════════════════════════════════════════
-

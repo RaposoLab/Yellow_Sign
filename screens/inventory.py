@@ -10,8 +10,8 @@ class InventoryScreen(Screen):
         self.prev_screen = "explore"
 
     def enter(self):
-        # Preserve the screen we came from — check the game's current screen name
-        self.prev_screen = self.game._current_screen_name
+        # Read where we came from (set by switch_screen before enter() is called)
+        self.prev_screen = getattr(self.game, '_prev_screen_name', "explore")
         # If we were just in combat, go back to combat
         if self.game.state and self.game.state.combat:
             self.prev_screen = "combat"
@@ -111,9 +111,4 @@ class InventoryScreen(Screen):
         back_hover = (len(self.item_buttons) == self.hover_idx)
         draw_ornate_button(surface, self.back_btn, "Back [Q]", self.assets.fonts["body"],
                            hover=back_hover, color=C.PARCHMENT_EDGE)
-
-
-# ═══════════════════════════════════════════
-# SHOP SCREEN
-# ═══════════════════════════════════════════
 

@@ -13,12 +13,11 @@ class SaveScreen(Screen):
 
     def enter(self):
         self.mode = "save" if self.game.state else "load"
-        # Track where we came from
+        # Track where we came from (set by switch_screen before enter() is called)
+        self.prev_screen = getattr(self.game, '_prev_screen_name', "explore")
         if self.game.state and self.game.state.combat:
             self.prev_screen = "combat"
-        elif self.game.state:
-            self.prev_screen = "explore"
-        else:
+        elif not self.game.state:
             self.prev_screen = "title"
         bw, bh = 400, 50
         cx = SCREEN_W // 2
@@ -105,9 +104,4 @@ class LoadScreen(SaveScreen):
             for i, btn in enumerate(self.slot_buttons):
                 if btn.collidepoint(event.pos):
                     self._do_slot(i)
-
-
-# ═══════════════════════════════════════════
-# HUD DRAWING
-# ═══════════════════════════════════════════
 
