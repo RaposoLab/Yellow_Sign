@@ -96,6 +96,8 @@ game/
 - Old `game_data.py` and `game_engine.py` removed
 - Fixed ClassSelectScreen crash: `ability_btns`/`future_btns` not initialized in `__init__`
 - Fixed 38 broken buff types (see Buff System section below)
+- Fixed 6 madness/instant-effect skills with buff_duration=0 (calmMind, eldritchBargain, foolLuck, realityAnchor, pallidMask, prophetRes)
+- `apply_status_player()` now checks immunity buff — debuff immunity works
 
 ## Buff System (engine/combat.py)
 67 buff types defined across 5 classes. Most are simple "store name + duration" with effects checked elsewhere:
@@ -147,6 +149,16 @@ game/
 - bloodRitual: -15% HP, +50 XP
 - madImmune: madness no longer causes death
 - permCrit10: +25% crit (cleaned on expire)
+- calmMind: instant -3 MAD (Leng's Whisper)
+- eldritchBargain: instant -3 to 3 random stats, +50 gold
+- foolLuck: instant -10 MAD + divineInterv 3 stacks
+- realityAnchor: maps to undying for 2 turns
+- pallidMask: +50% all stats (temp) + immunity to debuffs 3 turns
+- prophetRes: +5 MAD, maps to regen for 2 turns
+
+### Debuff Immunity
+- `immunity` buff checked in `apply_status_player()` — blocks all debuffs
+- Applied by: Hastur's Embrace (2t), The Pallid Mask (3t)
 
 ## Crash Prevention Protocol
 1. ONE task per prompt

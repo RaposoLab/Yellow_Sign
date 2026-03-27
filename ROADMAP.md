@@ -159,3 +159,16 @@ Last updated: 2026-03-28 06:08
 - `calc_player_damage()`: ethereal gives 2.5x damage, consumed after attack
 - `tick_player_buffs()`: added regen5 (5% HP/turn), calmMind (-3 MAD/turn)
 - Full integration test suite passed
+
+### ✅ Step 20: Madness-Reducing Skills Fixed (Session 10 — 2026-03-28)
+- Bug: buff_duration=0 skills fell through to generic handler, stored buff as 0,
+  then tick_player_buffs decremented to -1 before effect could fire
+- Fixed 6 skills with instant-effect handlers:
+  - Leng's Whisper (Scholar, calmMind): -3 MAD instantly
+  - Eldritch Bargain (Prophet): -3 to 3 random stats, +50 gold instantly
+  - The Fool's Luck (Prophet, foolLuck): -10 MAD + divineInterv 3 stacks
+  - Reality Anchor (Prophet): maps to undying buff for 2 turns
+  - The Pallid Mask (Prophet): +50% all stats (temp) + debuff immunity 3 turns
+  - Prophet's Resilience (Prophet): +5 MAD, regen 8% for 2 turns
+- apply_status_player() now checks immunity buff before applying debuffs
+- Added pallidMask to STAT_BUFF_KEYS for proper temp_stats cleanup on expire
