@@ -175,9 +175,22 @@ game/
 - **Fix in SaveScreen**: Added `self.prev_screen` tracking and `_get_return_screen()` helper that checks combat state. All return paths (back button, escape key, after save) use this helper.
 - **LoadScreen**: Inherits from SaveScreen, loading always transitions to explore (correct behavior — loaded games start in explore)
 
+## Refactoring: player_use_skill() Handler Architecture (2026-03-28)
+- **Before**: 300+ line if/elif chain in `player_use_skill()` — one typo breaks combat silently
+- **After**: Three handler modules with registries:
+  - `HEAL_HANDLERS` dict: heal_calc name → (calc_fn, message_template). 15 heal types.
+  - `SHIELD_HANDLERS` dict: shield_calc name → (build_fn, message_template). 10 shield types.
+  - `BUFF_HANDLERS` dict: buff_type → apply_fn. `BUFF_MESSAGES` dict: buff_type → message template. 23 buff types.
+  - `player_use_skill()` now: pre-checks → dispatch to handler → damage path. ~30 lines.
+- Adding a new skill: write one small function, add one dict entry. No risk to existing code.
+- All existing behaviors preserved: tested by compilation + line-by-line comparison.
+
 ## Known Issues / Future Work
-- Some buff types still unimplemented (bladeAura, copyAttack, skipCombat, realityAnchor, etc.) — low priority, not used by any current skill
-- `player_use_skill()` is 300+ lines of if/elif — consider refactoring into handler functions per skill type
+- Some buff types still unimplemented (bladeAura, copyAttack, skipCombat, etc.) — low priority, not used by any current skill
+- `draw_text_with_glow()` renders text 9× per call — #1 performance bottleneck, should cache
+- `pygame_game.py` at 3,200 lines — screens could be split into modules
+- Parchment texture cache by (w,h) tuple — could use atlas or tile approach
+- No automated tests
 - `draw_text_with_glow()` renders text 8+ times per call — performance bottleneck, consider caching
 - No automated tests — one bad number in skill dict can break combat silently
 

@@ -98,8 +98,19 @@ Last updated: 2026-03-28 06:08
 - Fix: SaveScreen now tracks where it was opened from and uses `_get_return_screen()` helper
 - Save/Load from combat now correctly returns to combat screen after closing
 
+### ✅ Step 22: Refactor player_use_skill() into Handler Functions (Session 11 — 2026-03-28)
+- Extracted 300-line if/elif block into three handler modules:
+  - `_handle_self_heal()` — 15 heal types via HEAL_HANDLERS registry (calc_fn + message template)
+  - `_handle_self_shield()` — 10 shield types via SHIELD_HANDLERS registry
+  - `_handle_self_buff()` — 23 buff types via BUFF_HANDLERS registry + _BUFF_MESSAGES
+- Each handler is a small function: takes (state, skill), returns effect-specific data
+- `player_use_skill()` reduced from ~300 lines to ~30 lines of dispatch
+- Adding a new skill type = one function + one registry entry (no touching the main function)
+- All 48 existing skill behaviors preserved exactly (heal, shield, buff handlers)
+- Damage-dealing path unchanged
+
 ### Pending
-- #8: Refactor `player_use_skill()` (300+ lines if/elif → handler functions)
+- #9: Cache `draw_text_with_glow()` — pre-render glow surfaces per unique string+font+color
 - #9: Cache `draw_text_with_glow()` — pre-render glow surfaces per unique string+font+color
 - #10: Add automated combat simulation tests
 - #11: Split `pygame_game.py` screens into separate modules
