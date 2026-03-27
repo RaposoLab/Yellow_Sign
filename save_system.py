@@ -5,7 +5,7 @@ Simple JSON-based save/load.
 
 import json
 import os
-from game_engine import GameState, Skill, Item, StatusEffect
+from engine import GameState, Skill, Item, StatusEffect
 
 
 SAVE_DIR = os.path.join(os.path.dirname(__file__), "saves")

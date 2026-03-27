@@ -9,17 +9,28 @@
 - **Palette**: Dark purples, golds, bone whites — ornate gothic style
 - **Design reference**: `transparent-Text-box-Sample.png` shows the ornate gold-trim dark panel style
 
-## File Structure
+## File Structure (Refactored 2026-03-28)
 ```
 game/
-├── pygame_game.py        ← Main graphical game (THE FILE WE EDIT)
-├── game_data.py          ← All game data (classes, enemies, items, events)
-├── game_engine.py        ← Core logic (combat, leveling, items)
-├── save_system.py        ← Save/load functionality
-├── main.py               ← Terminal-based entry point (separate)
+├── pygame_game.py        ← Main graphical game (THE FILE WE EDIT) — 3157 lines
+├── save_system.py        ← Save/load functionality (JSON, 5 slots)
+├── main.py               ← Terminal entry point (NOTE: needs ui.py, not included)
+├── data/                 ← Game data package (replaces old game_data.py)
+│   ├── __init__.py       ← Re-exports everything
+│   ├── constants.py      ← MAX_ACTIVE_SKILLS, sprite/icon mappings
+│   ├── classes.py        ← 5 classes + ~40 skills each (308 lines)
+│   ├── enemies.py        ← Enemy definitions + boss (86 lines)
+│   ├── items.py          ← Rarity, prefixes, equipment templates (65 lines)
+│   ├── events.py         ← Floor events + traps (97 lines)
+│   └── narratives.py     ← Floor narratives + path templates (56 lines)
+├── engine/               ← Game logic package (replaces old game_engine.py)
+│   ├── __init__.py       ← Re-exports everything
+│   ├── models.py         ← Item, Skill, StatusEffect, Enemy, GameState (372 lines)
+│   ├── combat.py         ← Combat system, item generation, damage calc (823 lines)
+│   └── world.py          ← Floor progression, events, traps, shop (175 lines)
 ├── ROADMAP.md            ← Visual overhaul progress tracker
 ├── GAME_MEMORY.md        ← This file
-├── images/               ← ALL sprite/background/icon assets (41 files)
+├── images/               ← ALL sprite/background/icon assets (47 files)
 ├── fonts/                ← Custom fonts (CinzelDecorative, Cinzel)
 └── saves/                ← Save files directory (auto-created)
 ```
@@ -75,6 +86,15 @@ game/
 - ✅ Step 14: Exploration Path Icons + Two-Line Descriptions — 6 new path choice icons loaded at 64×64, PATH_TEMPLATES expanded with desc2, ExploreScreen redesigned with icon + name + description per path button
 - ✅ Step 15: Side-by-Side Path Layout + Bigger Icons — icons scaled to 150×150, stacked layout → side-by-side cards (560×260), description text word-wrapped
 - ✅ Step 16: Luck Icon Fix + Card Rendering Cleanup — replaced Luck_Icon_F with correct version, regenerated variants, cleaner card rendering
+
+## Refactoring Notes (2026-03-28)
+- Split `game_data.py` (650 lines) → `data/` package (6 files, biggest is 308 lines)
+- Split `game_engine.py` (1361 lines) → `engine/` package (3 logic files + init)
+- `pygame_game.py` kept as single file (splitting UI code = high risk, low reward)
+- All imports updated: `from data import ...` / `from engine import ...`
+- `main.py` still references broken `ui` module (separate issue, not addressed)
+- Backward-compatible: `data/__init__.py` and `engine/__init__.py` re-export everything
+- Old `game_data.py` and `game_engine.py` removed
 
 ## Crash Prevention Protocol
 1. ONE task per prompt
