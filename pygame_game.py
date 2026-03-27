@@ -2609,11 +2609,16 @@ class StatsScreen(Screen):
             bonus = val - base
             sc = stat_colors.get(stat_name, C.INK)
 
+            # Stat icon
+            icon = self.assets.images.get(f"stat_{stat_name}_64")
+            if icon:
+                surface.blit(icon, (lx - 20, y - 12))
+
             text = f"{stat_name.upper()}: {val}"
             if bonus > 0:
                 text += f"  ({base}+{bonus})"
-            draw_text_with_glow(surface, text, self.assets.fonts["body"], sc, lx, y)
-            y += 42
+            draw_text_with_glow(surface, text, self.assets.fonts["body"], sc, lx + 56, y + 2)
+            y += 58
 
         # Combat stats (right side)
         rx = SCREEN_W // 2 + 60
