@@ -1149,7 +1149,7 @@ class ClassSelectScreen(Screen):
         ry += 28
 
         future = sorted(
-            [sk for sk in cls["skills"] if sk.get("tier", 1) == 1 and not sk.get("starting", False)],
+            [sk for sk in cls["skills"] if sk.get("tier", 1) == 3 and not sk.get("starting", False)],
             key=lambda s: s.get("unlock_lv", 1)
         )[:3]
         self.future_btns = []

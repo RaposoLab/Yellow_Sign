@@ -223,6 +223,7 @@ class GameState:
         self.rage = False
         self.combat = None
         self.buffs = {}  # buff_type -> remaining turns
+        self.temp_stats = {}  # stat -> bonus amount (combat-only, cleared on combat end)
         self.hits_taken = 0
         self.pending_levelup_skills = []
 
@@ -271,6 +272,11 @@ class GameState:
                         bonus_def -= v
                     elif k == "hp":
                         bonus_hp -= v
+
+        # Apply temporary combat stat bonuses
+        for k, v in self.temp_stats.items():
+            if k in ("int", "str", "agi", "wis", "luck"):
+                s[k] = s.get(k, 0) + v
 
         self.stats = s
         self.max_hp = max(1, cls["hp_base"] + cls["hp_per_level"] * (self.level - 1) + int(s["str"] * 2.5) + bonus_hp)
@@ -464,6 +470,7 @@ def start_combat(state, is_boss=False):
     state.barrier = 0
     state.rage = False
     state.buffs = {}
+    state.temp_stats = {}
     state.hits_taken = 0
     for sk in state.active_skills:
         sk.current_cd = 0
@@ -680,9 +687,32 @@ def tick_player_buffs(state):
         if state.buffs[key] <= 0:
             to_remove.append(key)
 
+    # Mapping of stat buff types to their temp_stats keys
+    STAT_BUFF_KEYS = {
+        "permIntWis": ["int", "wis"],
+        "permAtk2": ["str"],
+        "permWisStr": ["wis", "str"],
+        "permAgiLuk": ["agi", "luck"],
+        "permAll1": ["int", "str", "agi", "wis", "luck"],
+        "thickSkull": ["str", "wis"],
+        "perseverance": ["wis", "str"],
+        "shadowBless": ["agi", "luck"],
+        "randStat2": ["int", "str", "agi", "wis", "luck"],  # cleared fully on expire
+    }
+
     for key in to_remove:
         del state.buffs[key]
-        logs.append((f"{key} expired.", "info"))
+        # Clean up temp stats if this was a stat buff
+        if key in STAT_BUFF_KEYS:
+            for sk in STAT_BUFF_KEYS[key]:
+                state.temp_stats.pop(sk, None)
+            state.recalc_stats()
+            logs.append((f"{key} — temporary stat boost expired.", "info"))
+        elif key == "permCrit10":
+            state.crit = max(0, state.crit - 25)
+            logs.append(("Sixth Sense — CRIT bonus expired.", "info"))
+        else:
+            logs.append((f"{key} expired.", "info"))
     return logs
 
 
@@ -848,32 +878,38 @@ def player_use_skill(state, skill_index):
             state.hp = max(1, state.hp - hp_loss)
             logs.append((f"Warlord's Command! All buffs active! -{hp_loss} HP!", "effect"))
         elif skill.buff_type == "permIntWis":
-            state.base_stats["int"] = state.base_stats.get("int", 0) + 2
-            state.base_stats["wis"] = state.base_stats.get("wis", 0) + 1
+            state.temp_stats["int"] = state.temp_stats.get("int", 0) + 6
+            state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
+            state.buffs["permIntWis"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Forbidden Text Deciphered! INT+2, WIS+1 permanently!", "effect"))
+            logs.append(("Forbidden Text Deciphered! INT+6, WIS+4 for 5 turns!", "effect"))
         elif skill.buff_type == "permAtk2":
-            state.base_stats["str"] = state.base_stats.get("str", 0) + 2
+            state.temp_stats["str"] = state.temp_stats.get("str", 0) + 5
+            state.buffs["permAtk2"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Warpaint! STR+2 permanently!", "effect"))
+            logs.append(("Warpaint! STR+5 for 5 turns!", "effect"))
         elif skill.buff_type == "permWisStr":
-            state.base_stats["wis"] = state.base_stats.get("wis", 0) + 2
-            state.base_stats["str"] = state.base_stats.get("str", 0) + 1
+            state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 6
+            state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
+            state.buffs["permWisStr"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Oath of the Warden! WIS+2, STR+1 permanently!", "effect"))
+            logs.append(("Oath of the Warden! WIS+6, STR+4 for 5 turns!", "effect"))
         elif skill.buff_type == "permAgiLuk":
-            state.base_stats["agi"] = state.base_stats.get("agi", 0) + 2
-            state.base_stats["luck"] = state.base_stats.get("luck", 0) + 1
+            state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 7
+            state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 4
+            state.buffs["permAgiLuk"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Perfect Assassin! AGI+2, LUCK+1 permanently!", "effect"))
+            logs.append(("Perfect Assassin! AGI+7, LUCK+4 for 5 turns!", "effect"))
         elif skill.buff_type == "permCrit10":
-            state.crit = min(95, state.crit + 10)
-            logs.append(("Sixth Sense! Crit permanently +10%!", "effect"))
+            state.crit = min(95, state.crit + 25)
+            state.buffs["permCrit10"] = skill.buff_duration
+            logs.append(("Sixth Sense! CRIT+25% for 4 turns!", "effect"))
         elif skill.buff_type == "permAll1":
             for stat in ("int", "str", "agi", "wis", "luck"):
-                state.base_stats[stat] = state.base_stats.get(stat, 0) + 1
+                state.temp_stats[stat] = state.temp_stats.get(stat, 0) + 4
+            state.buffs["permAll1"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Vision of the End! All stats +1 permanently!", "effect"))
+            logs.append(("Vision of the End! All stats +4 for 5 turns!", "effect"))
         elif skill.buff_type == "resetCds":
             for sk in state.active_skills:
                 sk.current_cd = 0
@@ -886,28 +922,32 @@ def player_use_skill(state, skill_index):
             stat_keys = ["int", "str", "agi", "wis", "luck"]
             chosen_stats = random.sample(stat_keys, 2)
             for st in chosen_stats:
-                state.base_stats[st] = state.base_stats.get(st, 0) + 2
+                state.temp_stats[st] = state.temp_stats.get(st, 0) + 3
+            state.buffs["randStat2"] = 5
             state.recalc_stats()
-            logs.append((f"Prophetic Insight! {chosen_stats[0].upper()}+2, {chosen_stats[1].upper()}+2!", "effect"))
+            logs.append((f"Prophetic Insight! {chosen_stats[0].upper()}+3, {chosen_stats[1].upper()}+3 for 5 turns!", "effect"))
         elif skill.buff_type == "madImmune":
             state.buffs["madImmune"] = 999
             state.madness = min(100, state.madness + 15)
             logs.append(("Madness Mastery! MAD no longer causes death! (+15 MAD)", "effect"))
         elif skill.buff_type == "thickSkull":
-            state.base_stats["str"] = state.base_stats.get("str", 0) + 1
-            state.base_stats["wis"] = state.base_stats.get("wis", 0) + 1
+            state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
+            state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 3
+            state.buffs["thickSkull"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Thick Skull! STR+1, WIS+1 permanently!", "effect"))
+            logs.append(("Thick Skull! STR+4, WIS+3 for 5 turns!", "effect"))
         elif skill.buff_type == "perseverance":
-            state.base_stats["wis"] = state.base_stats.get("wis", 0) + 1
-            state.base_stats["str"] = state.base_stats.get("str", 0) + 1
+            state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
+            state.temp_stats["str"] = state.temp_stats.get("str", 0) + 3
+            state.buffs["perseverance"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Perseverance! WIS+1, STR+1 permanently!", "effect"))
+            logs.append(("Perseverance! WIS+4, STR+3 for 5 turns!", "effect"))
         elif skill.buff_type == "shadowBless":
-            state.base_stats["agi"] = state.base_stats.get("agi", 0) + 1
-            state.base_stats["luck"] = state.base_stats.get("luck", 0) + 1
+            state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 4
+            state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 3
+            state.buffs["shadowBless"] = skill.buff_duration
             state.recalc_stats()
-            logs.append(("Shadow's Blessing! AGI+1, LUCK+1 permanently!", "effect"))
+            logs.append(("Shadow's Blessing! AGI+4, LUCK+3 for 5 turns!", "effect"))
         elif skill.buff_type == "abyssFort":
             state.buffs["ironSkin"] = skill.buff_duration
             state.barrier = min(3, state.barrier + 1)
