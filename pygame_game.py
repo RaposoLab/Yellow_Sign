@@ -1014,6 +1014,8 @@ class ClassSelectScreen(Screen):
         self.hovered_ability = -1
         self.hovered_future = -1
         self.start_btn = None
+        self.ability_btns = []
+        self.future_btns = []
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEMOTION:
