@@ -541,13 +541,21 @@ def rarity_color(rarity):
 # PARCHMENT TEXTURE & GLOW TEXT
 # ═══════════════════════════════════════════
 
-_obsidian_cache = {}
+# ═══════════════════════════════════════════
+# OBSIDIAN TEXTURE — TILE-BASED CACHING
+# ═══════════════════════════════════════════
+# Generate one 256x256 master tile with grain, patches, sparkles, cracks.
+# Any panel tiles this master across its area, then adds edge effects + symbols.
+# This replaces the old per-(w,h) cache that generated unique textures per size.
+
+_OBSIDIAN_TILE_SIZE = 256
+_obsidian_master_tile = None  # Lazily generated once
+
 
 def _draw_yellow_sign(surf, cx, cy, size, alpha=18):
     """Draw a faded Yellow Sign (spiral + cross) — eldritch watermark."""
     s = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
     color = (200, 160, 40, alpha)
-    import math
     points = []
     for a in range(0, 360 * 3, 5):
         rad = math.radians(a)
@@ -566,7 +574,6 @@ def _draw_elder_sign(surf, cx, cy, size, alpha=15):
     """Draw a faded Elder Sign (star in circle)."""
     s = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
     color = (140, 100, 200, alpha)
-    import math
     pygame.draw.circle(s, color, (size, size), size - 2, 1)
     pts = []
     for i in range(10):
@@ -580,7 +587,6 @@ def _draw_alchemical_circle(surf, cx, cy, size, alpha=12):
     """Draw a faded alchemical circle with triangle."""
     s = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
     color = (160, 120, 220, alpha)
-    import math
     pygame.draw.circle(s, color, (size, size), size - 2, 1)
     pygame.draw.circle(s, color, (size, size), size - 6, 1)
     pts = []
@@ -600,7 +606,6 @@ def _draw_crack(surf, x, y, length, alpha=25):
     color = (60, 40, 90, alpha)
     points = [(x, y)]
     cx, cy = x, y
-    import math
     angle = random.uniform(0, 360)
     for _ in range(random.randint(3, 7)):
         angle += random.uniform(-40, 40)
@@ -612,35 +617,24 @@ def _draw_crack(surf, x, y, length, alpha=25):
     if len(points) > 1:
         pygame.draw.lines(surf, color, False, points, 1)
 
-def generate_parchment_texture(width, height):
-    """Generate a procedural obsidian/dark stone texture with eldritch symbols."""
-    key = (width, height)
-    if key in _obsidian_cache:
-        return _obsidian_cache[key]
 
-    try:
-        return _generate_obsidian_inner(width, height, key)
-    except Exception as e:
-        print(f"Warning: texture generation failed ({width}x{height}): {e}")
-        # Emergency fallback — solid dark surface
-        surf = pygame.Surface((width, height), pygame.SRCALPHA)
-        surf.fill((*C.OBSIDIAN, 250))
-        _obsidian_cache[key] = surf
-        return surf
+def _generate_obsidian_tile():
+    """Generate the 256x256 master obsidian tile. Called once, cached forever."""
+    global _obsidian_master_tile
+    if _obsidian_master_tile is not None:
+        return _obsidian_master_tile
 
-def _generate_obsidian_inner(width, height, key):
-    """Internal obsidian texture generation."""
-
-    surf = pygame.Surface((width, height), pygame.SRCALPHA)
+    size = _OBSIDIAN_TILE_SIZE
+    surf = pygame.Surface((size, size), pygame.SRCALPHA)
     base = C.OBSIDIAN
 
     # Fill base — deep obsidian
     surf.fill((*base, 250))
 
     # Layer 1: Fine crystalline grain noise
-    for _ in range(width * height // 3):
-        px = random.randint(0, width - 1)
-        py = random.randint(0, height - 1)
+    for _ in range(size * size // 3):
+        px = random.randint(0, size - 1)
+        py = random.randint(0, size - 1)
         v = random.randint(-12, 12)
         r = max(0, min(255, base[0] + v))
         g = max(0, min(255, base[1] + v))
@@ -648,10 +642,10 @@ def _generate_obsidian_inner(width, height, key):
         surf.set_at((px, py), (r, g, b, 255))
 
     # Layer 2: Purple/indigo color variation patches
-    for _ in range(max(4, width * height // 3000)):
-        cx = random.randint(0, width)
-        cy = random.randint(0, height)
-        radius = random.randint(20, 60)
+    for _ in range(max(4, size * size // 3000)):
+        cx = random.randint(0, size)
+        cy = random.randint(0, size)
+        radius = random.randint(15, 40)
         spot = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
         for ring in range(radius, 0, -1):
             alpha = int(12 * (1 - ring / radius))
@@ -660,9 +654,9 @@ def _generate_obsidian_inner(width, height, key):
         surf.blit(spot, (cx - radius, cy - radius))
 
     # Layer 3: Bright crystalline sparkle points
-    for _ in range(max(5, width * height // 2000)):
-        sx = random.randint(0, width - 1)
-        sy = random.randint(0, height - 1)
+    for _ in range(max(5, size * size // 2000)):
+        sx = random.randint(0, size - 1)
+        sy = random.randint(0, size - 1)
         sparkle = random.choice([
             (200, 160, 50, random.randint(15, 35)),   # Gold sparkle
             (140, 100, 190, random.randint(10, 25)),   # Purple sparkle
@@ -671,19 +665,40 @@ def _generate_obsidian_inner(width, height, key):
         sz = random.randint(1, 3)
         pygame.draw.circle(surf, sparkle, (sx, sy), sz)
 
-    # Layer 4: Deep cracks/veins in the stone
-    for _ in range(random.randint(3, 7)):
+    # Layer 4: Cracks in the tile
+    for _ in range(random.randint(2, 4)):
         edge = random.choice(['top', 'bottom', 'left', 'right'])
         if edge == 'top':
-            _draw_crack(surf, random.randint(0, width), 0, random.randint(40, 100))
+            _draw_crack(surf, random.randint(0, size), 0, random.randint(30, 80))
         elif edge == 'bottom':
-            _draw_crack(surf, random.randint(0, width), height - 1, random.randint(40, 100))
+            _draw_crack(surf, random.randint(0, size), size - 1, random.randint(30, 80))
         elif edge == 'left':
-            _draw_crack(surf, 0, random.randint(0, height), random.randint(40, 100))
+            _draw_crack(surf, 0, random.randint(0, size), random.randint(30, 80))
         else:
-            _draw_crack(surf, width - 1, random.randint(0, height), random.randint(40, 100))
+            _draw_crack(surf, size - 1, random.randint(0, size), random.randint(30, 80))
 
-    # Layer 5: Eldritch symbols — watermarks
+    # Layer 5: A few watermarks baked into the tile
+    if size > 200:
+        _draw_yellow_sign(surf, size // 3, size // 3, 20, alpha=14)
+        _draw_elder_sign(surf, 2 * size // 3, 2 * size // 3, 15, alpha=10)
+
+    _obsidian_master_tile = surf
+    return surf
+
+
+def generate_parchment_texture(width, height):
+    """Generate a panel texture by tiling the master obsidian tile, then adding per-panel effects."""
+    tile = _generate_obsidian_tile()
+    tile_w, tile_h = tile.get_size()
+
+    surf = pygame.Surface((width, height), pygame.SRCALPHA)
+
+    # Tile the master texture across the panel area
+    for ty in range(0, height, tile_h):
+        for tx in range(0, width, tile_w):
+            surf.blit(tile, (tx, ty))
+
+    # Per-panel: additional elritch symbols (unique per panel, not tiled)
     if width > 200 and height > 150:
         _draw_yellow_sign(surf, random.randint(width // 4, 3 * width // 4),
                          random.randint(height // 4, 3 * height // 4),
@@ -703,7 +718,7 @@ def _generate_obsidian_inner(width, height, key):
             else:
                 _draw_alchemical_circle(surf, sx, sy, random.randint(10, 16), alpha=8)
 
-    # Layer 6: Purple edge glow — eldritch energy seeping through
+    # Per-panel: edge glow — eldritch energy seeping through
     glow = pygame.Surface((width, height), pygame.SRCALPHA)
     for i in range(25):
         alpha = int(35 * (1 - i / 25))
@@ -717,7 +732,7 @@ def _generate_obsidian_inner(width, height, key):
         pygame.draw.line(glow, (*edge_c, alpha), (width - 1 - i, 0), (width - 1 - i, height))
     surf.blit(glow, (0, 0))
 
-    # Layer 7: Very dark vignette on top
+    # Per-panel: dark vignette
     vig = pygame.Surface((width, height), pygame.SRCALPHA)
     for i in range(15):
         alpha = int(50 * (1 - i / 15))
@@ -725,7 +740,6 @@ def _generate_obsidian_inner(width, height, key):
         pygame.draw.line(vig, (0, 0, 0, alpha), (0, height - 1 - i), (width, height - 1 - i))
     surf.blit(vig, (0, 0))
 
-    _obsidian_cache[key] = surf
     return surf
 
 

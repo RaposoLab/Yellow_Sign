@@ -145,8 +145,20 @@ Last updated: 2026-03-28 07:17
 - All imports verified at runtime (pygame dummy driver)
 - Game instantiates with all 17 screens correctly
 
+### ✅ Step 26: Tile-Based Obsidian Texture Caching (Session 12 — 2026-03-28)
+- Problem: Old `_obsidian_cache` generated unique procedural texture per (w,h) size — slow first render, many cache entries
+- Solution: Single 256×256 master tile generated once, tiled across any panel size
+- Master tile includes: crystalline grain noise, purple color patches, sparkle points, cracks, eldritch watermarks
+- Per-panel layer: additional eldritch symbols (unique, not tiled), edge glow, dark vignette
+- Old code: `generate_parchment_texture(w,h)` → pixel-by-pixel generation proportional to w*h
+- New code: `generate_parchment_texture(w,h)` → blit master tile in a grid, add edge effects
+- Performance: first call generates 256×256 tile (~fast), all subsequent calls just tile-blit + edge effects
+- Memory: 1 tile (256KB) vs old N textures (up to dozens, each potentially megabytes)
+- Removed `_obsidian_cache`, `_generate_obsidian_inner`; added `_generate_obsidian_tile`, `_obsidian_master_tile`
+- Helper functions moved before tile generator to fix import ordering
+- All 271 combat tests pass, Game instantiation verified
+
 ### Pending
-- #12: Improve texture caching (atlas or tile-based approach)
 - Further text spacing polish if needed (exploration, equipment, general cleanup)
 
 ### ✅ Step 14: Exploration Path Icons + Two-Line Descriptions (Session 9 — 2026-03-27)
