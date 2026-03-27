@@ -12,6 +12,7 @@ class ExploreScreen(Screen):
         self.path_buttons = []
         self.cmd_buttons = {}
         self.narrative = ""
+        self.particles = []
 
     def enter(self):
         s = self.game.state
@@ -26,6 +27,21 @@ class ExploreScreen(Screen):
         if not self.paths:
             self.paths = generate_paths(s.floor)
         self._build_buttons()
+        # Spawn dust particles
+        if not self.particles:
+            for _ in range(40):
+                self.particles.append(self._new_dust_particle())
+
+    def _new_dust_particle(self):
+        return {
+            "x": random.uniform(0, SCREEN_W),
+            "y": random.uniform(130, SCREEN_H),
+            "vx": random.uniform(-0.2, 0.2),
+            "vy": random.uniform(-0.8, -0.1),
+            "size": random.randint(1, 3),
+            "alpha": random.randint(30, 80),
+            "life": random.uniform(3, 10),
+        }
 
     def _build_buttons(self):
         # Side-by-side layout: left and right cards
@@ -50,6 +66,16 @@ class ExploreScreen(Screen):
             "save": pygame.Rect(cx + 70, SCREEN_H - 70, 120, 40),
             "menu": pygame.Rect(cx + 260, SCREEN_H - 70, 120, 40),
         }
+
+    def update(self, dt):
+        for p in self.particles:
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["life"] -= dt
+            p["alpha"] = max(0, p["alpha"] - dt * 8)
+            if p["life"] <= 0 or p["y"] < 120:
+                new_p = self._new_dust_particle()
+                p.update(new_p)
 
     def handle_event(self, event):
         # Track hover for all buttons
@@ -127,6 +153,12 @@ class ExploreScreen(Screen):
     def draw(self, surface):
         s = self.game.state
         draw_hud(surface, s, self.assets)
+
+        # Dust particles (drawn behind UI)
+        for p in self.particles:
+            ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
+            ps.fill((180, 170, 150, int(p["alpha"])))
+            surface.blit(ps, (int(p["x"]), int(p["y"])))
 
         is_boss = s.floor >= s.max_floor
 

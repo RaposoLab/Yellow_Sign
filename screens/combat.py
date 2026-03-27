@@ -17,6 +17,7 @@ class CombatScreen(Screen):
         self.shake_intensity = 0
         self.turn_message = ""
         self.turn_msg_timer = 0
+        self.particles = []  # [x, y, vx, vy, size, color, alpha, life]
 
     def enter(self):
         self.damage_numbers = []
@@ -24,6 +25,36 @@ class CombatScreen(Screen):
         self._build_buttons()
         self.turn_message = ""
         self.turn_msg_timer = 0
+        self.particles = []
+        # Ambient eldritch particles
+        for _ in range(25):
+            self.particles.append(self._new_ambient_particle())
+
+    def _new_ambient_particle(self):
+        return {
+            "x": random.uniform(0, SCREEN_W),
+            "y": random.uniform(120, SCREEN_H),
+            "vx": random.uniform(-0.3, 0.3),
+            "vy": random.uniform(-1.0, -0.2),
+            "size": random.randint(1, 3),
+            "color": random.choice([(175, 130, 225), (140, 100, 200), (80, 50, 130)]),
+            "alpha": random.randint(20, 60),
+            "life": random.uniform(2, 6),
+        }
+
+    def _spawn_blood_particles(self, x, y, count=8):
+        """Spawn blood splatter particles at (x, y)."""
+        for _ in range(count):
+            self.particles.append({
+                "x": x + random.uniform(-15, 15),
+                "y": y + random.uniform(-10, 10),
+                "vx": random.uniform(-2, 2),
+                "vy": random.uniform(-3, -0.5),
+                "size": random.randint(2, 5),
+                "color": random.choice([(196, 30, 58), (139, 0, 0), (220, 50, 50)]),
+                "alpha": random.randint(120, 200),
+                "life": random.uniform(0.5, 1.5),
+            })
 
     def _build_buttons(self):
         s = self.game.state
@@ -51,6 +82,11 @@ class CombatScreen(Screen):
 
     def add_damage_number(self, text, x, y, color):
         self.damage_numbers.append([text, x, y, color, 1.5, -60])
+        # Spawn blood particles on damage
+        if color == C.CRIMSON:
+            self._spawn_blood_particles(x, y, count=10)
+        elif color == C.YELLOW:  # crit
+            self._spawn_blood_particles(x, y, count=16)
 
     def trigger_shake(self, intensity=8, duration=0.3):
         self.shake_intensity = intensity
@@ -65,6 +101,18 @@ class CombatScreen(Screen):
             self.shake_timer -= dt
         if self.turn_msg_timer > 0:
             self.turn_msg_timer -= dt
+        # Update particles
+        for p in self.particles:
+            p["x"] += p["vx"]
+            p["y"] += p["vy"]
+            p["life"] -= dt
+            p["alpha"] = max(0, p["alpha"] - dt * 40)
+        self.particles = [p for p in self.particles if p["life"] > 0 and p["alpha"] > 0]
+        # Respawn ambient particles to maintain count
+        ambient_count = sum(1 for p in self.particles if p["size"] <= 3)
+        while ambient_count < 25:
+            self.particles.append(self._new_ambient_particle())
+            ambient_count += 1
 
     def handle_event(self, event):
         s = self.game.state
@@ -281,6 +329,12 @@ class CombatScreen(Screen):
             oy = random.randint(-self.shake_intensity, self.shake_intensity)
 
         draw_hud(surface, s, self.assets)
+
+        # Particles (behind UI elements)
+        for p in self.particles:
+            ps = pygame.Surface((p["size"] * 2, p["size"] * 2), pygame.SRCALPHA)
+            ps.fill((*p["color"], int(p["alpha"])))
+            surface.blit(ps, (int(p["x"]) + ox, int(p["y"]) + oy))
 
         # --- Enemy info panel (compact nameplate above sprite) ---
         e_hp_pct = max(0, e.hp / e.max_hp * 100)
