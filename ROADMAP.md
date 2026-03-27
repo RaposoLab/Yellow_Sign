@@ -1,7 +1,7 @@
 # Visual Overhaul Roadmap
 
 ## Status: ✅ COMPLETE + Code Refactoring
-Last updated: 2026-03-28 06:08
+Last updated: 2026-03-28 07:17
 
 ## Workflow
 **ONE task per prompt. Save code + roadmap + memory after each step.**
@@ -128,13 +128,24 @@ Last updated: 2026-03-28 06:08
 - Run: `python3 tests/test_combat.py`
 - Can catch regressions in: buff logic, damage math, skill handlers, combat flow
 
+### ✅ Step 25: Split pygame_game.py Screens into Separate Modules (Session 12 — 2026-03-28)
+- Split 3,225-line monolith into 21 files:
+  - `shared.py` (892 lines) — Constants, C class, Assets, all drawing/texture/glow functions
+  - `pygame_game.py` (237 lines) — draw_hud, Game class, entry point (93% reduction!)
+  - `screens/` package (17 screen files + base + init):
+    - `base.py` (37 lines) — Screen base class
+    - `title.py` (134), `class_select.py` (200), `explore.py` (195), `combat.py` (385)
+    - `inventory.py` (119), `shop.py` (105), `rest.py` (88), `loot.py` (95)
+    - `event.py` (92), `trap_result.py` (37), `combat_result.py` (117), `levelup.py` (180)
+    - `gameover.py` (49), `victory.py` (84), `stats.py` (186), `save.py` (113)
+- Architecture: screens import from `shared` + `screens.base`, no circular deps
+- `screens/__init__.py` re-exports all screen classes
+- Fixed missing `import random` in title.py
+- All 271 combat tests pass
+- All imports verified at runtime (pygame dummy driver)
+- Game instantiates with all 17 screens correctly
+
 ### Pending
-- #11: Split `pygame_game.py` screens into separate modules
-- #11: Split `pygame_game.py` screens into separate modules
-- #12: Improve texture caching (atlas or tile-based approach)
-- #9: Cache `draw_text_with_glow()` — pre-render glow surfaces per unique string+font+color
-- #10: Add automated combat simulation tests
-- #11: Split `pygame_game.py` screens into separate modules
 - #12: Improve texture caching (atlas or tile-based approach)
 - Further text spacing polish if needed (exploration, equipment, general cleanup)
 

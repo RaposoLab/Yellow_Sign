@@ -12,7 +12,27 @@
 ## File Structure (Refactored 2026-03-28)
 ```
 game/
-├── pygame_game.py        ← Main graphical game (THE FILE WE EDIT) — 3157 lines
+├── pygame_game.py        ← Game class + entry point (237 lines)
+├── shared.py             ← Constants, Assets, all drawing functions (892 lines)
+├── screens/              ← Screen modules (one per screen)
+│   ├── __init__.py       ← Re-exports all screen classes
+│   ├── base.py           ← Screen base class (37 lines)
+│   ├── title.py          ← TitleScreen (134 lines)
+│   ├── class_select.py   ← ClassSelectScreen (200 lines)
+│   ├── explore.py        ← ExploreScreen (195 lines)
+│   ├── combat.py         ← CombatScreen (385 lines) — biggest
+│   ├── inventory.py      ← InventoryScreen (119 lines)
+│   ├── shop.py           ← ShopScreen (105 lines)
+│   ├── rest.py           ← RestScreen (88 lines)
+│   ├── loot.py           ← LootScreen (95 lines)
+│   ├── event.py          ← EventScreen (92 lines)
+│   ├── trap_result.py    ← TrapResultScreen (37 lines)
+│   ├── combat_result.py  ← CombatResultScreen (117 lines)
+│   ├── levelup.py        ← LevelUpScreen (180 lines)
+│   ├── gameover.py       ← GameOverScreen (49 lines)
+│   ├── victory.py        ← VictoryScreen (84 lines)
+│   ├── stats.py          ← StatsScreen (186 lines)
+│   └── save.py           ← SaveScreen + LoadScreen (113 lines)
 ├── save_system.py        ← Save/load functionality (JSON, 5 slots)
 ├── data/                 ← Game data package (replaces old game_data.py)
 │   ├── __init__.py       ← Re-exports everything
@@ -72,9 +92,10 @@ game/
 ## Key Technical Notes
 - CinzelDecorative-Regular.ttf + Cinzel.ttf downloaded to `fonts/` — Victorian/occult title + body fonts active
 - `fit_text()` and `draw_text_fitted()` for pixel-width text truncation
-- Screen class hierarchy: `Screen` base → individual screen classes → registered in `Game.screens` dict
-- HUD is drawn by `draw_hud()` function (not a screen class), called at top of explore/combat screens
+- Screen class hierarchy: `Screen` base (screens/base.py) → individual screen classes (screens/*.py) → registered in `Game.screens` dict
+- HUD is drawn by `draw_hud()` function (in pygame_game.py), called at top of explore/combat screens
 - `hover_idx` + `update_hover()` on Screen base class — all screens use hover effects
+- All shared drawing/texture code in `shared.py` — screens import from it, no circular deps
 
 ## Visual Overhaul Status
 - ✅ Steps 0-9: Complete (fullscreen, fonts, icons, polish)
@@ -89,10 +110,10 @@ game/
 ## Refactoring Notes (2026-03-28)
 - Split `game_data.py` (650 lines) → `data/` package (6 files, biggest is 308 lines)
 - Split `game_engine.py` (1361 lines) → `engine/` package (3 logic files + init)
-- `pygame_game.py` kept as single file (splitting UI code = high risk, low reward)
-- All imports updated: `from data import ...` / `from engine import ...`
+- Split `pygame_game.py` (3,225 lines) → `shared.py` (892) + `screens/` (17 files) + `pygame_game.py` (237)
+- All imports updated: `from data import ...` / `from engine import ...` / `from shared import ...` / `from screens import ...`
 - `main.py` removed (depended on nonexistent `ui` module, was dead code)
-- Backward-compatible: `data/__init__.py` and `engine/__init__.py` re-export everything
+- Backward-compatible: `data/__init__.py`, `engine/__init__.py`, `screens/__init__.py` re-export everything
 - Old `game_data.py` and `game_engine.py` removed
 - Fixed ClassSelectScreen crash: `ability_btns`/`future_btns` not initialized in `__init__`
 - Fixed 38 broken buff types (see Buff System section below)
