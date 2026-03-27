@@ -499,11 +499,27 @@ def draw_ornate_button(surface, rect, text, font, hover=False, color=C.INK, disa
     # Text with glow
     draw_text_with_glow(surface, text, font, text_color, rect.centerx,
                          rect.centery - font.get_height() // 2, align="center")
-    # Hover glow effect
+    # Animated hover effect
     if hover:
-        glow = pygame.Surface((rect.w + 10, rect.h + 10), pygame.SRCALPHA)
-        glow.fill((120, 80, 200, 40))
-        surface.blit(glow, (rect.x - 5, rect.y - 5))
+        t = pygame.time.get_ticks() / 1000.0
+        # Pulsing glow: alpha oscillates between 20 and 70
+        pulse_alpha = int(20 + 50 * (0.5 + 0.5 * math.sin(t * 4)))
+        glow = pygame.Surface((rect.w + 12, rect.h + 12), pygame.SRCALPHA)
+        glow.fill((120, 80, 200, pulse_alpha))
+        surface.blit(glow, (rect.x - 6, rect.y - 6))
+        # Gold border pulse: brighter on peak
+        border_pulse = int(0.5 + 0.5 * math.sin(t * 4))
+        if border_pulse:
+            gold_glow = pygame.Surface((rect.w + 6, rect.h + 6), pygame.SRCALPHA)
+            gold_glow.fill((212, 160, 23, 35))
+            surface.blit(gold_glow, (rect.x - 3, rect.y - 3))
+        # Shimmer sweep: thin highlight moves left to right
+        shimmer_phase = (t * 1.5) % 3.0  # 3-second cycle
+        if shimmer_phase < 1.0:
+            shimmer_x = rect.x - 20 + int((rect.w + 40) * shimmer_phase)
+            shimmer = pygame.Surface((20, rect.h + 4), pygame.SRCALPHA)
+            shimmer.fill((255, 220, 100, 25))
+            surface.blit(shimmer, (shimmer_x, rect.y - 2))
 
 def draw_gold_divider(surface, x, y, width):
     """Draw a decorative gold divider line with end caps."""
