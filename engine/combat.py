@@ -161,6 +161,8 @@ def calc_player_damage(state, skill):
         bd *= 2.0
     if state.buffs.get("eclipse", 0) > 0:
         bd *= 1.3
+    if state.buffs.get("ethereal", 0) > 0:
+        bd *= 2.5  # +150% = 2.5x total
 
     # Random variance
     bd *= (1 + random.random() * state.luck * 0.005)
@@ -224,8 +226,47 @@ def apply_damage_to_enemy(state, raw, skill):
     return dmg, is_crit
 
 
+def _get_buff_defense_bonus(state, is_phys):
+    """Calculate DEF/mDEF percentage bonus from active buffs."""
+    pct = 0
+    b = state.buffs
+    if is_phys:
+        if b.get("thoughtform", 0) > 0:   pct += 30
+        if b.get("ironSkin", 0) > 0:       pct += 60
+        if b.get("chant", 0) > 0:          pct += 20
+        if b.get("innerFire", 0) > 0:      pct += 15
+        if b.get("hallowed", 0) > 0:       pct += 40
+        if b.get("fortress", 0) > 0:       pct += 80
+        if b.get("bulwark", 0) > 0:        pct += 60
+        if b.get("umbralAegis", 0) > 0:    pct += 40
+    else:
+        if b.get("thoughtform", 0) > 0:   pct += 30
+        if b.get("ironSkin", 0) > 0:       pct += 30
+        if b.get("chant", 0) > 0:          pct += 20
+        if b.get("innerFire", 0) > 0:      pct += 15
+        if b.get("mDefUp", 0) > 0:         pct += 50
+        if b.get("wardAura", 0) > 0:       pct += 30
+        if b.get("hallowed", 0) > 0:       pct += 40
+        if b.get("fortress", 0) > 0:       pct += 80
+        if b.get("bulwark", 0) > 0:        pct += 60
+        if b.get("dreamShell", 0) > 0:     pct += 80
+    return pct
+
+
+def _get_buff_evasion_bonus(state):
+    """Calculate EVA bonus from active buffs."""
+    bonus = 0
+    b = state.buffs
+    if b.get("smokeScreen", 0) > 0:   bonus += 25
+    if b.get("dreamVeil", 0) > 0:     bonus += 35
+    if b.get("evasionUp", 0) > 0:     bonus += 40
+    if b.get("dreamShell", 0) > 0:    bonus += 50
+    if b.get("umbralAegis", 0) > 0:   bonus += 60
+    return bonus
+
+
 def apply_damage_to_player(state, raw, is_phys):
-    """Apply damage to player with shield/barrier/evasion."""
+    """Apply damage to player with shield/barrier/evasion/buffs."""
     if state.barrier > 0 and raw > 0:
         state.barrier -= 1
         return 0, "barrier"
@@ -238,19 +279,63 @@ def apply_damage_to_player(state, raw, is_phys):
             raw -= state.shield
             state.shield = 0
 
-    if random.random() * 100 < state.evasion:
+    # Divine Intervention: nullify next N attacks
+    if state.buffs.get("divineInterv", 0) > 0:
+        state.buffs["divineInterv"] -= 1
+        return 0, "barrier"
+
+    # Ethereal: invulnerable this turn
+    if state.buffs.get("ethereal", 0) > 0:
         return 0, "evade"
 
-    df = state.defense if is_phys else state.m_def
+    # Flicker: 50% dodge per stack
+    if state.buffs.get("flicker", 0) > 0:
+        if random.random() < 0.5:
+            state.buffs["flicker"] -= 1
+            return 0, "evade"
+
+    # Evasion with buff bonuses
+    eva = state.evasion + _get_buff_evasion_bonus(state)
+    if random.random() * 100 < eva:
+        return 0, "evade"
+
+    # DEF/mDEF with buff bonuses
+    base_df = state.defense if is_phys else state.m_def
+    bonus_pct = _get_buff_defense_bonus(state, is_phys)
+    df = base_df * (1 + bonus_pct / 100)
     dr = df / (df + 50)
     dmg = max(1, int(raw * (1 - dr)))
+
+    # Mirror Images: 30% damage reduction
+    if state.buffs.get("mirrorImg", 0) > 0:
+        dmg = int(dmg * 0.7)
 
     if state.buffs.get("undying", 0) > 0 and dmg >= state.hp:
         state.hp = 1
         return dmg, "undying"
 
+    # Undying Pact: can't die while active
+    if state.buffs.get("undyingPact", 0) > 0 and dmg >= state.hp:
+        state.hp = 1
+        return dmg, "undying"
+
+    # Final Stand: invulnerable
+    if state.buffs.get("finalStand", 0) > 0:
+        return 0, "barrier"
+
     state.hp = max(0, state.hp - dmg)
     state.hits_taken += 1
+
+    # Blood Aura: lifesteal 10% on damage taken (counter-intuitive but works as passive drain)
+    if state.buffs.get("bloodAura", 0) > 0:
+        heal = int(dmg * 0.10)
+        state.hp = min(state.max_hp, state.hp + heal)
+
+    # Retribution Aura: reflect 30% damage back to enemy
+    if state.buffs.get("retribAura", 0) > 0 and state.combat:
+        reflected = int(dmg * 0.30)
+        state.combat.enemy.hp = max(0, state.combat.enemy.hp - reflected)
+
     return dmg, "hit"
 
 
@@ -311,10 +396,17 @@ def tick_player_buffs(state):
             h = int(state.max_hp * 0.08)
             state.hp = min(state.max_hp, state.hp + h)
             logs.append((f"Regen heals {h} HP.", "heal"))
+        elif key == "regen5" and state.buffs[key] >= 0:
+            h = int(state.max_hp * 0.05)
+            state.hp = min(state.max_hp, state.hp + h)
+            logs.append((f"Regen heals {h} HP.", "heal"))
         elif key == "oath" and state.buffs[key] >= 0:
             h = int(state.max_hp * 0.10)
             state.hp = min(state.max_hp, state.hp + h)
             logs.append((f"Oath heals {h} HP.", "heal"))
+        elif key == "calmMind" and state.buffs[key] >= 0:
+            state.madness = max(0, state.madness - 3)
+            logs.append(("Calm Mind reduces madness by 3.", "heal"))
         if state.buffs[key] <= 0:
             to_remove.append(key)
 
@@ -607,6 +699,10 @@ def player_use_skill(state, skill_index):
         h = int(dmg * skill.lifesteal)
         state.hp = min(state.max_hp, state.hp + h)
         logs.append((f"Stole {h} HP!", "heal"))
+
+    # Consume ethereal buff after attack
+    if state.buffs.get("ethereal", 0) > 0 and dmg > 0:
+        state.buffs["ethereal"] = 0
 
     if state.madness >= 100:
         return logs + [("Your mind shatters from the madness!", "damage")]

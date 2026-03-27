@@ -16,15 +16,14 @@ import pygame
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from data import (
-    CLASSES, ENEMIES, BOSS, ENEMY_SPRITES, CLASS_ICONS, STAT_ICONS,
+    CLASSES, BOSS, ENEMY_SPRITES, CLASS_ICONS, STAT_ICONS,
     EVENTS, TRAPS, RARITY_DATA, FLOOR_NARRATIVES, MAX_ACTIVE_SKILLS,
-    PATH_TEMPLATES,
 )
 from engine import (
     GameState, generate_item, start_combat, player_use_skill,
     enemy_turn, process_status_effects, process_player_status_effects,
     tick_player_buffs, check_boss_phase, combat_run_attempt,
-    generate_paths, advance_floor, get_floor_narrative,
+    generate_paths, advance_floor,
     resolve_event, resolve_trap, generate_shop, buy_shop_item,
 )
 from save_system import save_game, load_game, list_saves
