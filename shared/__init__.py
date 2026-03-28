@@ -26,6 +26,7 @@ from shared.rendering import (
     generate_parchment_texture, draw_parchment_panel,
     draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow,
     draw_hud,
+    draw_status_icon, draw_status_icons_row, draw_status_tooltip,
 )
 
 # Also re-export data imports that were previously in shared.py's namespace

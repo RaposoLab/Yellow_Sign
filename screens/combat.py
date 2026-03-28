@@ -1,5 +1,5 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, draw_status_icons_row, draw_status_tooltip
 import random
 from screens.base import Screen
 from engine import (player_use_skill, enemy_turn, check_boss_phase,
@@ -19,6 +19,7 @@ class CombatScreen(Screen):
         self.turn_message = ""
         self.turn_msg_timer = 0
         self.particles = []  # [x, y, vx, vy, size, color, alpha, life]
+        self._enemy_status_rects = []  # [(Rect, effect_type), ...] for hover tooltips
 
     def enter(self):
         self.damage_numbers = []
@@ -340,6 +341,23 @@ class CombatScreen(Screen):
             draw_text_with_glow(surface, l, font, color,
                                 tip_x + padding, tip_y + padding + i * line_h)
 
+    def _draw_status_tooltips(self, surface):
+        """Check hover over status icons and draw tooltips for both enemy and player."""
+        mx, my = pygame.mouse.get_pos()
+
+        # Check enemy status icons
+        for rect, effect_type in self._enemy_status_rects:
+            if rect.collidepoint(mx, my):
+                draw_status_tooltip(surface, effect_type, rect, self.assets.fonts["tiny"])
+                return  # Only show one tooltip at a time
+
+        # Check player status icons (from HUD)
+        if hasattr(surface, '_hud_status_rects'):
+            for rect, effect_type in surface._hud_status_rects:
+                if rect.collidepoint(mx, my):
+                    draw_status_tooltip(surface, effect_type, rect, self.assets.fonts["tiny"])
+                    return
+
     def draw(self, surface):
         s = self.game.state
         c = s.combat
@@ -382,15 +400,17 @@ class CombatScreen(Screen):
         draw_text_with_glow(surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"],
                   C.INK, panel_x + 350, panel_y + 44)
 
-        # Enemy statuses (inline next to HP bar)
-        est = []
-        for st in e.statuses:
-            est.append(f"{st.type.upper()}:{st.duration}")
+        # Enemy status icons (replaces text statuses)
+        enemy_statuses = list(e.statuses)
         if e.stunned:
-            est.append("STUNNED")
-        if est:
-            draw_text_with_glow(surface, " ".join(est), self.assets.fonts["tiny"],
-                      C.CRIMSON, panel_x + 200, panel_y + 60)
+            # Add stun as a virtual status for icon display
+            from engine.models import StatusEffect
+            stun_se = StatusEffect("stunned", 1)
+            enemy_statuses = [stun_se] + enemy_statuses
+        self._enemy_status_rects = draw_status_icons_row(
+            surface, panel_x + 12, panel_y + 58, enemy_statuses, {},
+            size=20, gap=4
+        )
 
         # --- Enemy sprite (right side, below panel, fully visible) ---
         enemy_sprite = self.assets.get_sprite(e.name)
@@ -456,3 +476,6 @@ class CombatScreen(Screen):
         for dn in self.damage_numbers:
             text, x, y, color, timer, vy = dn
             draw_text(surface, text, self.assets.fonts["heading"], color, int(x) + ox, int(y) + oy)
+
+        # Status effect tooltips on hover
+        self._draw_status_tooltips(surface)

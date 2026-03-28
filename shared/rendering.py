@@ -8,6 +8,7 @@ import random
 import pygame
 from shared.constants import C, SCREEN_W, SCREEN_H, CLASS_COLORS
 from data import CLASS_ICONS
+from data.buff_debuff_data import get_effect_info
 
 
 # ═══════════════════════════════════════════
@@ -145,6 +146,182 @@ def mad_color(madness):
 
 def rarity_color(rarity):
     return {1: C.ASH, 2: C.MIST, 3: C.FROST, 4: C.CRIMSON}.get(rarity, C.ASH)
+
+
+# ═══════════════════════════════════════
+# BUFF / DEBUFF ICON SYSTEM
+# ═══════════════════════════════════════
+
+_ICON_FONT_CACHE = {}  # size → font
+
+
+def _get_icon_font(size):
+    """Get a small font for icon letters, cached."""
+    if size not in _ICON_FONT_CACHE:
+        _ICON_FONT_CACHE[size] = pygame.font.Font(None, size)
+    return _ICON_FONT_CACHE[size]
+
+
+def draw_status_icon(surface, x, y, effect_type, duration=0, size=22):
+    """Draw a single status effect icon as a colored circle with letter abbreviation.
+    Returns the pygame.Rect of the icon (for hover detection)."""
+    info = get_effect_info(effect_type)
+    letter = info["letter"]
+    color = info["color"]
+    radius = size // 2
+    cx, cy = x + radius, y + radius
+
+    # Background circle — darker version of the effect color
+    bg_color = tuple(max(0, c - 120) for c in color)
+    pygame.draw.circle(surface, bg_color, (cx, cy), radius)
+    pygame.draw.circle(surface, color, (cx, cy), radius, 2)
+
+    # Inner highlight
+    highlight = pygame.Surface((size, size), pygame.SRCALPHA)
+    for r in range(radius - 1, 0, -1):
+        alpha = int(20 * (1 - r / radius))
+        pygame.draw.circle(highlight, (*color, alpha), (radius, radius), r)
+    surface.blit(highlight, (x, y))
+
+    # Letter text
+    font_size = max(11, int(size * 0.6))
+    font = _get_icon_font(font_size)
+    text_surf = font.render(letter, True, color)
+    text_rect = text_surf.get_rect(center=(cx, cy - 1))
+    surface.blit(text_surf, text_rect)
+
+    # Duration number (bottom-right corner)
+    if duration > 0:
+        dur_font = _get_icon_font(max(9, int(size * 0.45)))
+        dur_text = str(duration)
+        dur_surf = dur_font.render(dur_text, True, (255, 255, 200))
+        dur_rect = dur_surf.get_rect(bottomright=(x + size - 1, y + size))
+        # Dark background for readability
+        bg_dur = pygame.Surface((dur_rect.w + 2, dur_rect.h + 1), pygame.SRCALPHA)
+        bg_dur.fill((0, 0, 0, 160))
+        surface.blit(bg_dur, (dur_rect.x - 1, dur_rect.y - 1))
+        surface.blit(dur_surf, dur_rect)
+
+    return pygame.Rect(x, y, size, size)
+
+
+def draw_status_icons_row(surface, x, y, statuses, buffs, barrier=0, size=22, gap=5):
+    """Draw a row of status effect icons. Returns list of (Rect, effect_type) for hover detection.
+    
+    Args:
+        statuses: list of StatusEffect objects (debuffs on enemy/player)
+        buffs: dict of {buff_type: duration} (player buffs)
+        barrier: barrier stack count
+        size: icon diameter in pixels
+        gap: pixels between icons
+    """
+    icon_rects = []
+    cx = x
+
+    # Draw debuffs first (from statuses list)
+    for st in statuses:
+        rect = draw_status_icon(surface, cx, y, st.type, st.duration, size)
+        icon_rects.append((rect, st.type))
+        cx += size + gap
+
+    # Draw stun if applicable (passed as a special case — check caller)
+    # Player buffs (from buffs dict)
+    for buff_type, duration in sorted(buffs.items()):
+        if duration <= 0:
+            continue
+        # Skip internal/hidden buffs that shouldn't show icons
+        if buff_type in ("darkRegenBuff",):
+            continue
+        rect = draw_status_icon(surface, cx, y, buff_type, duration, size)
+        icon_rects.append((rect, buff_type))
+        cx += size + gap
+
+    # Barrier stacks
+    if barrier > 0:
+        rect = draw_status_icon(surface, cx, y, "barrier", barrier, size)
+        icon_rects.append((rect, "barrier"))
+        cx += size + gap
+
+    return icon_rects
+
+
+def draw_status_tooltip(surface, effect_type, icon_rect, font=None):
+    """Draw a tooltip above/below a status icon showing the effect description.
+    
+    Args:
+        surface: target surface
+        effect_type: the buff/debuff type string
+        icon_rect: pygame.Rect of the hovered icon
+        font: font to use (defaults to tiny)
+    """
+    from shared.rendering import draw_text_with_glow, draw_parchment_panel
+    info = get_effect_info(effect_type)
+
+    if font is None:
+        font = _get_icon_font(14)
+
+    padding = 8
+    max_w = 320
+    name_font = _get_icon_font(15)
+
+    # Build tooltip lines
+    lines = []
+
+    # Name line
+    name_text = info["name"]
+    if info.get("category") == "debuff":
+        name_text += " (Debuff)"
+    lines.append(("name", name_text))
+
+    # Description (word-wrap)
+    desc = info["desc"]
+    desc_words = desc.split()
+    line = ""
+    for w in desc_words:
+        test = f"{line} {w}".strip()
+        if font.size(test)[0] > max_w - padding * 2:
+            lines.append(("desc", line))
+            line = w
+        else:
+            line = test
+    if line:
+        lines.append(("desc", line))
+
+    line_h = font.get_height() + 2
+    name_line_h = name_font.get_height() + 4
+    tip_w = max_w
+    tip_h = padding * 2 + name_line_h + (len(lines) - 1) * line_h
+
+    # Position: centered above icon
+    tip_x = icon_rect.centerx - tip_w // 2
+    tip_y = icon_rect.y - tip_h - 6
+
+    # Clamp to screen
+    if tip_y < 5:
+        tip_y = icon_rect.bottom + 6
+    if tip_x < 5:
+        tip_x = 5
+    if tip_x + tip_w > SCREEN_W - 5:
+        tip_x = SCREEN_W - tip_w - 5
+
+    # Background
+    bg = pygame.Surface((tip_w, tip_h), pygame.SRCALPHA)
+    bg.fill((10, 8, 20, 235))
+    surface.blit(bg, (tip_x, tip_y))
+    pygame.draw.rect(surface, info["color"], (tip_x, tip_y, tip_w, tip_h), 1, border_radius=3)
+    pygame.draw.rect(surface, C.PARCHMENT_EDGE, (tip_x + 1, tip_y + 1, tip_w - 2, tip_h - 2), 1, border_radius=2)
+
+    # Draw lines
+    y_off = padding
+    for kind, text in lines:
+        if kind == "name":
+            draw_text_with_glow(surface, text, name_font, info["color"],
+                                tip_x + padding, tip_y + y_off)
+            y_off += name_line_h
+        else:
+            draw_text_with_glow(surface, text, font, C.INK,
+                                tip_x + padding, tip_y + y_off)
+            y_off += line_h
 
 
 # ═══════════════════════════════════════════
@@ -525,10 +702,9 @@ def draw_hud(surface, s, assets):
     draw_text(surface, f"Madness: {int(s.madness)}%", assets.fonts["small"],
               mad_color(s.madness), 620, 68)
 
-    statuses = []
-    for st in s.statuses:
-        statuses.append(f"{st.type.upper()}:{st.duration}")
-    if s.barrier > 0:
-        statuses.append(f"BARRIER:x{s.barrier}")
-    if statuses:
-        draw_text(surface, " ".join(statuses), assets.fonts["tiny"], C.MADNESS, 480, 92)
+    # Buff/debuff icons row (replaces raw text statuses)
+    _hud_status_rects = draw_status_icons_row(
+        surface, 480, 90, s.statuses, s.buffs, barrier=s.barrier, size=20, gap=4
+    )
+    # Store on surface for tooltip access (combat screen reads this)
+    surface._hud_status_rects = _hud_status_rects
