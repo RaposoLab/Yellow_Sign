@@ -5,20 +5,20 @@ Simple JSON-based save/load.
 
 import json
 import os
+from typing import List, Dict, Any, Optional
+
 from engine import GameState, Skill, Item, StatusEffect
 
 
 SAVE_DIR = os.path.join(os.path.dirname(__file__), "saves")
-
-
-def ensure_save_dir():
-    os.makedirs(SAVE_DIR, exist_ok=True)
-
-
 SAVE_VERSION = 2
 
 
-def save_game(state, slot=0):
+def ensure_save_dir() -> None:
+    os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+def save_game(state: GameState, slot: int = 0) -> str:
     """Save game state to JSON file."""
     ensure_save_dir()
     data = {
@@ -65,7 +65,7 @@ def save_game(state, slot=0):
     return filepath
 
 
-def load_game(slot=0):
+def load_game(slot: int = 0) -> Optional[GameState]:
     """Load game state from JSON file. Returns GameState or None."""
     filepath = os.path.join(SAVE_DIR, f"save_{slot}.json")
     if not os.path.exists(filepath):
@@ -115,7 +115,7 @@ def load_game(slot=0):
     return state
 
 
-def list_saves():
+def list_saves() -> List[Dict[str, Any]]:
     """List available save files with metadata."""
     ensure_save_dir()
     saves = []
@@ -139,7 +139,7 @@ def list_saves():
     return saves
 
 
-def delete_save(slot=0):
+def delete_save(slot: int = 0) -> bool:
     """Delete a save file."""
     filepath = os.path.join(SAVE_DIR, f"save_{slot}.json")
     if os.path.exists(filepath):

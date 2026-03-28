@@ -2,8 +2,31 @@
 
 import random
 import math
-from data import ENEMIES, BOSS
-from engine.models import Item, StatusEffect, Enemy, CombatState, has_status, apply_status
+from typing import List, Tuple, Optional, Dict, Any
+
+from data import (
+    ENEMIES, BOSS,
+    DEFENSE_DENOM, CRIT_BASE_MULT,
+    DMG_VARIANCE_LOW, DMG_VARIANCE_RANGE, LUCK_DMG_VARIANCE,
+    ENEMY_VAR_LOW, ENEMY_VAR_RANGE,
+    FLEE_BASE_CHANCE, FLEE_AGI_MULTIPLIER, FLEE_SUCCESS_MADNESS, FLEE_FAIL_MADNESS,
+    EXECUTE_HP_THRESHOLD, EXECUTE_DAMAGE_MULT,
+    COIN_FLIP_HEAL_FRAC, COIN_FLIP_DAMAGE_MULT, GAMBLE_MIN, GAMBLE_RANGE,
+    DOOM_HP_THRESHOLD,
+    BOSS_PHASE2_HP, BOSS_PHASE3_HP, BOSS_PHASE3_ATK_MULT,
+    BURNING_HP_PCT, POISON_HP_PCT, BLEEDING_HP_PCT, POISON_MAX_STACKS,
+    FREEZING_PHYS_MULT, PETRIFIED_MAGIC_MULT, WEAKENED_ATK_MULT, WEAKENED_DEF_MULT,
+    SHOCK_STUN_CHANCE, BLIND_MISS_CHANCE,
+    REGEN_HP_PCT, REGEN5_HP_PCT, OATH_HP_PCT,
+    DAMAGE_BUFF_MULTIPLIERS, DEFENSE_BUFF_TABLE, EVASION_BUFF_TABLE,
+    MIRROR_IMG_REDUCTION, BLOOD_AURA_LS_PCT, RETRIB_AURA_REFLECT_PCT,
+    DREADNOUGHT_CONVERSION_PCT, ELDRITCH_REBIRTH_HP_PCT,
+    CRIT_UP_BONUS, ATK_CRIT_UP_BONUS,
+    XP_BASE, XP_PER_FLOOR, XP_BOSS_BONUS,
+    GOLD_BASE, GOLD_PER_FLOOR, GOLD_BOSS_BONUS, GOLD_BASE_RANDOM_MAX,
+    MADNESS_BOSS_KILL, MADNESS_NORMAL_KILL, STAT_KEYS,
+)
+from engine.models import Item, Skill, StatusEffect, Enemy, CombatState, GameState, has_status, apply_status
 from engine.items import generate_item
 from engine.skills import player_use_skill
 
@@ -12,7 +35,7 @@ from engine.skills import player_use_skill
 # COMBAT SYSTEM
 # ═══════════════════════════════════════════
 
-def start_combat(state, is_boss=False):
+def start_combat(state: GameState, is_boss: bool = False) -> None:
     """Initialize a combat encounter."""
     if is_boss or state.floor >= state.max_floor:
         ed = dict(BOSS)
@@ -34,7 +57,8 @@ def start_combat(state, is_boss=False):
     if enemy.desc:
         state.combat.add_log(enemy.desc, "info")
 
-def _base_damage(state, skill):
+
+def _base_damage(state: GameState, skill: Skill) -> float:
     """Core damage calculation shared by player and preview paths.
     Returns raw base damage as float (no random variance, no defense reduction).
     """
@@ -73,30 +97,18 @@ def _base_damage(state, skill):
     if skill.madness_scaling:
         bd *= (1 + state.madness / 100)
 
-    if state.rage:
-        bd *= 1.6
-    if state.buffs.get("atkCritUp", 0) > 0:
-        bd *= 1.4
-    if state.buffs.get("warpTime", 0) > 0:
-        bd *= 1.2
-    if state.buffs.get("madPower", 0) > 0:
-        bd *= 1.25
-    if state.buffs.get("darkPact", 0) > 0:
-        bd *= 1.3
-    if state.buffs.get("shadowMeld", 0) > 0:
-        bd *= 2.0
-    if state.buffs.get("eclipse", 0) > 0:
-        bd *= 1.3
-    if state.buffs.get("ethereal", 0) > 0:
-        bd *= 2.5
+    # Apply damage buff multipliers from registry
+    for buff_key, mult in DAMAGE_BUFF_MULTIPLIERS.items():
+        if state.buffs.get(buff_key, 0) > 0:
+            bd *= mult
 
     if skill.multihit and skill.multihit > 1:
         bd *= skill.multihit
 
     if skill.execute_bonus and state.combat:
         e = state.combat.enemy
-        if e and e.hp / e.max_hp < 0.25:
-            bd *= 2.0
+        if e and e.hp / e.max_hp < EXECUTE_HP_THRESHOLD:
+            bd *= EXECUTE_DAMAGE_MULT
 
     if skill.luck_bonus:
         bd *= (1 + state.luck * 0.02)
@@ -104,30 +116,30 @@ def _base_damage(state, skill):
     return bd
 
 
-def calc_player_damage(state, skill):
+def calc_player_damage(state: GameState, skill: Skill) -> int:
     """Calculate raw player damage for a skill (with random variance)."""
     bd = _base_damage(state, skill)
 
     # Random variance
-    bd *= (1 + random.random() * state.luck * 0.005)
-    bd *= (0.85 + random.random() * 0.3)
+    bd *= (1 + random.random() * state.luck * LUCK_DMG_VARIANCE)
+    bd *= (DMG_VARIANCE_LOW + random.random() * DMG_VARIANCE_RANGE)
 
     if skill.gamble:
-        gm = 0.5 + random.random() * 2.5
+        gm = GAMBLE_MIN + random.random() * GAMBLE_RANGE
         bd *= gm
 
     if skill.coin_flip:
         if random.random() < 0.5:
             bd = 0
-            h = int(state.max_hp * 0.25)
+            h = int(state.max_hp * COIN_FLIP_HEAL_FRAC)
             state.hp = min(state.max_hp, state.hp + h)
         else:
-            bd *= 1.5
+            bd *= COIN_FLIP_DAMAGE_MULT
 
     return int(bd)
 
 
-def calc_preview_damage(state, skill):
+def calc_preview_damage(state: GameState, skill: Skill) -> Tuple[int, int]:
     """Calculate deterministic preview damage for a skill (no random variance).
     Returns (base_dmg, final_dmg_after_def) as approximate range center.
     """
@@ -147,13 +159,14 @@ def calc_preview_damage(state, skill):
         if skill.armor_pierce:
             df *= (1 - skill.armor_pierce)
         if has_status(e, "weakened"):
-            df *= 0.8
-        dr = df / (df + 50)
+            df *= WEAKENED_DEF_MULT
+        dr = df / (df + DEFENSE_DENOM)
         final_dmg = max(1, int(base_dmg * (1 - dr)))
 
     return base_dmg, final_dmg
 
-def apply_damage_to_enemy(state, raw, skill):
+
+def apply_damage_to_enemy(state: GameState, raw: float, skill: Optional[Skill]) -> Tuple[int, bool]:
     """Apply damage to enemy, accounting for defense and crits."""
     e = state.combat.enemy
     df = e.defense
@@ -161,18 +174,17 @@ def apply_damage_to_enemy(state, raw, skill):
         df = e.m_def
     if skill and skill.armor_pierce:
         df *= (1 - skill.armor_pierce)
-    # Weakened debuff: enemy takes more damage (DEF reduced by 20%)
     if has_status(e, "weakened"):
-        df *= 0.8
-    dr = df / (df + 50)
+        df *= WEAKENED_DEF_MULT
+    dr = df / (df + DEFENSE_DENOM)
     dmg = max(1, int(raw * (1 - dr)))
 
     is_crit = False
     cc = state.crit
     if state.buffs.get("critUp", 0) > 0:
-        cc += 30
+        cc += CRIT_UP_BONUS
     if state.buffs.get("atkCritUp", 0) > 0:
-        cc += 20
+        cc += ATK_CRIT_UP_BONUS
     if skill and skill.flat_crit_bonus:
         cc += skill.flat_crit_bonus
     if skill and skill.guaranteed_crit:
@@ -181,52 +193,34 @@ def apply_damage_to_enemy(state, raw, skill):
         is_crit = True
 
     if is_crit:
-        dmg = int(dmg * (1.8 + state.luck * 0.01))
+        dmg = int(dmg * (CRIT_BASE_MULT + state.luck * 0.01))
 
     dmg = max(1, dmg)
     e.hp = max(0, e.hp - dmg)
     return dmg, is_crit
 
-def _get_buff_defense_bonus(state, is_phys):
-    """Calculate DEF/mDEF percentage bonus from active buffs."""
+
+def _get_buff_defense_bonus(state: GameState, is_phys: bool) -> int:
+    """Calculate DEF/mDEF percentage bonus from active buffs using registry."""
     pct = 0
     b = state.buffs
-    if is_phys:
-        if b.get("thoughtform", 0) > 0:   pct += 30
-        if b.get("ironSkin", 0) > 0:       pct += 60
-        if b.get("chant", 0) > 0:          pct += 20
-        if b.get("innerFire", 0) > 0:      pct += 15
-        if b.get("hallowed", 0) > 0:       pct += 40
-        if b.get("fortress", 0) > 0:       pct += 80
-        if b.get("bulwark", 0) > 0:        pct += 60
-        if b.get("umbralAegis", 0) > 0:    pct += 40
-    else:
-        if b.get("thoughtform", 0) > 0:   pct += 30
-        if b.get("ironSkin", 0) > 0:       pct += 30
-        if b.get("chant", 0) > 0:          pct += 20
-        if b.get("innerFire", 0) > 0:      pct += 15
-        if b.get("mDefUp", 0) > 0:         pct += 50
-        if b.get("wardAura", 0) > 0:       pct += 30
-        if b.get("hallowed", 0) > 0:       pct += 40
-        if b.get("fortress", 0) > 0:       pct += 80
-        if b.get("bulwark", 0) > 0:        pct += 60
-        if b.get("dreamShell", 0) > 0:     pct += 80
-        if b.get("astral", 0) > 0:         pct += 60
+    for buff_key, phys_pct, magic_pct in DEFENSE_BUFF_TABLE:
+        if b.get(buff_key, 0) > 0:
+            pct += phys_pct if is_phys else magic_pct
     return pct
 
-def _get_buff_evasion_bonus(state):
-    """Calculate EVA bonus from active buffs."""
+
+def _get_buff_evasion_bonus(state: GameState) -> int:
+    """Calculate EVA bonus from active buffs using registry."""
     bonus = 0
     b = state.buffs
-    if b.get("smokeScreen", 0) > 0:   bonus += 25
-    if b.get("dreamVeil", 0) > 0:     bonus += 35
-    if b.get("evasionUp", 0) > 0:     bonus += 40
-    if b.get("dreamShell", 0) > 0:    bonus += 50
-    if b.get("umbralAegis", 0) > 0:   bonus += 60
-    if b.get("astral", 0) > 0:        bonus += 40
+    for buff_key, eva_bonus in EVASION_BUFF_TABLE:
+        if b.get(buff_key, 0) > 0:
+            bonus += eva_bonus
     return bonus
 
-def apply_damage_to_player(state, raw, is_phys):
+
+def apply_damage_to_player(state: GameState, raw: float, is_phys: bool) -> Tuple[int, str]:
     """Apply damage to player with shield/barrier/evasion/buffs."""
     if state.barrier > 0 and raw > 0:
         state.barrier -= 1
@@ -240,22 +234,18 @@ def apply_damage_to_player(state, raw, is_phys):
             raw -= state.shield
             state.shield = 0
 
-    # Divine Intervention: nullify next N attacks
     if state.buffs.get("divineInterv", 0) > 0:
         state.buffs["divineInterv"] -= 1
         return 0, "barrier"
 
-    # Ethereal: invulnerable this turn
     if state.buffs.get("ethereal", 0) > 0:
         return 0, "evade"
 
-    # Flicker: 50% dodge per stack
     if state.buffs.get("flicker", 0) > 0:
         if random.random() < 0.5:
             state.buffs["flicker"] -= 1
             return 0, "evade"
 
-    # Evasion with buff bonuses
     eva = state.evasion + _get_buff_evasion_bonus(state)
     if random.random() * 100 < eva:
         return 0, "evade"
@@ -267,71 +257,65 @@ def apply_damage_to_player(state, raw, is_phys):
         base_df = state.defense if is_phys else state.m_def
     bonus_pct = _get_buff_defense_bonus(state, is_phys)
     df = base_df * (1 + bonus_pct / 100)
-    dr = df / (df + 50)
+    dr = df / (df + DEFENSE_DENOM)
     dmg = max(1, int(raw * (1 - dr)))
 
-    # Mirror Images: 30% damage reduction
     if state.buffs.get("mirrorImg", 0) > 0:
-        dmg = int(dmg * 0.7)
+        dmg = int(dmg * MIRROR_IMG_REDUCTION)
 
     if state.buffs.get("undying", 0) > 0 and dmg >= state.hp:
         state.hp = 1
         return dmg, "undying"
 
-    # Undying Pact: can't die while active
     if state.buffs.get("undyingPact", 0) > 0 and dmg >= state.hp:
         state.hp = 1
         return dmg, "undying"
 
-    # Eldritch Rebirth: auto-revive at 30% HP once
     if state.buffs.get("eldritchRebirth", 0) > 0 and dmg >= state.hp:
-        state.hp = max(1, int(state.max_hp * 0.30))
+        state.hp = max(1, int(state.max_hp * ELDRITCH_REBIRTH_HP_PCT))
         del state.buffs["eldritchRebirth"]
         return dmg, "undying"
 
-    # Final Stand: invulnerable
     if state.buffs.get("finalStand", 0) > 0:
         return 0, "barrier"
 
     state.hp = max(0, state.hp - dmg)
     state.hits_taken += 1
 
-    # Blood Aura: lifesteal 10% on damage taken (counter-intuitive but works as passive drain)
     if state.buffs.get("bloodAura", 0) > 0:
-        heal = int(dmg * 0.10)
+        heal = int(dmg * BLOOD_AURA_LS_PCT)
         state.hp = min(state.max_hp, state.hp + heal)
 
-    # Retribution Aura: reflect 30% damage back to enemy
     if state.buffs.get("retribAura", 0) > 0 and state.combat:
-        reflected = int(dmg * 0.30)
+        reflected = int(dmg * RETRIB_AURA_REFLECT_PCT)
         state.combat.enemy.hp = max(0, state.combat.enemy.hp - reflected)
 
-    # Dreadnought: convert damage taken into ATK bonus
     if state.buffs.get("dreadnought", 0) > 0:
-        atk_bonus = int(dmg * 0.5)
+        atk_bonus = int(dmg * DREADNOUGHT_CONVERSION_PCT)
         state.temp_stats["str"] = state.temp_stats.get("str", 0) + atk_bonus
         state.recalc_stats()
 
     return dmg, "hit"
 
-def process_status_effects(target, is_player, state):
+
+def process_status_effects(target, is_player: bool, state: GameState) -> List[Tuple[str, str]]:
     """Process burning, poison, bleeding, etc. Returns list of log messages."""
-    logs = []
-    to_remove = []
+    logs: List[Tuple[str, str]] = []
+    to_remove: List[StatusEffect] = []
     for st in target.statuses:
         if st.type == "burning":
-            d = int(target.max_hp * 0.06) if hasattr(target, 'max_hp') else int(state.max_hp * 0.06)
+            d = int(target.max_hp * BURNING_HP_PCT) if hasattr(target, 'max_hp') else int(state.max_hp * BURNING_HP_PCT)
             target.hp = max(0, target.hp - d)
             who = "You burn" if is_player else f"{target.name} burns"
             logs.append((f"{who} for {d}!", "damage"))
         elif st.type == "poisoned":
             stacks = getattr(st, 'stacks', 1)
-            d = int(target.max_hp * 0.04 * stacks) if hasattr(target, 'max_hp') else int(state.max_hp * 0.04 * stacks)
+            d = int(target.max_hp * POISON_HP_PCT * stacks) if hasattr(target, 'max_hp') else int(state.max_hp * POISON_HP_PCT * stacks)
             target.hp = max(0, target.hp - d)
             who = "Poison" if is_player else f"Poison on {target.name}"
             logs.append((f"{who} deals {d}! ({stacks} stacks)", "damage"))
         elif st.type == "bleeding":
-            d = int(target.max_hp * 0.05) if hasattr(target, 'max_hp') else int(state.max_hp * 0.05)
+            d = int(target.max_hp * BLEEDING_HP_PCT) if hasattr(target, 'max_hp') else int(state.max_hp * BLEEDING_HP_PCT)
             target.hp = max(0, target.hp - d)
             who = "You bleed" if is_player else f"{target.name} bleeds"
             logs.append((f"{who} for {d}!", "damage"))
@@ -343,9 +327,8 @@ def process_status_effects(target, is_player, state):
     for st in to_remove:
         target.statuses.remove(st)
         if st.type == "doom" and not is_player:
-            # Doom triggers: instant kill if below 30% HP
             hp_pct = target.hp / target.max_hp if target.max_hp > 0 else 0
-            if hp_pct < 0.30:
+            if hp_pct < DOOM_HP_THRESHOLD:
                 target.hp = 0
                 logs.append((f"━━ THE YELLOW SIGN CLAIMS {target.name}! ━━", "crit"))
             else:
@@ -356,28 +339,28 @@ def process_status_effects(target, is_player, state):
             logs.append((f"{st.type} wears off.", "info"))
     return logs
 
-def tick_player_buffs(state):
+
+def tick_player_buffs(state: GameState) -> List[Tuple[str, str]]:
     """Tick player buff durations and apply regen/oath effects."""
-    logs = []
-    to_remove = []
+    logs: List[Tuple[str, str]] = []
+    to_remove: List[str] = []
     for key in list(state.buffs.keys()):
         state.buffs[key] -= 1
         if key == "regen" and state.buffs[key] >= 0:
-            h = int(state.max_hp * 0.08)
+            h = int(state.max_hp * REGEN_HP_PCT)
             state.hp = min(state.max_hp, state.hp + h)
             logs.append((f"Regen heals {h} HP.", "heal"))
         elif key == "regen5" and state.buffs[key] >= 0:
-            h = int(state.max_hp * 0.05)
+            h = int(state.max_hp * REGEN5_HP_PCT)
             state.hp = min(state.max_hp, state.hp + h)
             logs.append((f"Regen heals {h} HP.", "heal"))
         elif key == "oath" and state.buffs[key] >= 0:
-            h = int(state.max_hp * 0.10)
+            h = int(state.max_hp * OATH_HP_PCT)
             state.hp = min(state.max_hp, state.hp + h)
             logs.append((f"Oath heals {h} HP.", "heal"))
         if state.buffs[key] <= 0:
             to_remove.append(key)
 
-    # Mapping of stat buff types to their temp_stats keys
     STAT_BUFF_KEYS = {
         "permIntWis": ["int", "wis"],
         "permAtk2": ["str"],
@@ -387,14 +370,13 @@ def tick_player_buffs(state):
         "thickSkull": ["str", "wis"],
         "perseverance": ["wis", "str"],
         "shadowBless": ["agi", "luck"],
-        "randStat2": ["int", "str", "agi", "wis", "luck"],  # cleared fully on expire
+        "randStat2": ["int", "str", "agi", "wis", "luck"],
         "pallidMask": ["int", "str", "agi", "wis", "luck"],
         "dreadnought": ["str"],
     }
 
     for key in to_remove:
         del state.buffs[key]
-        # Clean up temp stats if this was a stat buff
         if key in STAT_BUFF_KEYS:
             for sk in STAT_BUFF_KEYS[key]:
                 state.temp_stats.pop(sk, None)
@@ -407,29 +389,12 @@ def tick_player_buffs(state):
             logs.append((f"{key} expired.", "info"))
     return logs
 
-# ═══════════════════════════════════════════
-# SKILL HANDLERS (extracted from player_use_skill)
-# ═══════════════════════════════════════════
-
-# Maps heal_calc names → (calc_fn, message_template, extra_fn)
-# calc_fn(state, skill) → heal_amount (int)
-# extra_fn(state, skill) is called after heal (optional side effects)
-
-# Heal handler registry: heal_calc name → (calc_fn, message)
-
-# Shield handler registry: shield_calc name → (build_fn, message)
-# build_fn(state, skill) → shield_value (int), or None if custom logic
-
-# Buff handler registry: buff_type → (apply_fn, message)
-# apply_fn(state, skill) → None (mutates state directly)
-
-# Static messages per buff_type (most don't need dynamic formatting)
 
 # ═══════════════════════════════════════════
-# MAIN SKILL DISPATCHER
+# ENEMY AI
 # ═══════════════════════════════════════════
 
-def _get_enemy_intent_message(skill):
+def _get_enemy_intent_message(skill: Dict[str, Any]) -> str:
     """Generate a descriptive intent message for the enemy's next action."""
     stype = skill.get("type", "physical")
     sname = skill.get("name", "attack")
@@ -445,9 +410,10 @@ def _get_enemy_intent_message(skill):
     else:
         return f"{sname} — the enemy readies itself!"
 
-def enemy_turn(state):
+
+def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
     """Execute enemy turn. Returns list of (text, type) log messages."""
-    logs = []
+    logs: List[Tuple[str, str]] = []
     c = state.combat
     e = c.enemy
 
@@ -456,19 +422,16 @@ def enemy_turn(state):
         logs.append((f"{e.name} is stunned!", "effect"))
         return logs
 
-    # Shock stun check
     shocked = next((s for s in e.statuses if s.type == "shocked"), None)
-    if shocked and random.random() < 0.5:
+    if shocked and random.random() < SHOCK_STUN_CHANCE:
         e.stunned = True
         logs.append((f"{e.name} stunned by shock!", "effect"))
         return logs
 
-    # Blind miss check
-    if has_status(e, "blinded") and random.random() < 0.5:
+    if has_status(e, "blinded") and random.random() < BLIND_MISS_CHANCE:
         logs.append((f"{e.name} misses!", "info"))
         return logs
 
-    # Use pre-selected skill if available, otherwise pick randomly
     if c.next_enemy_skill:
         skill = c.next_enemy_skill
         c.next_enemy_skill = None
@@ -478,13 +441,13 @@ def enemy_turn(state):
     spower = skill.get("power", 1.0)
 
     if stype in ("physical", "magic"):
-        dmg = int(e.atk * spower * (0.85 + random.random() * 0.3))
+        dmg = int(e.atk * spower * (ENEMY_VAR_LOW + random.random() * ENEMY_VAR_RANGE))
         if stype == "physical" and has_status(e, "freezing"):
-            dmg = int(dmg * 0.75)
+            dmg = int(dmg * FREEZING_PHYS_MULT)
         if stype == "magic" and has_status(e, "petrified"):
-            dmg = int(dmg * 0.75)
+            dmg = int(dmg * PETRIFIED_MAGIC_MULT)
         if has_status(e, "weakened"):
-            dmg = int(dmg * 0.8)
+            dmg = int(dmg * WEAKENED_ATK_MULT)
         is_phys = stype == "physical"
         actual, result = apply_damage_to_player(state, dmg, is_phys)
         if actual > 0:
@@ -497,13 +460,13 @@ def enemy_turn(state):
             logs.append(("Undying Fury keeps you alive!", "heal"))
 
     elif stype in ("physical_debuff", "magic_debuff"):
-        dmg = int(e.atk * spower * (0.85 + random.random() * 0.3))
+        dmg = int(e.atk * spower * (ENEMY_VAR_LOW + random.random() * ENEMY_VAR_RANGE))
         if "physical" in stype and has_status(e, "freezing"):
-            dmg = int(dmg * 0.75)
+            dmg = int(dmg * FREEZING_PHYS_MULT)
         if "magic" in stype and has_status(e, "petrified"):
-            dmg = int(dmg * 0.75)
+            dmg = int(dmg * PETRIFIED_MAGIC_MULT)
         if has_status(e, "weakened"):
-            dmg = int(dmg * 0.8)
+            dmg = int(dmg * WEAKENED_ATK_MULT)
         is_phys = "physical" in stype
         actual, result = apply_damage_to_player(state, dmg, is_phys)
 
@@ -525,14 +488,19 @@ def enemy_turn(state):
 
     return logs
 
-def apply_status_effect_on_player(state, effect_type, duration):
+
+# ═══════════════════════════════════════════
+# STATUS EFFECT APPLICATION
+# ═══════════════════════════════════════════
+
+def apply_status_effect_on_player(state: GameState, effect_type: str, duration: int) -> None:
     """Apply a status effect to the player."""
     if effect_type:
         apply_status_player(state, effect_type, duration)
 
-def apply_status_player(state, effect_type, duration):
+
+def apply_status_player(state: GameState, effect_type: str, duration: int) -> None:
     """Apply status to player's status list."""
-    # Debuff immunity check
     if state.buffs.get("immunity", 0) > 0:
         return
     existing = next((s for s in state.statuses if s.type == effect_type), None)
@@ -543,28 +511,28 @@ def apply_status_player(state, effect_type, duration):
         state.statuses.append(se)
         if effect_type == "poisoned":
             se.stacks = 1
-    # Stack poison
     if effect_type == "poisoned":
         existing = next((s for s in state.statuses if s.type == "poisoned"), None)
         if existing:
-            existing.stacks = min(5, existing.stacks + 1)
+            existing.stacks = min(POISON_MAX_STACKS, existing.stacks + 1)
 
-def process_player_status_effects(state):
+
+def process_player_status_effects(state: GameState) -> List[Tuple[str, str]]:
     """Process burning/poison/bleeding on the player."""
-    logs = []
-    to_remove = []
+    logs: List[Tuple[str, str]] = []
+    to_remove: List[StatusEffect] = []
     for st in state.statuses:
         if st.type == "burning":
-            d = int(state.max_hp * 0.06)
+            d = int(state.max_hp * BURNING_HP_PCT)
             state.hp = max(0, state.hp - d)
             logs.append((f"You burn for {d}!", "damage"))
         elif st.type == "poisoned":
             stacks = getattr(st, 'stacks', 1)
-            d = int(state.max_hp * 0.04 * stacks)
+            d = int(state.max_hp * POISON_HP_PCT * stacks)
             state.hp = max(0, state.hp - d)
             logs.append((f"Poison deals {d}! ({stacks} stacks)", "damage"))
         elif st.type == "bleeding":
-            d = int(state.max_hp * 0.05)
+            d = int(state.max_hp * BLEEDING_HP_PCT)
             state.hp = max(0, state.hp - d)
             logs.append((f"You bleed for {d}!", "damage"))
         st.duration -= 1
@@ -575,22 +543,27 @@ def process_player_status_effects(state):
         logs.append((f"{st.type} wears off.", "info"))
     return logs
 
-def check_boss_phase(state):
+
+# ═══════════════════════════════════════════
+# BOSS PHASES & FLEE
+# ═══════════════════════════════════════════
+
+def check_boss_phase(state: GameState) -> List[Tuple[str, str]]:
     """Check and apply boss phase transitions."""
     c = state.combat
     if not c or not c.is_boss:
         return []
     e = c.enemy
     pct = e.hp / e.max_hp
-    logs = []
+    logs: List[Tuple[str, str]] = []
 
-    if pct <= 0.25 and not c.phase3:
+    if pct <= BOSS_PHASE3_HP and not c.phase3:
         c.phase3 = True
-        e.atk = int(e.atk * 1.4)
+        e.atk = int(e.atk * BOSS_PHASE3_ATK_MULT)
         e.skills.append({"name": "Desperate Fury", "type": "physical", "power": 2.5})
         logs.append(("━━ HASTUR ENTERS FINAL PHASE! ATK increased! ━━", "crit"))
 
-    elif pct <= 0.5 and not c.phase2:
+    elif pct <= BOSS_PHASE2_HP and not c.phase2:
         c.phase2 = True
         e.skills.append({"name": "Reality Tear", "type": "magic_debuff", "power": 2.0, "effect": "blinded", "duration": 2})
         e.skills.append({"name": "Maddening Whisper", "type": "magic_debuff", "power": 1.0, "effect": "shocked", "duration": 2})
@@ -598,17 +571,18 @@ def check_boss_phase(state):
 
     return logs
 
-def combat_run_attempt(state):
+
+def combat_run_attempt(state: GameState) -> bool:
     """Attempt to flee combat. Returns True if successful."""
     c = state.combat
     if not c:
         return False
     if c.is_boss:
-        return False  # Can't flee from boss
-    chance = 40 + state.stats["agi"] * 2
+        return False
+    chance = FLEE_BASE_CHANCE + state.stats["agi"] * FLEE_AGI_MULTIPLIER
     if random.random() * 100 < chance:
-        state.add_madness(5)
+        state.add_madness(FLEE_SUCCESS_MADNESS)
         return True
     else:
-        state.add_madness(3)
+        state.add_madness(FLEE_FAIL_MADNESS)
         return False

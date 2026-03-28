@@ -1,17 +1,21 @@
 """World systems: floor progression, events, traps, shop."""
 
 import random
+from typing import List, Tuple, Optional, Dict, Any
+
 from data import PATH_TEMPLATES, FLOOR_NARRATIVES, EVENTS, TRAPS
-from engine.models import Item
+from data import ADVANCE_FLOOR_HEAL_PCT
+from engine.models import Item, GameState
 from engine.items import generate_item
+
 
 # ═══════════════════════════════════════════
 # FLOOR PROGRESSION
 # ═══════════════════════════════════════════
 
-def generate_paths(floor):
+def generate_paths(floor: int) -> List[Dict[str, Any]]:
     """Generate two path choices for the player."""
-    weighted_pool = []
+    weighted_pool: List[Dict[str, Any]] = []
     for pt in PATH_TEMPLATES:
         w = pt["weight"]
         if pt["type"] == "shop" and floor < 3:
@@ -28,14 +32,14 @@ def generate_paths(floor):
     return [dict(p1), dict(p2)]
 
 
-def advance_floor(state):
-    """Advance to the next floor."""
-    state.hp = min(state.max_hp, state.hp + int(state.max_hp * 0.1))
+def advance_floor(state: GameState) -> bool:
+    """Advance to the next floor. Returns True if final floor reached."""
+    state.hp = min(state.max_hp, state.hp + int(state.max_hp * ADVANCE_FLOOR_HEAL_PCT))
     state.floor += 1
     return state.floor >= state.max_floor
 
 
-def get_floor_narrative(floor):
+def get_floor_narrative(floor: int) -> str:
     idx = min(floor - 1, len(FLOOR_NARRATIVES) - 1)
     return FLOOR_NARRATIVES[idx]
 
@@ -44,12 +48,12 @@ def get_floor_narrative(floor):
 # EVENT HANDLING
 # ═══════════════════════════════════════════
 
-def resolve_event(state, event_idx, outcome_idx):
+def resolve_event(state: GameState, event_idx: int, outcome_idx: int) -> Tuple[str, Optional[Item]]:
     """Resolve an event outcome. Returns (message, loot_item_or_None)."""
     ev = EVENTS[event_idx]
     outcome = ev["outcomes"][outcome_idx]
     effect = outcome["effect"]
-    loot = None
+    loot: Optional[Item] = None
     msg = outcome["text"]
 
     if effect == "gain_int_2_mad_10":
@@ -131,7 +135,7 @@ def resolve_event(state, event_idx, outcome_idx):
 # TRAP HANDLING
 # ═══════════════════════════════════════════
 
-def resolve_trap(state, trap_idx):
+def resolve_trap(state: GameState, trap_idx: int) -> Tuple[str, bool]:
     """Resolve a trap. Returns (message, game_over)."""
     trap = TRAPS[trap_idx]
     roll = random.random()
@@ -153,14 +157,15 @@ def resolve_trap(state, trap_idx):
 # SHOP
 # ═══════════════════════════════════════════
 
-def generate_shop(state):
+def generate_shop(state: GameState) -> Tuple[List[Item], List[int]]:
     """Generate shop items and prices."""
     items = [generate_item(state.floor, luck=state.luck, buffs=state.buffs) for _ in range(4)]
     prices = [10 + (item.rarity or 1) * 8 + random.randint(0, 10) for item in items]
     return items, prices
 
 
-def buy_shop_item(state, shop_items, shop_prices, shop_sold, idx):
+def buy_shop_item(state: GameState, shop_items: List[Item], shop_prices: List[int],
+                  shop_sold: List[bool], idx: int) -> Tuple[bool, str]:
     """Buy an item from the shop. Returns (success, message)."""
     if shop_sold[idx]:
         return False, "Already sold!"

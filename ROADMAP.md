@@ -399,3 +399,48 @@ Last updated: 2026-03-28 09:26
 - Warden class (wisdom-primary) uses this sprite on class select and combat screens
 - Commit: `9d9e432`
 
+
+### ✅ Step 47: Centralize Combat Constants (Session 16 — 2026-03-29)
+- **Problem**: Magic numbers scattered across `engine/combat.py` (0.06, 0.08, 1.8, 50, 0.75, etc.) and `engine/world.py` (0.1 floor heal).
+- **Solution**: Added 60+ named constants to `data/constants.py`:
+  - Combat formulas: `DEFENSE_DENOM` (50), `CRIT_BASE_MULT` (1.8), `DMG_VARIANCE_LOW/RANGE`, `LUCK_DMG_VARIANCE`
+  - Status DOT %: `BURNING_HP_PCT` (0.06), `POISON_HP_PCT` (0.04), `BLEEDING_HP_PCT` (0.05), `POISON_MAX_STACKS` (5)
+  - Debuff multipliers: `FREEZING_PHYS_MULT`, `PETRIFIED_MAGIC_MULT`, `WEAKENED_ATK_MULT`, `WEAKENED_DEF_MULT`
+  - Flee/run: `FLEE_BASE_CHANCE`, `FLEE_AGI_MULTIPLIER`, `FLEE_SUCCESS/FAIL_MADNESS`
+  - Boss phases: `BOSS_PHASE2_HP`, `BOSS_PHASE3_HP`, `BOSS_PHASE3_ATK_MULT`
+  - Rewards: `XP_BASE`, `XP_PER_FLOOR`, `GOLD_BASE`, `GOLD_PER_FLOOR`, etc.
+  - Regen: `REGEN_HP_PCT`, `REGEN5_HP_PCT`, `OATH_HP_PCT`
+  - Defense buffs: `DEFENSE_BUFF_TABLE` (12 entries), `EVASION_BUFF_TABLE` (6 entries)
+  - On-take-damage: `MIRROR_IMG_REDUCTION`, `BLOOD_AURA_LS_PCT`, `RETRIB_AURA_REFLECT_PCT`, `DREADNOUGHT_CONVERSION_PCT`, `ELDRITCH_REBIRTH_HP_PCT`
+  - UI/game: `MAX_BARRIER_STACKS`, `MADNESS_MAX`, `STAT_KEYS`, `ADVANCE_FLOOR_HEAL_PCT`
+- All constants exported via `data/__init__.py`
+- **Files changed**: `data/constants.py` (+178 lines), `data/__init__.py` (+24 lines)
+
+### ✅ Step 48: Buff Damage Multiplier Registry (#17) (Session 16 — 2026-03-29)
+- **Problem**: `_base_damage()` had 8 hardcoded `if state.buffs.get(...)` checks for damage multipliers.
+- **Solution**: Created `DAMAGE_BUFF_MULTIPLIERS` registry in `data/constants.py`:
+  ```python
+  DAMAGE_BUFF_MULTIPLIERS = {
+      "rage": 1.6, "atkCritUp": 1.4, "warpTime": 1.2, "madPower": 1.25,
+      "darkPact": 1.3, "shadowMeld": 2.0, "eclipse": 1.3, "ethereal": 2.5,
+  }
+  ```
+- `_base_damage()` now uses a single loop: `for buff_key, mult in DAMAGE_BUFF_MULTIPLIERS.items()`
+- Adding a new damage buff = one line in the registry, no touching `_base_damage()`
+- Similarly, `_get_buff_defense_bonus()` now uses `DEFENSE_BUFF_TABLE` (data-driven instead of 20+ if-chains)
+- `_get_buff_evasion_bonus()` now uses `EVASION_BUFF_TABLE` (6 entries)
+- **Files changed**: `data/constants.py`, `engine/combat.py`
+
+### ✅ Step 49: Type Hints on Engine + Save System (#15) (Session 16 — 2026-03-29)
+- Added type annotations to all engine modules and save_system:
+  - `engine/combat.py`: all 20+ functions annotated (params + return types)
+  - `engine/skills.py`: all 30+ handler functions + registries typed (added `LogEntry`, `HealCalcFn`, `ShieldCalcFn`, `BuffApplyFn` type aliases)
+  - `engine/world.py`: all 7 functions annotated
+  - `engine/items.py`: both functions annotated
+  - `engine/models.py`: already had types from dataclass refactor
+  - `save_system.py`: all 4 functions annotated
+- Used `typing` module: `List`, `Tuple`, `Dict`, `Optional`, `Any`, `Callable`
+- No runtime behavior change — type hints are purely informational
+- **Files changed**: `engine/combat.py`, `engine/skills.py`, `engine/world.py`, `engine/items.py`, `save_system.py`
+
+- All 271 combat tests pass

@@ -1,79 +1,89 @@
 """Skill handler system: heal/shield/buff registries and player skill dispatch."""
 
 import random
-from engine.models import Skill, StatusEffect, has_status, apply_status
+from typing import List, Tuple, Dict, Any, Optional, Callable
+
+from data import MADNESS_MAX, POISON_MAX_STACKS, MAX_BARRIER_STACKS
+from engine.models import Skill, GameState, StatusEffect, has_status, apply_status
+
+# Type aliases
+LogEntry = Tuple[str, str]
+HealCalcFn = Callable[[GameState, Skill], int]
+ShieldCalcFn = Callable[[GameState, Skill], Optional[int]]
+BuffApplyFn = Callable[[GameState, Skill], Optional[Dict[str, Any]]]
+
 
 # ═══════════════════════════════════════════
 # SKILL HANDLER REGISTRIES
 # ═══════════════════════════════════════════
 
-def _calc_heal_int2_buff(state, skill):
+def _calc_heal_int2_buff(state: GameState, skill: Skill) -> int:
     h = int(state.stats["int"] * 2)
     state.base_stats["int"] += 3
     state.recalc_stats()
     return h
 
-def _calc_heal_missing_hp(state, skill):
+def _calc_heal_missing_hp(state: GameState, skill: Skill) -> int:
     missing = 1 - state.hp / state.max_hp
     return int(missing * state.max_hp * 0.6)
 
-def _calc_heal_wis2_10(state, skill):
+def _calc_heal_wis2_10(state: GameState, skill: Skill) -> int:
     return int(state.stats["wis"] * 2) + 10
 
-def _calc_heal_wis3_int1(state, skill):
+def _calc_heal_wis3_int1(state: GameState, skill: Skill) -> int:
     return int(state.stats["wis"] * 3 + state.stats["int"] * 1.5)
 
-def _calc_heal_wis2_luck1(state, skill):
+def _calc_heal_wis2_luck1(state: GameState, skill: Skill) -> int:
     h = int(state.stats["wis"] * 2.5 + state.luck * 1)
-    state.madness = min(100, state.madness + 5)
+    state.madness = min(MADNESS_MAX, state.madness + 5)
     return h
 
-def _calc_heal_full_heal(state, skill):
+def _calc_heal_full_heal(state: GameState, skill: Skill) -> int:
     state.hp = state.max_hp
-    state.madness = min(100, state.madness + 25)
-    return 0  # already set to full
+    state.madness = min(MADNESS_MAX, state.madness + 25)
+    return 0
 
-def _calc_heal_int2_mend(state, skill):
+def _calc_heal_int2_mend(state: GameState, skill: Skill) -> int:
     return int(state.stats["int"] * 2)
 
-def _calc_heal_devour15(state, skill):
+def _calc_heal_devour15(state: GameState, skill: Skill) -> int:
     return int(state.max_hp * 0.15)
 
-def _calc_heal_titanResil(state, skill):
+def _calc_heal_titanResil(state: GameState, skill: Skill) -> int:
     state.statuses.clear()
     return int(state.max_hp * 0.40)
 
-def _calc_heal_layOnHands(state, skill):
+def _calc_heal_layOnHands(state: GameState, skill: Skill) -> int:
     state.statuses.clear()
     return int(state.stats["wis"] * 3)
 
-def _calc_heal_meditation(state, skill):
+def _calc_heal_meditation(state: GameState, skill: Skill) -> int:
     state.madness = max(0, state.madness - 10)
     return int(state.max_hp * 0.20)
 
-def _calc_heal_darkRegen(state, skill):
+def _calc_heal_darkRegen(state: GameState, skill: Skill) -> int:
     state.buffs["darkRegenBuff"] = 2
     return int(state.max_hp * 0.30)
 
-def _calc_heal_hasturEmbrace(state, skill):
+def _calc_heal_hasturEmbrace(state: GameState, skill: Skill) -> int:
     state.hp = state.max_hp
-    state.madness = min(100, state.madness + 20)
+    state.madness = min(MADNESS_MAX, state.madness + 20)
     state.buffs["immunity"] = 2
-    return 0  # already set to full
+    return 0
 
-def _calc_heal_secondWind(state, skill):
+def _calc_heal_secondWind(state: GameState, skill: Skill) -> int:
     state.buffs["regen"] = 2
     return int(state.max_hp * 0.20)
 
-def _calc_heal_nimbleRecov(state, skill):
+def _calc_heal_nimbleRecov(state: GameState, skill: Skill) -> int:
     state.buffs["evasionUp"] = 2
     return int(state.max_hp * 0.25)
 
-def _calc_heal_default(state, skill):
+def _calc_heal_default(state: GameState, skill: Skill) -> int:
     return int(state.stats.get(skill.stat, 10) * 2)
 
 # Heal handler registry: heal_calc name → (calc_fn, message)
-HEAL_HANDLERS = {
+HEAL_HANDLERS: Dict[str, Tuple[HealCalcFn, str]] = {
     "int2_buff":     (_calc_heal_int2_buff,     "Forbidden Knowledge heals {h} HP! INT+3!"),
     "missing_hp":    (_calc_heal_missing_hp,     "Adrenaline Surge heals {h} HP!"),
     "wis2_10":       (_calc_heal_wis2_10,        "Purifying Touch heals {h} HP!"),
@@ -92,7 +102,7 @@ HEAL_HANDLERS = {
 }
 
 
-def _handle_self_heal(state, skill):
+def _handle_self_heal(state: GameState, skill: Skill) -> List[LogEntry]:
     """Handle self_heal skill type. Returns list of log messages."""
     calc_fn, msg_template = HEAL_HANDLERS.get(skill.heal_calc, (_calc_heal_default, "Recovered {h} HP!"))
     h = calc_fn(state, skill)
@@ -101,45 +111,48 @@ def _handle_self_heal(state, skill):
     msg = msg_template.format(h=h) if h > 0 else msg_template
     return [(msg, "heal")]
 
-def _shield_int2_wis1(state, skill):
+
+# ── Shield handlers ──────────────────────────
+
+def _shield_int2_wis1(state: GameState, skill: Skill) -> int:
     return int(state.stats["int"] * 2 + state.stats["wis"])
 
-def _shield_wis3_int1(state, skill):
+def _shield_wis3_int1(state: GameState, skill: Skill) -> int:
     return int(state.stats["wis"] * 3 + state.stats["int"] * 1.5)
 
-def _shield_wis3_hits(state, skill):
+def _shield_wis3_hits(state: GameState, skill: Skill) -> int:
     return int(state.stats["wis"] * 3 + state.hits_taken * 5)
 
-def _shield_sanctuary(state, skill):
-    state.barrier = min(3, state.barrier + 3)
+def _shield_sanctuary(state: GameState, skill: Skill) -> int:
+    state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 3)
     h = int(state.stats["wis"] * 2)
     state.hp = min(state.max_hp, state.hp + h)
     return int(state.stats["wis"] * 4)
 
-def _shield_glyph_1(state, skill):
-    state.barrier = min(3, state.barrier + 1)
-    return None  # barrier only, no shield value
+def _shield_glyph_1(state: GameState, skill: Skill) -> Optional[int]:
+    state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 1)
+    return None
 
-def _shield_fracSan(state, skill):
-    state.madness = min(100, state.madness + 10)
+def _shield_fracSan(state: GameState, skill: Skill) -> int:
+    state.madness = min(MADNESS_MAX, state.madness + 10)
     return int(state.stats["int"] * 3)
 
-def _shield_str3_hits(state, skill):
+def _shield_str3_hits(state: GameState, skill: Skill) -> int:
     return int(state.stats.get("str", 10) * 3 + state.hits_taken * 5)
 
-def _shield_madShell(state, skill):
-    state.madness = min(100, state.madness + 10)
+def _shield_madShell(state: GameState, skill: Skill) -> int:
+    state.madness = min(MADNESS_MAX, state.madness + 10)
     return int(state.stats["wis"] * 2 + state.madness)
 
-def _shield_madBarrier(state, skill):
+def _shield_madBarrier(state: GameState, skill: Skill) -> int:
     return int(state.stats["wis"] * 3 + state.luck * 2)
 
-def _shield_madEndur(state, skill):
-    state.madness = min(100, state.madness + 8)
+def _shield_madEndur(state: GameState, skill: Skill) -> int:
+    state.madness = min(MADNESS_MAX, state.madness + 8)
     state.buffs["regen"] = 2
     return int(state.stats["wis"] * 2)
 
-SHIELD_HANDLERS = {
+SHIELD_HANDLERS: Dict[str, Tuple[ShieldCalcFn, str]] = {
     "int2_wis1":  (_shield_int2_wis1,  "Psychic Shield: {v} damage absorbed!"),
     "wis3_int1":  (_shield_wis3_int1,   "Aegis Shield: {v} damage absorbed!"),
     "wis3_hits":  (_shield_wis3_hits,   "Eldritch Ward: {v} shield!"),
@@ -153,7 +166,7 @@ SHIELD_HANDLERS = {
 }
 
 
-def _handle_self_shield(state, skill):
+def _handle_self_shield(state: GameState, skill: Skill) -> List[LogEntry]:
     """Handle self_shield skill type. Returns list of log messages."""
     handler, msg_template = SHIELD_HANDLERS.get(skill.shield_calc, (None, None))
     if handler is None:
@@ -163,22 +176,24 @@ def _handle_self_shield(state, skill):
     if result is not None:
         state.shield = result
 
-    # Format message — use 'v' for shield value, 'h' for heal amount if sanctuary
     h = int(state.stats["wis"] * 2) if skill.shield_calc == "sanctuary" else 0
     v = state.barrier if skill.shield_calc == "glyph_1" else (result or state.shield)
     msg = msg_template.format(v=v, h=h)
     return [(msg, "shield")]
 
-def _buff_barrier(state, skill):
-    state.barrier = min(3, state.barrier + skill.barrier_stacks)
 
-def _buff_rage(state, skill):
+# ── Buff handlers ────────────────────────────
+
+def _buff_barrier(state: GameState, skill: Skill) -> None:
+    state.barrier = min(MAX_BARRIER_STACKS, state.barrier + skill.barrier_stacks)
+
+def _buff_rage(state: GameState, skill: Skill) -> Dict[str, Any]:
     state.rage = True
     hp_loss = int(state.max_hp * 0.12)
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
 
-def _buff_warlord(state, skill):
+def _buff_warlord(state: GameState, skill: Skill) -> Dict[str, Any]:
     state.rage = True
     state.buffs["atkCritUp"] = skill.buff_duration
     state.buffs["ironSkin"] = skill.buff_duration
@@ -186,48 +201,48 @@ def _buff_warlord(state, skill):
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
 
-def _buff_permIntWis(state, skill):
+def _buff_permIntWis(state: GameState, skill: Skill) -> None:
     state.temp_stats["int"] = state.temp_stats.get("int", 0) + 6
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
     state.buffs["permIntWis"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_permAtk2(state, skill):
+def _buff_permAtk2(state: GameState, skill: Skill) -> None:
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 5
     state.buffs["permAtk2"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_permWisStr(state, skill):
+def _buff_permWisStr(state: GameState, skill: Skill) -> None:
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 6
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
     state.buffs["permWisStr"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_permAgiLuk(state, skill):
+def _buff_permAgiLuk(state: GameState, skill: Skill) -> None:
     state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 7
     state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 4
     state.buffs["permAgiLuk"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_permCrit10(state, skill):
+def _buff_permCrit10(state: GameState, skill: Skill) -> None:
     state.crit = min(95, state.crit + 25)
     state.buffs["permCrit10"] = skill.buff_duration
 
-def _buff_permAll1(state, skill):
+def _buff_permAll1(state: GameState, skill: Skill) -> None:
     for stat in ("int", "str", "agi", "wis", "luck"):
         state.temp_stats[stat] = state.temp_stats.get(stat, 0) + 4
     state.buffs["permAll1"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_resetCds(state, skill):
+def _buff_resetCds(state: GameState, skill: Skill) -> None:
     for sk in state.active_skills:
         sk.current_cd = 0
 
-def _buff_bloodRitual(state, skill):
+def _buff_bloodRitual(state: GameState, skill: Skill) -> None:
     state.hp = max(1, state.hp - int(state.max_hp * 0.15))
     state.xp += 50
 
-def _buff_randStat2(state, skill):
+def _buff_randStat2(state: GameState, skill: Skill) -> Dict[str, Any]:
     stat_keys = ["int", "str", "agi", "wis", "luck"]
     chosen = random.sample(stat_keys, 2)
     for st in chosen:
@@ -236,14 +251,14 @@ def _buff_randStat2(state, skill):
     state.recalc_stats()
     return {"stats": chosen}
 
-def _buff_madImmune(state, skill):
+def _buff_madImmune(state: GameState, skill: Skill) -> None:
     state.buffs["madImmune"] = 999
-    state.madness = min(100, state.madness + 15)
+    state.madness = min(MADNESS_MAX, state.madness + 15)
 
-def _buff_calmMind(state, skill):
+def _buff_calmMind(state: GameState, skill: Skill) -> None:
     state.madness = max(0, state.madness - 3)
 
-def _buff_eldritchBargain(state, skill):
+def _buff_eldritchBargain(state: GameState, skill: Skill) -> Dict[str, Any]:
     stat_keys = ["int", "str", "agi", "wis", "luck"]
     chosen = random.sample(stat_keys, 3)
     for st in chosen:
@@ -252,60 +267,60 @@ def _buff_eldritchBargain(state, skill):
     state.gold += 50
     return {"stats": chosen}
 
-def _buff_foolLuck(state, skill):
+def _buff_foolLuck(state: GameState, skill: Skill) -> None:
     state.madness = max(0, state.madness - 10)
     state.buffs["divineInterv"] = 3
 
-def _buff_realityAnchor(state, skill):
+def _buff_realityAnchor(state: GameState, skill: Skill) -> None:
     state.buffs["undying"] = skill.buff_duration
 
-def _buff_pallidMask(state, skill):
+def _buff_pallidMask(state: GameState, skill: Skill) -> None:
     for stat in ("int", "str", "agi", "wis", "luck"):
         state.temp_stats[stat] = state.temp_stats.get(stat, 0) + int(state.base_stats.get(stat, 5) * 0.5)
     state.buffs["pallidMask"] = skill.buff_duration
     state.buffs["immunity"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_prophetRes(state, skill):
-    state.madness = min(100, state.madness + 5)
+def _buff_prophetRes(state: GameState, skill: Skill) -> None:
+    state.madness = min(MADNESS_MAX, state.madness + 5)
     state.buffs["regen"] = skill.buff_duration
 
-def _buff_thickSkull(state, skill):
+def _buff_thickSkull(state: GameState, skill: Skill) -> None:
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 3
     state.buffs["thickSkull"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_perseverance(state, skill):
+def _buff_perseverance(state: GameState, skill: Skill) -> None:
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 3
     state.buffs["perseverance"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_shadowBless(state, skill):
+def _buff_shadowBless(state: GameState, skill: Skill) -> None:
     state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 4
     state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 3
     state.buffs["shadowBless"] = skill.buff_duration
     state.recalc_stats()
 
-def _buff_abyssFort(state, skill):
+def _buff_abyssFort(state: GameState, skill: Skill) -> None:
     state.buffs["ironSkin"] = skill.buff_duration
-    state.barrier = min(3, state.barrier + 1)
+    state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 1)
 
-def _buff_eldritchRebirth(state, skill):
+def _buff_eldritchRebirth(state: GameState, skill: Skill) -> None:
     state.buffs["eldritchRebirth"] = skill.buff_duration
 
-def _buff_astral(state, skill):
+def _buff_astral(state: GameState, skill: Skill) -> None:
     state.buffs["astral"] = skill.buff_duration
 
-def _buff_statSwap(state, skill):
+def _buff_statSwap(state: GameState, skill: Skill) -> None:
     state.buffs["statSwap"] = skill.buff_duration
 
-def _buff_dreadnought(state, skill):
+def _buff_dreadnought(state: GameState, skill: Skill) -> None:
     state.buffs["dreadnought"] = skill.buff_duration
 
-# Static messages per buff_type (most don't need dynamic formatting)
-_BUFF_MESSAGES = {
+# Static messages per buff_type
+_BUFF_MESSAGES: Dict[str, str] = {
     "barrier":       "Barrier! ({v} stacks)",
     "rage":          "Berserker Rage! +60% damage, -{hp_loss} HP!",
     "warlord":       "Warlord's Command! All buffs active! -{hp_loss} HP!",
@@ -335,7 +350,7 @@ _BUFF_MESSAGES = {
     "dreadnought":   "Dreadnought! Damage taken converts to ATK for {d} turns!",
 }
 
-BUFF_HANDLERS = {
+BUFF_HANDLERS: Dict[str, BuffApplyFn] = {
     "barrier":       _buff_barrier,
     "rage":          _buff_rage,
     "warlord":       _buff_warlord,
@@ -366,7 +381,7 @@ BUFF_HANDLERS = {
 }
 
 
-def _handle_self_buff(state, skill):
+def _handle_self_buff(state: GameState, skill: Skill) -> List[LogEntry]:
     """Handle self_buff skill type. Returns list of log messages."""
     buff_type = skill.buff_type
     if not buff_type:
@@ -374,18 +389,15 @@ def _handle_self_buff(state, skill):
 
     handler = BUFF_HANDLERS.get(buff_type)
     if handler is None:
-        # Generic fallback — just set the buff
         state.buffs[buff_type] = skill.buff_duration
         return [(f"{skill.name} activated!", "effect")]
 
     extra = handler(state, skill) or {}
 
-    # Build message
     msg_template = _BUFF_MESSAGES.get(buff_type, f"{skill.name} activated!")
-    # Format dynamic parts
     fmt = dict(extra)
-    fmt["v"] = state.barrier  # for barrier type
-    fmt["d"] = skill.buff_duration  # for duration in messages
+    fmt["v"] = state.barrier
+    fmt["d"] = skill.buff_duration
     if "stats" in fmt and isinstance(fmt["stats"], list):
         fmt["stats"] = ", ".join(s.upper() + ("+3" if buff_type == "randStat2" else "-3") for s in fmt["stats"])
     try:
@@ -395,12 +407,12 @@ def _handle_self_buff(state, skill):
 
     return [(msg, "effect" if buff_type != "barrier" else "shield")]
 
-def player_use_skill(state, skill_index):
+
+def player_use_skill(state: GameState, skill_index: int) -> List[LogEntry]:
     """Player uses a skill. Returns list of (text, type) log messages."""
-    # Lazy import to avoid circular dependency with engine.combat
     from engine.combat import calc_player_damage, apply_damage_to_enemy
 
-    logs = []
+    logs: List[LogEntry] = []
     skill = state.active_skills[skill_index]
     c = state.combat
     e = c.enemy
@@ -410,8 +422,8 @@ def player_use_skill(state, skill_index):
         return [("That ability is on cooldown!", "info")]
 
     if skill.cost > 0:
-        state.madness = min(100, state.madness + skill.cost)
-        if state.madness >= 100:
+        state.madness = min(MADNESS_MAX, state.madness + skill.cost)
+        if state.madness >= MADNESS_MAX:
             return [("Your mind shatters from the madness cost!", "damage")]
 
     if skill.madness_cost > 0:
@@ -435,7 +447,7 @@ def player_use_skill(state, skill_index):
         return logs + _handle_self_buff(state, skill)
 
     # Accuracy miss check (skip for true_strike skills)
-    if not (skill and skill.true_strike):
+    if not skill.true_strike:
         if random.random() * 100 >= state.accuracy:
             logs.append((f"{skill.name} misses!", "info"))
             return logs
@@ -464,7 +476,7 @@ def player_use_skill(state, skill_index):
     if state.buffs.get("ethereal", 0) > 0 and dmg > 0:
         state.buffs["ethereal"] = 0
 
-    if state.madness >= 100:
+    if state.madness >= MADNESS_MAX:
         return logs + [("Your mind shatters from the madness!", "damage")]
 
     # Apply effects
@@ -473,7 +485,7 @@ def player_use_skill(state, skill_index):
         if skill.effect == "poisoned":
             existing = next((s for s in e.statuses if s.type == "poisoned"), None)
             if existing:
-                existing.stacks = min(5, existing.stacks + 1)
+                existing.stacks = min(POISON_MAX_STACKS, existing.stacks + 1)
         logs.append((f"{skill.effect} applied to {e.name}!", "effect"))
 
     if skill.effect2:
@@ -510,4 +522,3 @@ def player_use_skill(state, skill_index):
             logs.append(("Hastur grants LUK+5!", "effect"))
 
     return logs
-
