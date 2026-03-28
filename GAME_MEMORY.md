@@ -343,15 +343,16 @@ game/
 - Hover tooltip: damage formula shown in popup above the ability button
 - Navigation: Left/Right arrow keys, page indicator "1/5"
 
-## Victory Animation (Step 40 — Session 14, 2026-03-28)
-### 3-Phase End-of-Combat Animation
+## Victory Animation (Step 40 — Session 14, 2026-03-28, Fixed 21:42)
+### 3-Phase End-of-Combat Animation + Smooth Fade-Out
 Replaces the instant screen switch on combat win with a satisfying animation sequence.
 
 **Phase 1 — HP Drain** (~1s):
-- Enemy HP bar rapidly drains to 0 with accelerating speed
+- Enemy HP bar drains from max_hp → 0 with accelerating speed (150→700 HP/s)
+- Starts SLOW (watching HP tick down), accelerates as it approaches zero
 - Red pulsing tint on enemy sprite (sin wave, alpha 40-80)
 - Screen shake on trigger (intensity=12, 0.5s)
-- Damage numbers fly off randomly (yellow/crimson/bone, ~0.15/frame chance)
+- Damage numbers fly off randomly (yellow/crimson/bone, ~0.25/frame chance)
 
 **Phase 2 — Disintegration** (~2s):
 - Enemy sprite split into 8×6px fragments (vertical strips × horizontal chunks)
@@ -361,7 +362,7 @@ Replaces the instant screen switch on combat win with a satisfying animation seq
 - Sharp burst: 30 white spark particles (fast, short-lived 0.3-0.8s)
 - Ongoing wisps during disintegration (gold/purple, 0.2/frame chance)
 
-**Phase 3 — Dramatic Pause** (~1.5s):
+**Phase 3 — Dramatic Pause** (~1.8s):
 - "D E F E A T E D" fades in (heading font, gold parchment color, alpha = timer×500)
 - Growing gold underline divider (width = timer×300, max 300px)
 - Combat log panel replaced with victory narrative (different for boss vs regular)
@@ -369,10 +370,21 @@ Replaces the instant screen switch on combat win with a satisfying animation seq
 - Regular: "The creature dissolves into shadow. The air grows still."
 - Fading ghost of enemy sprite (alpha 60, fades over 0.5s)
 - Final golden particles drift upward
-- Auto-transition to combat_result/levelup via `_finish_victory()`
+
+**Phase 4 — Fade Out** (1.0s):
+- Smooth fade-to-black overlay (alpha 0→255 over 1s)
+- "DEFEATED" text and gold divider remain visible during fade
+- Screen switch to combat_result/levelup happens AFTER fade completes
+- Avoids jarring double-fade (victory fade + global screen transition fade)
+
+**Bug Fix (21:42)**:
+- **Root cause**: `_start_victory_animation()` set `_victory_hp_display = float(c.enemy.hp)` — but enemy HP was already ≤0 from the killing blow, so the HP drain phase instantly skipped
+- **Fix**: Changed to `float(c.enemy.max_hp)` so drain always starts from full HP
+- **Drain speed formula fix**: Old formula `(1.0 - x/(x+1)) * 400` was always 0, making speed constant 600. New formula uses true fraction for smooth acceleration 150→700 HP/s
+- **Added fade_out phase**: New 1.0s smooth fade-to-black. Old code called `_finish_victory()` directly at end of dramatic_pause, causing instant screen switch
 
 **Implementation Details**:
-- State machine: `self._victory_state` (None → "hp_drain" → "disintegrate" → "dramatic_pause" → None)
+- State machine: `self._victory_state` (None → "hp_drain" → "disintegrate" → "dramatic_pause" → "fade_out" → done)
 - Input fully blocked during all phases (`handle_event` returns early)
 - UI hidden: skills, commands, status icons all hidden when `_victory_state` is set
 - `_finish_victory()` guarded against double-call (sets `_victory_state = None` first)

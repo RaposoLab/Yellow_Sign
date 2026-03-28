@@ -26,7 +26,7 @@ class CombatScreen(Screen):
         self._enemy_flash_timer = 0  # brief flash when enemy acts
 
         # Victory animation state machine
-        # States: None (normal) → "hp_drain" → "disintegrate" → "dramatic_pause" → done
+        # States: None (normal) → "hp_drain" → "disintegrate" → "dramatic_pause" → "fade_out" → done
         self._victory_state = None
         self._victory_timer = 0.0
         self._victory_hp_target = 0  # HP we're draining toward
@@ -34,6 +34,7 @@ class CombatScreen(Screen):
         self._victory_is_boss = False
         self._fragments = []  # Disintegration fragments: [x, y, vx, vy, w, h, color, alpha, rot, rot_v]
         self._victory_text_alpha = 0  # For "DEFEATED" text fade-in
+        self._victory_fade_alpha = 0  # For final fade-to-black
 
     def enter(self):
         self.damage_numbers = []
@@ -46,6 +47,7 @@ class CombatScreen(Screen):
         self._victory_timer = 0.0
         self._fragments = []
         self._victory_text_alpha = 0
+        self._victory_fade_alpha = 0
         # Ambient eldritch particles
         for _ in range(25):
             self.particles.append(self._new_ambient_particle())
@@ -124,30 +126,35 @@ class CombatScreen(Screen):
             self._victory_timer += dt
 
             if self._victory_state == "hp_drain":
-                # Rapidly drain HP display toward 0
-                drain_speed = 200.0 + (1.0 - self._victory_hp_display / max(1, self._victory_hp_display + 1)) * 400
-                self._victory_hp_display -= drain_speed * dt
+                # Accelerating drain: starts slow, ends fast
+                max_hp = max(1, int(self._victory_hp_display) + 1)  # avoid /0
+                # fraction goes from 1.0 (full) to 0.0 (empty) as display drops
+                fraction = max(0.0, self._victory_hp_display / max(1, self._victory_hp_display + 1))
+                # Speed ramps from ~150 at start to ~700 at end
+                drain_speed = 150.0 + (1.0 - fraction) * 550.0
+                # Apply a power curve for smoother acceleration
+                drain_amount = drain_speed * dt
+                self._victory_hp_display -= drain_amount
+
                 if self._victory_hp_display <= 0:
                     self._victory_hp_display = 0
-                    # Spawn damage numbers during drain
-                    if random.random() < 0.3:
-                        dmg_val = str(random.randint(10, 50))
-                        self.add_damage_number(dmg_val,
-                            random.uniform(860, 1050), random.uniform(180, 280),
-                            random.choice([C.YELLOW, C.CRIMSON, C.PARCHMENT_EDGE]))
+                    # Final big damage number
+                    self.add_damage_number(str(random.randint(30, 99)),
+                        random.uniform(880, 1020), random.uniform(200, 260),
+                        random.choice([C.YELLOW, C.CRIMSON]))
                     # HP drained — transition to disintegration
-                    self.trigger_shake(intensity=15, duration=0.4)
+                    self.trigger_shake(intensity=18, duration=0.5)
                     self._build_disintegration_fragments()
                     if self._victory_state != "dramatic_pause":  # fragments may have skipped
                         self._victory_state = "disintegrate"
                         self._victory_timer = 0.0
                 else:
                     # Continuously spawn floating damage numbers while draining
-                    if random.random() < 0.15:
-                        dmg_val = str(random.randint(8, 40))
+                    if random.random() < 0.25:
+                        dmg_val = str(random.randint(5, 35))
                         self.add_damage_number(dmg_val,
                             random.uniform(860, 1050), random.uniform(180, 280),
-                            C.BONE)
+                            random.choice([C.BONE, C.YELLOW, C.CRIMSON]))
 
             elif self._victory_state == "disintegrate":
                 # Update fragment physics
@@ -189,8 +196,16 @@ class CombatScreen(Screen):
                         "alpha": random.randint(40, 100),
                         "life": random.uniform(1.0, 2.0),
                     })
-                # After pause, finish
-                if self._victory_timer > 1.5:
+                # After pause, transition to fade-out
+                if self._victory_timer > 1.8:
+                    self._victory_state = "fade_out"
+                    self._victory_timer = 0.0
+
+            elif self._victory_state == "fade_out":
+                # Smooth fade to black over 1.0s, then switch screen
+                fade_dur = 1.0
+                self._victory_fade_alpha = min(255, int(255 * (self._victory_timer / fade_dur)))
+                if self._victory_timer >= fade_dur:
                     self._finish_victory()
                     return
 
@@ -415,10 +430,12 @@ class CombatScreen(Screen):
         s = self.game.state
         c = s.combat
         self._victory_is_boss = c.is_boss
-        self._victory_hp_display = float(c.enemy.hp)
+        # Start from max HP so the drain animation is always visible
+        self._victory_hp_display = float(c.enemy.max_hp)
         self._victory_hp_target = 0
         self._victory_timer = 0.0
         self._victory_text_alpha = 0
+        self._victory_fade_alpha = 0
         self._victory_state = "hp_drain"
         # Big screen shake on victory start
         self.trigger_shake(intensity=12, duration=0.5)
@@ -854,9 +871,9 @@ class CombatScreen(Screen):
             draw_text_with_glow(surface, self.turn_message, self.assets.fonts["body"],
                       C.CRIMSON, SCREEN_W // 2, 245, align="center")
 
-        # --- "DEFEATED" text overlay during dramatic pause ---
-        if self._victory_state == "dramatic_pause":
-            alpha = min(255, int(self._victory_timer * 500))
+        # --- "DEFEATED" text overlay during dramatic pause and fade ---
+        if self._victory_state in ("dramatic_pause", "fade_out"):
+            alpha = min(255, int(self._victory_timer * 500)) if self._victory_state == "dramatic_pause" else 255
             if alpha > 0:
                 # Render "DEFEATED" with glow, centered on screen
                 defeated_surf = self.assets.fonts["heading"].render("D E F E A T E D", True, C.PARCHMENT_EDGE)
@@ -864,9 +881,15 @@ class CombatScreen(Screen):
                 defeated_rect = defeated_surf.get_rect(center=(SCREEN_W // 2, 150))
                 surface.blit(defeated_surf, defeated_rect)
                 # Gold underline that grows
-                line_w = min(300, int(self._victory_timer * 300))
+                line_w = min(300, int(self._victory_timer * 300)) if self._victory_state == "dramatic_pause" else 300
                 if line_w > 0:
                     draw_gold_divider(surface, SCREEN_W // 2 - line_w // 2, 175, line_w)
+
+        # --- Victory fade-to-black overlay ---
+        if self._victory_fade_alpha > 0:
+            fade_surf = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+            fade_surf.fill((0, 0, 0, self._victory_fade_alpha))
+            surface.blit(fade_surf, (0, 0))
 
         # Damage numbers
         for dn in self.damage_numbers:

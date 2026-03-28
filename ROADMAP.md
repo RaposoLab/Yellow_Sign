@@ -302,6 +302,7 @@ Last updated: 2026-03-28 09:26
 ## Pending Steps
 
 ### ✅ Step 40: Victory Animation (Session 14 — 2026-03-28)
+**FIXED 2026-03-28 21:42** — HP drain was instant (enemy hp already ≤0 at victory start). Now starts from max_hp with accelerating drain, and added smooth fade-out phase.
 - **3-phase victory sequence** replaces the instant screen switch on combat win
 - **Phase 1 "hp_drain"** (~1s): Enemy HP bar rapidly drains to 0 with accelerating speed. Red pulsing tint on enemy sprite. Damage numbers fly off randomly. Screen shake on trigger. ~0.15 chance per frame to spawn floating damage numbers (yellow/crimson/bone colors).
 - **Phase 2 "disintegrate"** (~2s): Enemy sprite split into 8×6px fragments (vertical strips × horizontal chunks). Each fragment gets outward velocity from center, upward bias, gravity, rotation. Fragments fade out over 1.2s. Eldritch energy burst from center (60 gold/purple/amber particles). Eldritch wisps spawn during disintegration.
