@@ -1,7 +1,7 @@
 # Visual Overhaul Roadmap
 
 ## Status: ✅ COMPLETE + Code Refactoring + Polish Effects
-Last updated: 2026-03-28 07:52
+Last updated: 2026-03-29 04:50
 
 ## Workflow
 **ONE task per prompt. Save code + roadmap + memory after each step.**
@@ -363,4 +363,39 @@ Last updated: 2026-03-28 09:26
   - Net -77 lines across codebase
 - All 271 combat tests pass
 - Commit: `b9e885c`
+
+### ✅ Step 44: Refactor Skill to @dataclass (Session 16 — 2026-03-29)
+- **Problem**: `Skill.__init__` had 42 manual `data.get()` lines. Adding a new skill property required touching `__init__`, `to_dict`, and `from_dict`.
+- **Solution**: Converted to `@dataclass` with 42 typed fields and defaults matching original `.get()` fallbacks.
+- Constructor changed: `Skill(data_dict)` → `Skill(**data_dict)` (keyword unpack)
+- `to_dict()` simplified: uses `dataclasses.asdict()`, drops `starting` field
+- `from_dict()` simplified: `cls(**d)` — no post-init field assignment needed
+- Adding a new skill field = one line (declare field with default) instead of three (init + to_dict + from_dict)
+- **Files changed**: `engine/models.py` (Skill class only)
+- **Files unchanged**: `data/classes/*.py` (still pass dicts), `engine/skills.py`, `engine/combat.py`, all screens, `save_system.py`
+- All 271 combat tests pass
+- Commit: `9e7d7c7`
+
+### ✅ Step 45: Decompose GameState into Composed Components (Session 16 — 2026-03-29)
+- **Problem**: `GameState` was a god object with 30+ fields mixing identity, progression, combat stats, and combat-ephemeral state.
+- **Solution**: Extracted 3 focused dataclasses. GameState composes them, exposes backward-compatible properties.
+- `PlayerIdentity`: `class_id`, `class_name`, `level`
+- `PlayerProgression`: `floor`, `max_floor`, `kills`, `rooms_explored`, `gold`, `xp`, `xp_next`, `madness`
+- `CombatBuffs`: `shield`, `barrier`, `rage`, `buffs`, `temp_stats`, `hits_taken`
+- GameState holds these as `self.identity`, `self.progression`, `self.combat_buffs`
+- 18 `@property` getters/setters delegate to sub-objects → screen code unchanged (137+ refs like `s.floor`, `s.gold` work as-is)
+- Combat stats (`atk`, `defense`, `crit`, etc.) stay flat on GameState — too interconnected with `recalc_stats()` to separate
+- `init_from_class()` updated to use `Skill(**dict)` (from Step 44)
+- **Save system**: Added `SAVE_VERSION = 2` and `"version"` field to save files. Backward-compatible with v1 saves.
+- `.gitignore`: Added `*.bak` pattern
+- **Files changed**: `engine/models.py` (GameState class), `save_system.py` (version field)
+- **Files unchanged**: All 17 screen files, `engine/combat.py`, `engine/skills.py`, `engine/world.py`, `tests/test_combat.py`
+- All 271 combat tests pass, import checks pass, property delegation verified
+- Commit: `9e7d7c7`
+
+### ✅ Step 46: Replace Warden Class Sprite (Session 16 — 2026-03-29)
+- Replaced `images/wis-character.png` with new Wisdom Class artwork (1024×1024 RGBA PNG)
+- Old sprite backed up to `images/wis-character.png.bak`
+- Warden class (wisdom-primary) uses this sprite on class select and combat screens
+- Commit: `9d9e432`
 
