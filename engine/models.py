@@ -2,6 +2,8 @@
 
 import random
 import math
+from dataclasses import dataclass, field, asdict
+from typing import List, Optional, Dict, Any
 from data import (
     CLASSES, MAX_ACTIVE_SKILLS,
     RARITY_DATA, CURSED_DEBUFFS, ITEM_PREFIXES,
@@ -45,88 +47,97 @@ class Item:
         return cls(d["name"], d["slot"], d["stats"], d["rarity"], d.get("debuffs"))
 
 
+@dataclass
 class Skill:
     """Represents a player skill/ability."""
-    def __init__(self, data):
-        self.name = data["name"]
-        self.icon = data.get("icon", "?")
-        self.unlock_lv = data.get("unlock_lv", 1)
-        self.desc = data.get("desc", "")
-        self.formula = data.get("formula", "")
-        self.type = data.get("type", "physical")
-        self.power = data.get("power", 1.0)
-        self.stat = data.get("stat", "str")
-        self.stat2 = data.get("stat2")
-        self.stat2_mult = data.get("stat2_mult", 0)
-        self.cost = data.get("cost", 0)
-        self.cd = data.get("cd", 0)
-        self.current_cd = 0
-        self.tags = data.get("tags", [])
-        self.effect = data.get("effect")
-        self.effect2 = data.get("effect2")
-        self.effect3 = data.get("effect3")
-        self.duration = data.get("duration", 2)
-        self.armor_pierce = data.get("armor_pierce", 0)
-        self.lifesteal = data.get("lifesteal", 0)
-        self.multihit = data.get("multihit", 1)
-        self.scaling_low_hp = data.get("scaling_low_hp", False)
-        self.def_scaling = data.get("def_scaling", False)
-        self.shield_calc = data.get("shield_calc")
-        self.heal_calc = data.get("heal_calc")
-        self.buff_type = data.get("buff_type")
-        self.buff_duration = data.get("buff_duration", 3)
-        self.barrier_stacks = data.get("barrier_stacks", 0)
-        self.consume_shield = data.get("consume_shield", False)
-        self.shield_scaling = data.get("shield_scaling", 0)
-        self.hp_cost = data.get("hp_cost", 0)
-        self.madness_scaling = data.get("madness_scaling", False)
-        self.madness_cost = data.get("madness_cost", 0)
-        self.coin_flip = data.get("coin_flip", False)
-        self.gamble = data.get("gamble", False)
-        self.execute_bonus = data.get("execute_bonus", False)
-        self.guaranteed_crit = data.get("guaranteed_crit", False)
-        self.flat_crit_bonus = data.get("flat_crit_bonus", 0)
-        self.luck_bonus = data.get("luck_bonus", False)
-        self.true_strike = data.get("true_strike", False)
-        self.extend_debuffs = data.get("extend_debuffs", False)
-        self.random_effect = data.get("random_effect", False)
-        self.tier = data.get("tier", 1)
-        self.category = data.get("category", "offensive")
-        self.stat_priority = data.get("stat_priority", [])
-        self.starting = data.get("starting", False)
+    name: str
+    icon: str = "?"
+    unlock_lv: int = 1
+    desc: str = ""
+    formula: str = ""
+    type: str = "physical"
+    power: float = 1.0
+    stat: str = "str"
+    stat2: Optional[str] = None
+    stat2_mult: float = 0
+    cost: int = 0
+    cd: int = 0
+    current_cd: int = 0
+    tags: List[str] = field(default_factory=list)
+    effect: Optional[str] = None
+    effect2: Optional[str] = None
+    effect3: Optional[str] = None
+    duration: int = 2
+    armor_pierce: float = 0
+    lifesteal: float = 0
+    multihit: int = 1
+    scaling_low_hp: bool = False
+    def_scaling: bool = False
+    shield_calc: Optional[str] = None
+    heal_calc: Optional[str] = None
+    buff_type: Optional[str] = None
+    buff_duration: int = 3
+    barrier_stacks: int = 0
+    consume_shield: bool = False
+    shield_scaling: float = 0
+    hp_cost: float = 0
+    madness_scaling: bool = False
+    madness_cost: int = 0
+    coin_flip: bool = False
+    gamble: bool = False
+    execute_bonus: bool = False
+    guaranteed_crit: bool = False
+    flat_crit_bonus: int = 0
+    luck_bonus: bool = False
+    true_strike: bool = False
+    extend_debuffs: bool = False
+    random_effect: bool = False
+    tier: int = 1
+    category: str = "offensive"
+    stat_priority: List[str] = field(default_factory=list)
+    starting: bool = False
 
     def to_dict(self):
-        return {
-            "name": self.name, "icon": self.icon, "unlock_lv": self.unlock_lv,
-            "desc": self.desc, "formula": self.formula, "type": self.type,
-            "power": self.power, "stat": self.stat, "stat2": self.stat2,
-            "stat2_mult": self.stat2_mult, "cost": self.cost, "cd": self.cd,
-            "current_cd": self.current_cd, "tags": self.tags,
-            "effect": self.effect, "effect2": self.effect2, "effect3": self.effect3,
-            "duration": self.duration, "armor_pierce": self.armor_pierce,
-            "lifesteal": self.lifesteal, "multihit": self.multihit,
-            "scaling_low_hp": self.scaling_low_hp, "def_scaling": self.def_scaling,
-            "shield_calc": self.shield_calc, "heal_calc": self.heal_calc,
-            "buff_type": self.buff_type, "buff_duration": self.buff_duration,
-            "barrier_stacks": self.barrier_stacks, "consume_shield": self.consume_shield,
-            "shield_scaling": self.shield_scaling, "hp_cost": self.hp_cost,
-            "madness_scaling": self.madness_scaling, "madness_cost": self.madness_cost,
-            "coin_flip": self.coin_flip, "gamble": self.gamble,
-            "execute_bonus": self.execute_bonus, "guaranteed_crit": self.guaranteed_crit,
-            "flat_crit_bonus": self.flat_crit_bonus, "luck_bonus": self.luck_bonus,
-            "true_strike": self.true_strike, "extend_debuffs": self.extend_debuffs,
-            "random_effect": self.random_effect,
-            "tier": self.tier, "category": self.category, "stat_priority": self.stat_priority,
-        }
+        d = asdict(self)
+        # Exclude transient/runtime fields from serialization
+        d.pop("starting", None)
+        return d
 
     @classmethod
     def from_dict(cls, d):
-        s = cls(d)
-        s.current_cd = d.get("current_cd", 0)
-        s.tier = d.get("tier", 1)
-        s.category = d.get("category", "offensive")
-        s.stat_priority = d.get("stat_priority", [])
-        return s
+        return cls(**d)
+
+
+@dataclass
+class PlayerIdentity:
+    """Who the player is: class choice and level."""
+    class_id: Optional[str] = None
+    class_name: str = ""
+    level: int = 1
+
+
+@dataclass
+class PlayerProgression:
+    """Run-level progression: floors, kills, gold, XP, madness."""
+    floor: int = 1
+    max_floor: int = 20
+    kills: int = 0
+    rooms_explored: int = 0
+    gold: int = 15
+    xp: int = 0
+    xp_next: int = 20
+    madness: float = 0
+
+
+@dataclass
+class CombatBuffs:
+    """Combat-only ephemeral state, cleared on combat start."""
+    shield: int = 0
+    barrier: int = 0
+    rage: bool = False
+    buffs: Dict[str, int] = field(default_factory=dict)
+    temp_stats: Dict[str, int] = field(default_factory=dict)
+    hits_taken: int = 0
 
 
 class StatusEffect:
@@ -195,18 +206,26 @@ class Enemy:
 
 
 class GameState:
-    """Main game state container."""
+    """Main game state container.
+
+    Composes three sub-objects for grouped state:
+      - identity: PlayerIdentity (class, name, level)
+      - progression: PlayerProgression (floor, kills, gold, xp, madness)
+      - combat_buffs: CombatBuffs (shield, barrier, rage, buffs, temp_stats, hits_taken)
+
+    Backward-compatible properties delegate to sub-objects so screen code
+    can keep using state.class_id, state.floor, state.gold, etc.
+    """
 
     def __init__(self):
-        self.class_id = None
-        self.class_name = ""
-        self.level = 1
-        self.floor = 1
-        self.max_floor = 20
+        # --- Sub-objects ---
+        self.identity = PlayerIdentity()
+        self.progression = PlayerProgression()
+        self.combat_buffs = CombatBuffs()
+
+        # --- Flat combat stats (recalculated by recalc_stats) ---
         self.hp = 0
         self.max_hp = 0
-        self.shield = 0
-        self.barrier = 0
         self.stats = {}
         self.base_stats = {}
         self.atk = 0
@@ -216,12 +235,8 @@ class GameState:
         self.evasion = 0
         self.luck = 5
         self.accuracy = 90
-        self.madness = 0
-        self.gold = 15
-        self.xp = 0
-        self.xp_next = 20
-        self.kills = 0
-        self.rooms_explored = 0
+
+        # --- Equipment & skills ---
         self.equipment = {
             "weapon": None, "accessory": None, "armor": None,
             "boots": None, "ringL": None, "ringR": None,
@@ -230,12 +245,135 @@ class GameState:
         self.all_skills = []
         self.active_skills = []
         self.statuses = []
-        self.rage = False
         self.combat = None
-        self.buffs = {}  # buff_type -> remaining turns
-        self.temp_stats = {}  # stat -> bonus amount (combat-only, cleared on combat end)
-        self.hits_taken = 0
         self.pending_levelup_skills = []
+
+    # ── Identity properties ──────────────────────────────────────────
+
+    @property
+    def class_id(self):
+        return self.identity.class_id
+    @class_id.setter
+    def class_id(self, v):
+        self.identity.class_id = v
+
+    @property
+    def class_name(self):
+        return self.identity.class_name
+    @class_name.setter
+    def class_name(self, v):
+        self.identity.class_name = v
+
+    @property
+    def level(self):
+        return self.identity.level
+    @level.setter
+    def level(self, v):
+        self.identity.level = v
+
+    # ── Progression properties ───────────────────────────────────────
+
+    @property
+    def floor(self):
+        return self.progression.floor
+    @floor.setter
+    def floor(self, v):
+        self.progression.floor = v
+
+    @property
+    def max_floor(self):
+        return self.progression.max_floor
+    @max_floor.setter
+    def max_floor(self, v):
+        self.progression.max_floor = v
+
+    @property
+    def kills(self):
+        return self.progression.kills
+    @kills.setter
+    def kills(self, v):
+        self.progression.kills = v
+
+    @property
+    def rooms_explored(self):
+        return self.progression.rooms_explored
+    @rooms_explored.setter
+    def rooms_explored(self, v):
+        self.progression.rooms_explored = v
+
+    @property
+    def gold(self):
+        return self.progression.gold
+    @gold.setter
+    def gold(self, v):
+        self.progression.gold = v
+
+    @property
+    def xp(self):
+        return self.progression.xp
+    @xp.setter
+    def xp(self, v):
+        self.progression.xp = v
+
+    @property
+    def xp_next(self):
+        return self.progression.xp_next
+    @xp_next.setter
+    def xp_next(self, v):
+        self.progression.xp_next = v
+
+    @property
+    def madness(self):
+        return self.progression.madness
+    @madness.setter
+    def madness(self, v):
+        self.progression.madness = v
+
+    # ── Combat buff properties ───────────────────────────────────────
+
+    @property
+    def shield(self):
+        return self.combat_buffs.shield
+    @shield.setter
+    def shield(self, v):
+        self.combat_buffs.shield = v
+
+    @property
+    def barrier(self):
+        return self.combat_buffs.barrier
+    @barrier.setter
+    def barrier(self, v):
+        self.combat_buffs.barrier = v
+
+    @property
+    def rage(self):
+        return self.combat_buffs.rage
+    @rage.setter
+    def rage(self, v):
+        self.combat_buffs.rage = v
+
+    @property
+    def buffs(self):
+        return self.combat_buffs.buffs
+    @buffs.setter
+    def buffs(self, v):
+        self.combat_buffs.buffs = v
+
+    @property
+    def temp_stats(self):
+        return self.combat_buffs.temp_stats
+    @temp_stats.setter
+    def temp_stats(self, v):
+        self.combat_buffs.temp_stats = v
+
+    @property
+    def hits_taken(self):
+        return self.combat_buffs.hits_taken
+    @hits_taken.setter
+    def hits_taken(self, v):
+        self.combat_buffs.hits_taken = v
+
+    # ── Core methods ─────────────────────────────────────────────────
 
     def init_from_class(self, class_id):
         """Initialize game state for a chosen class."""
@@ -246,8 +384,8 @@ class GameState:
         self.stats = dict(self.base_stats)
         self.max_hp = cls["hp_base"]
         self.hp = self.max_hp
-        self.all_skills = [Skill(s) for s in cls["skills"]]
-        self.active_skills = [Skill(s) for s in cls["skills"] if s.get("starting", False)]
+        self.all_skills = [Skill(**s) for s in cls["skills"]]
+        self.active_skills = [Skill(**s) for s in cls["skills"] if s.get("starting", False)]
         self.recalc_stats()
         self.hp = self.max_hp
 
@@ -382,5 +520,3 @@ class GameState:
         self.equipment[item.slot] = item
         self.recalc_stats()
         return prev
-
-

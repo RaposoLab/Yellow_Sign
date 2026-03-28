@@ -15,10 +15,14 @@ def ensure_save_dir():
     os.makedirs(SAVE_DIR, exist_ok=True)
 
 
+SAVE_VERSION = 2
+
+
 def save_game(state, slot=0):
     """Save game state to JSON file."""
     ensure_save_dir()
     data = {
+        "version": SAVE_VERSION,
         "class_id": state.class_id,
         "class_name": state.class_name,
         "level": state.level,
