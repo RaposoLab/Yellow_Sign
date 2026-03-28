@@ -296,3 +296,15 @@ Last updated: 2026-03-28 09:26
   - Effect logic stays in `engine/world.py` (resolve_event/resolve_trap unchanged)
   - Adding new events/traps/narratives = edit JSON, no Python changes needed
   - Backward compatible: `from data import EVENTS, TRAPS, ...` unchanged
+
+---
+
+## Pending Steps
+
+### ⬜ Step 40: Victory Animation (Deferred)
+- When winning a fight, instead of immediately going to item/gains screen:
+  - Show enemy HP going to zero
+  - Enemy fading/disappearing animation
+  - Brief pause before transitioning to combat result
+- **Status**: Noted for future implementation
+

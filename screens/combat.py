@@ -21,6 +21,8 @@ class CombatScreen(Screen):
         self.particles = []  # [x, y, vx, vy, size, color, alpha, life]
         self._enemy_status_rects = []  # [(Rect, effect_type), ...] for hover tooltips
         self._player_status_rects = []  # [(Rect, effect_type), ...] for hover tooltips
+        self._enemy_action_text = None  # (text, x, y, color, timer, vy) floating text
+        self._enemy_flash_timer = 0  # brief flash when enemy acts
 
     def enter(self):
         self.damage_numbers = []
@@ -110,6 +112,15 @@ class CombatScreen(Screen):
             self.shake_timer -= dt
         if self.turn_msg_timer > 0:
             self.turn_msg_timer -= dt
+        # Enemy action floating text
+        if self._enemy_action_text:
+            self._enemy_action_text[2] += self._enemy_action_text[5] * dt
+            self._enemy_action_text[4] -= dt
+            if self._enemy_action_text[4] <= 0:
+                self._enemy_action_text = None
+        # Enemy flash
+        if self._enemy_flash_timer > 0:
+            self._enemy_flash_timer -= dt
         # Update particles
         for p in self.particles:
             p["x"] += p["vx"]
@@ -203,6 +214,11 @@ class CombatScreen(Screen):
         if not c:
             return
 
+        # Store the skill name for floating text before executing
+        enemy_skill_name = ""
+        if c.next_enemy_skill:
+            enemy_skill_name = c.next_enemy_skill.get("name", "")
+
         logs = enemy_turn(s)
         for text, log_type in logs:
             c.add_log(text, log_type)
@@ -211,6 +227,14 @@ class CombatScreen(Screen):
                 dmg_val = text.split()[-1] if any(ch.isdigit() for ch in text) else ""
                 # Damage number floats above player sprite (left side)
                 self.add_damage_number(dmg_val, 140, 250, C.CRIMSON)
+
+        # Enemy action floating text (shows what the enemy did)
+        if enemy_skill_name:
+            # Position near enemy sprite (right side)
+            sprite_w = 240
+            sprite_x = SCREEN_W - sprite_w - 40
+            self._enemy_action_text = [enemy_skill_name, sprite_x + 120, 195, C.CRIMSON, 2.0, -30]
+            self._enemy_flash_timer = 0.25
 
         if s.hp <= 0:
             self._end_combat(victory=False)
@@ -414,7 +438,26 @@ class CombatScreen(Screen):
         # --- Enemy sprite (right side, below panel, fully visible) ---
         enemy_sprite = self.assets.get_sprite(e.name)
         if enemy_sprite:
-            surface.blit(enemy_sprite, (sprite_x, sprite_y))
+            # Flash overlay when enemy acts
+            if self._enemy_flash_timer > 0:
+                flash = enemy_sprite.copy()
+                flash_overlay = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
+                flash_overlay.fill((255, 60, 60, int(80 * (self._enemy_flash_timer / 0.25))))
+                flash.blit(flash_overlay, (0, 0))
+                surface.blit(flash, (sprite_x, sprite_y))
+            else:
+                surface.blit(enemy_sprite, (sprite_x, sprite_y))
+
+        # Enemy action floating text
+        if self._enemy_action_text:
+            text, fx, fy, color, timer, vy = self._enemy_action_text
+            # Fade alpha based on remaining time
+            alpha_ratio = min(1.0, timer / 0.5) if timer < 0.5 else 1.0
+            font = self.assets.fonts["small"]
+            text_surf = font.render(text, True, color)
+            text_surf.set_alpha(int(255 * alpha_ratio))
+            text_rect = text_surf.get_rect(center=(int(fx), int(fy)))
+            surface.blit(text_surf, text_rect)
 
         # --- Character sprite (left side) ---
         class_sprite = self.assets.get_class_combat(s.class_id)
