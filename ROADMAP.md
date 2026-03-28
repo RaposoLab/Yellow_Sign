@@ -279,5 +279,11 @@ Last updated: 2026-03-28 09:26
 - [x] **Step 31: Differentiate weakened debuff (Point 8)** — Fixed bug: `enemy_turn()` checked player status instead of enemy status. Added defense reduction: enemy with `weakened` now has DEF/mDEF reduced by 20% in `apply_damage_to_enemy()`, matching skill descriptions. Weakened now reduces both ATK (-20%) and DEF (-20%). All 271 tests pass.
 - [x] **Step 32: Implement accuracy stat (Point 11)** — `self.accuracy` now used as miss chance in `player_use_skill()`. Range: 2% (high AGI) to 50% (extremely low AGI). `true_strike` skills bypass miss check. All 271 tests pass.
 - [x] **Step 33: Enemy intent indicator (Point 12)** — Added `next_enemy_skill` to CombatState, pre-selects after each enemy turn. `_get_enemy_intent_message()` generates flavor text by skill type (physical/magic/debuff/heal). Intent shown in combat log before player's turn. All 271 tests pass.
-- [ ] **Step 35: Split shared.py into modules (Point 17)** — Split 892-line `shared.py` into constants, assets, rendering, textures.
+- [x] **Step 35: Split shared.py into modules (Point 17)** — Split shared.py (987 lines) into `shared/` package (937 lines across 4 files):
+  - `shared/constants.py` (98 lines) — SCREEN_W/H, FPS, dirs, C class, CLASS_COLORS, CLASS_PRIMARY_STAT, CLASS_SPRITE_FILES, PATH_ICON_FILES
+  - `shared/assets.py` (273 lines) — Assets class (image/font/cursor loading)
+  - `shared/rendering.py` (533 lines) — All draw functions, obsidian texture (tile-based), glow text (cached), HUD
+  - `shared/__init__.py` (33 lines) — Re-exports everything for backward compatibility
+  - Zero screen file changes needed — `from shared import ...` keeps working
+  - Runtime import verified: all public names accessible via package and direct submodule imports
 - [ ] **Step 36: Move events/traps to JSON (Point 18)** — Move hardcoded event/trap lists to JSON data files for easier content expansion.

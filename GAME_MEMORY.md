@@ -287,6 +287,28 @@ game/
 - `engine/__init__.py` — added `calc_preview_damage` to re-exports
 - `screens/combat.py` — added import, replaced `_draw_skill_tooltip()` with damage preview line
 
+
+## Split shared.py into Package (Step 35 — 2026-03-28)
+### Refactoring: shared.py → shared/ package
+- **Before**: single `shared.py` file (987 lines) — constants, asset loading, drawing, textures, glow text, HUD all in one file
+- **After**: `shared/` package with 4 modules (937 total lines):
+  - `shared/constants.py` (98 lines) — Pure constants: SCREEN_W/H, FPS, directory paths, `class C` (50+ colors), CLASS_COLORS, CLASS_PRIMARY_STAT, CLASS_SPRITE_FILES, PATH_ICON_FILES
+  - `shared/assets.py` (273 lines) — `Assets` class: image loading (class sprites, enemy sprites, backgrounds, cursor, stat icons, path icons), font loading (Cinzel Decorative + Cinzel with fallback chain), helper methods (get_background, get_sprite, get_class_sprite)
+  - `shared/rendering.py` (533 lines) — All drawing functions (draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color), obsidian texture system (_generate_obsidian_tile + generate_parchment_texture with tiling), glow text system (cached draw_text_with_glow + wrapped/fitted variants), HUD (draw_hud)
+  - `shared/__init__.py` (33 lines) — Re-exports everything from submodules + CLASS_ICONS from data
+- **Backward compatibility**: `from shared import C, draw_hud, Assets, ...` all work unchanged
+- **Zero screen file changes**: all 17 screen files + pygame_game.py import from shared with no modifications
+- ASSETS_DIR/FONTS_DIR paths updated: `os.path.dirname(os.path.dirname(__file__))` to go up one level from shared/ to project root
+- **Verification**: all 22 .py files compile clean, AST analysis confirms all definitions present and re-exported
+
+### Files Changed
+- `shared.py` → deleted (replaced by package)
+- `shared/__init__.py` — new (re-export hub)
+- `shared/constants.py` — new
+- `shared/assets.py` — new
+- `shared/rendering.py` — new
+- All screen files — unchanged (backward compatible)
+
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page
 - Layout: 400×400 sprite (left), info panel (right)
