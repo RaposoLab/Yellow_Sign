@@ -286,4 +286,13 @@ Last updated: 2026-03-28 09:26
   - `shared/__init__.py` (33 lines) — Re-exports everything for backward compatibility
   - Zero screen file changes needed — `from shared import ...` keeps working
   - Runtime import verified: all public names accessible via package and direct submodule imports
-- [ ] **Step 36: Move events/traps to JSON (Point 18)** — Move hardcoded event/trap lists to JSON data files for easier content expansion.
+- [x] **Step 36: Move events/traps to JSON (Point 18)** — Moved all game content data from hardcoded Python dicts/lists to JSON files:
+  - `data/json/events.json` (6 events) — title, icon, text, outcomes with effect identifiers
+  - `data/json/traps.json` (3 traps) — name, desc, outcomes with chance/dmg_pct/madness
+  - `data/json/narratives.json` (20 floor narratives) — one string per floor
+  - `data/json/paths.json` (10 path templates) — type, icon, name, desc, desc2, hint, weight
+  - `data/events.py` — now a thin JSON loader (EVENTS + TRAPS)
+  - `data/narratives.py` — now a thin JSON loader (FLOOR_NARRATIVES + PATH_TEMPLATES)
+  - Effect logic stays in `engine/world.py` (resolve_event/resolve_trap unchanged)
+  - Adding new events/traps/narratives = edit JSON, no Python changes needed
+  - Backward compatible: `from data import EVENTS, TRAPS, ...` unchanged

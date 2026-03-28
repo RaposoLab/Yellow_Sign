@@ -309,6 +309,33 @@ game/
 - `shared/rendering.py` — new
 - All screen files — unchanged (backward compatible)
 
+
+
+## Events/Traps/Narratives to JSON (Step 36 — 2026-03-28)
+### Content Externalization
+- **Before**: All event/trap/narrative/path data hardcoded in Python dicts/lists inside `data/events.py` and `data/narratives.py`
+- **After**: Data lives in `data/json/*.json` files, Python modules are thin loaders
+- **New files**:
+  - `data/json/events.json` — 6 floor events (title, icon, text, outcomes with effect string identifiers)
+  - `data/json/traps.json` — 3 traps (name, desc, outcomes with chance/dmg_pct/madness)
+  - `data/json/narratives.json` — 20 floor narrative strings (one per floor)
+  - `data/json/paths.json` — 10 path templates (type, icon, name, desc, desc2, hint, weight)
+- **Updated files**:
+  - `data/events.py` — replaced 65 lines of hardcoded dicts with 5-line JSON loader using `_load_json()`
+  - `data/narratives.py` — replaced 50 lines of hardcoded lists with 5-line JSON loader
+- **Unchanged**: `engine/world.py` — `resolve_event()` and `resolve_trap()` use effect strings as identifiers, no changes needed
+- `data/__init__.py` — unchanged (EVENTS, TRAPS, FLOOR_NARRATIVES, PATH_TEMPLATES still re-exported from same modules)
+- **Benefit**: Adding new events/traps/narratives = edit a JSON file, no Python compilation needed
+- **Runtime verified**: all 4 JSON files load correctly, structure matches engine expectations
+
+### Files Changed
+- `data/events.py` — rewritten (hardcoded dicts → JSON loader)
+- `data/narratives.py` — rewritten (hardcoded lists → JSON loader)
+- `data/json/events.json` — new
+- `data/json/traps.json` — new
+- `data/json/narratives.json` — new
+- `data/json/paths.json` — new
+
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page
 - Layout: 400×400 sprite (left), info panel (right)
