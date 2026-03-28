@@ -194,6 +194,96 @@ def calc_player_damage(state, skill):
     return int(bd)
 
 
+def calc_preview_damage(state, skill):
+    """Calculate deterministic preview damage for a skill (no random variance).
+    Returns (base_dmg, final_dmg_after_def) as approximate range center.
+    base_dmg = raw before enemy defense
+    final_dmg = after applying current enemy's defense
+    """
+    sv = state.stats.get(skill.stat, 10)
+    s2v = state.stats.get(skill.stat2, 10) if skill.stat2 else 0
+
+    if skill.type in ("physical", "physical_debuff", "mixed_phys"):
+        bd = state.atk * (skill.power or 1) + sv * 0.8
+        if skill.stat2_mult:
+            bd += s2v * skill.stat2_mult
+        if skill.def_scaling:
+            bd += state.defense * 1.0
+    elif skill.type in ("magic", "magic_debuff", "mixed_magic"):
+        bd = (5 + sv * 1.5) * (skill.power or 1)
+        if skill.stat2_mult:
+            bd += s2v * skill.stat2_mult
+    elif skill.type == "debuff":
+        bd = (5 + sv * 1.5) * (skill.power or 1)
+    elif skill.type in ("self_buff", "self_heal", "self_shield", "curse", "ultimate"):
+        bd = 0
+        if skill.type == "curse" and skill.consume_shield:
+            bd = (5 + sv * 1.5) * skill.power + state.shield
+        elif skill.type == "ultimate":
+            bd = (5 + sv * 1.5) * skill.power
+            if skill.stat2_mult:
+                bd += s2v * skill.stat2_mult
+        else:
+            bd = (5 + sv * 1.5) * (skill.power or 1) if skill.power else 0
+    else:
+        bd = (5 + sv * 1.5) * (skill.power or 1)
+
+    if skill.scaling_low_hp:
+        hr = state.hp / state.max_hp
+        bd *= 1 + (1 - hr) * 2.0
+
+    if skill.madness_scaling:
+        bd *= (1 + state.madness / 100)
+
+    if state.rage:
+        bd *= 1.6
+    if state.buffs.get("atkCritUp", 0) > 0:
+        bd *= 1.4
+    if state.buffs.get("warpTime", 0) > 0:
+        bd *= 1.2
+    if state.buffs.get("madPower", 0) > 0:
+        bd *= 1.25
+    if state.buffs.get("darkPact", 0) > 0:
+        bd *= 1.3
+    if state.buffs.get("shadowMeld", 0) > 0:
+        bd *= 2.0
+    if state.buffs.get("eclipse", 0) > 0:
+        bd *= 1.3
+    if state.buffs.get("ethereal", 0) > 0:
+        bd *= 2.5
+
+    if skill.multihit and skill.multihit > 1:
+        bd *= skill.multihit
+
+    if skill.execute_bonus and state.combat:
+        e = state.combat.enemy
+        if e and e.hp / e.max_hp < 0.25:
+            bd *= 2.0
+
+    if skill.luck_bonus:
+        bd *= (1 + state.luck * 0.02)
+
+    base_dmg = int(bd)
+    if base_dmg <= 0:
+        return 0, 0
+
+    # Apply enemy defense reduction
+    final_dmg = base_dmg
+    if state.combat and state.combat.enemy:
+        e = state.combat.enemy
+        df = e.defense
+        if skill.type in ("magic", "magic_debuff", "mixed_magic"):
+            df = e.m_def
+        if skill.armor_pierce:
+            df *= (1 - skill.armor_pierce)
+        if has_status(e, "weakened"):
+            df *= 0.8
+        dr = df / (df + 50)
+        final_dmg = max(1, int(base_dmg * (1 - dr)))
+
+    return base_dmg, final_dmg
+
+
 def apply_damage_to_enemy(state, raw, skill):
     """Apply damage to enemy, accounting for defense and crits."""
     e = state.combat.enemy

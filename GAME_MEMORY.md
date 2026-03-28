@@ -211,7 +211,7 @@ game/
 - ~~`draw_text_with_glow()` renders text 9× per call~~ → FIXED: now uses glow surface cache (2 blits on cache hit vs 25 renders). Cache: `_glow_text_cache` dict, 4096 entry limit, evicts 25% on overflow. Keyed by (text, font_id, color, glow_color, glow_radius).
 - `pygame_game.py` at 3,200 lines — screens could be split into modules
 - Parchment texture cache by (w,h) tuple — could use atlas or tile approach
-- No automated tests
+- ~~No automated tests~~ → FIXED: `tests/test_combat.py` — 19 suites, 271 assertions.
 - `draw_text_with_glow()` renders text 8+ times per call — performance bottleneck, consider caching
 - ~~No automated tests — one bad number in skill dict can break combat silently~~ → FIXED: `tests/test_combat.py` — 19 suites, 271 assertions. Covers state init, damage calc, all 5 classes, skill types, buffs, regen, immunity, poison, cooldowns, enemy AI, boss phases, flee, item gen, madness death, HP cost, lifesteal, full combat sim. Run: `python3 tests/test_combat.py`
 
@@ -261,6 +261,31 @@ game/
   - `enemy_turn()` uses pre-selected skill if available, falls back to random
 - **UX**: Players can now plan defensively — see "the enemy prepares a dark technique!" and choose to heal/shield instead of attacking
 - All 271 combat tests pass
+
+
+
+## Damage Preview on Skill Hover (Step 34 — 2026-03-28)
+### Feature: calc_preview_damage()
+- Added `calc_preview_damage(state, skill)` to `engine/combat.py` — deterministic damage calculator
+- Mirrors `calc_player_damage()` exactly but skips all RNG: no `random.random()` variance, no gamble, no coin flip
+- Returns `(base_dmg, final_dmg_after_def)` — raw damage and post-defense damage
+- Applies enemy DEF/mDEF, armor pierce, weakened debuff reduction (same formula as `apply_damage_to_enemy`)
+- Buff multipliers included: rage, atkCritUp, warpTime, madPower, darkPact, shadowMeld, eclipse, ethereal
+- Scaling included: low HP scaling, madness scaling, multihit, execute bonus, luck bonus
+- Returns (0, 0) for non-damage skills (buffs, heals, shields)
+
+### UI: Combat Tooltip Damage Preview
+- `_draw_skill_tooltip()` in `screens/combat.py` now shows damage preview as last line
+- Format: `~{lo}-{hi} dmg (after DEF)` where lo/hi = final_dmg × 0.75/1.25 (±25% range)
+- If final_dmg=0 but base_dmg>0 (no enemy context): shows `~{lo}-{hi} raw dmg`
+- If both 0 (buff/heal/shield): no extra line shown
+- Miss chance intentionally excluded from preview (gameplay surprise)
+- C.PARCHMENT_EDGE color for the preview line (matches formula line styling)
+
+### Files Changed
+- `engine/combat.py` — added `calc_preview_damage()` (~80 lines after `calc_player_damage`)
+- `engine/__init__.py` — added `calc_preview_damage` to re-exports
+- `screens/combat.py` — added import, replaced `_draw_skill_tooltip()` with damage preview line
 
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page

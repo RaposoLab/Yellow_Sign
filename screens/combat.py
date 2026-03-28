@@ -5,7 +5,8 @@ from screens.base import Screen
 from engine import (player_use_skill, enemy_turn, check_boss_phase,
                     tick_player_buffs, process_status_effects,
                     process_player_status_effects, generate_item, advance_floor,
-                    combat_run_attempt, _get_enemy_intent_message)
+                    combat_run_attempt, _get_enemy_intent_message,
+                    calc_preview_damage)
 
 class CombatScreen(Screen):
     def __init__(self, game):
@@ -287,7 +288,7 @@ class CombatScreen(Screen):
             self.game.switch_screen("gameover")
 
     def _draw_skill_tooltip(self, surface, sk, btn_rect):
-        """Draw a popup tooltip above a skill button showing description and formula."""
+        """Draw a popup tooltip above a skill button showing description, formula, and damage preview."""
         font = self.assets.fonts["tiny"]
         padding = 10
         max_w = 380
@@ -308,6 +309,17 @@ class CombatScreen(Screen):
             lines.append(line)
         # Formula line
         lines.append(sk.formula)
+        # Damage preview line (only for damage-dealing skills)
+        base_dmg, final_dmg = calc_preview_damage(self.game.state, sk)
+        if final_dmg > 0:
+            # Show range: center ± 25% accounts for the 0.85-1.15 random variance
+            lo = max(1, int(final_dmg * 0.75))
+            hi = int(final_dmg * 1.25)
+            lines.append(f"~{lo}-{hi} dmg (after DEF)")
+        elif base_dmg > 0:
+            lo = max(1, int(base_dmg * 0.75))
+            hi = int(base_dmg * 1.25)
+            lines.append(f"~{lo}-{hi} raw dmg")
 
         line_h = font.get_height() + 3
         tip_w = max_w
