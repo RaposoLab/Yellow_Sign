@@ -909,6 +909,12 @@ def player_use_skill(state, skill_index):
     if skill.type == "self_buff":
         return logs + _handle_self_buff(state, skill)
 
+    # Accuracy miss check (skip for true_strike skills)
+    if not (skill and skill.true_strike):
+        if random.random() * 100 >= state.accuracy:
+            logs.append((f"{skill.name} misses!", "info"))
+            return logs
+
     # Damage-dealing skill
     raw = calc_player_damage(state, skill)
 

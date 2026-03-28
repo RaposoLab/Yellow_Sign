@@ -237,6 +237,16 @@ game/
 - **Effect**: "weakened" now reduces enemy ATK damage by 20% AND reduces enemy defense by 20% (matching skill descriptions like "Curse of Frailty: DEF-25%", "Terrifying Presence: ATK-25%", "Terror of the Deep: ATK-30%, DEF-20%")
 - All 271 combat tests pass
 
+### Accuracy Stat Implemented (Step 32, Session 14)
+- **Symptom**: `self.accuracy` was calculated (50-98 range based on AGI) but never used — dead variable
+- **Fix**: Added miss chance check in `player_use_skill()` before damage calculation
+  - Miss chance = `(100 - accuracy)%` — ranges from 2% (high AGI) to 50% (extremely low AGI)
+  - Formula: `accuracy = min(98, max(50, 90 + agi * 0.5))` (from recalc_stats)
+  - `true_strike` skills bypass the check entirely (Arcane Missile already has this)
+  - Miss displays "{skill.name} misses!" in the combat log
+  - Miss chance is low enough to not feel punishing but gives AGI a real combat value
+- All 271 combat tests pass
+
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page
 - Layout: 400×400 sprite (left), info panel (right)
