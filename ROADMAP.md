@@ -176,6 +176,14 @@ Last updated: 2026-03-28 07:52
 - Particles update in screen.update(dt), drawn behind UI with screen shake offset in combat
 - Title screen already had particles (unchanged)
 
+### ✅ Step 28: Animated Hover Effects (Session 13 — 2026-03-28)
+- `draw_ornate_button()` hover now animated (was static purple tint):
+  - Pulsing purple glow: alpha oscillates 20-70 via sin(t*4), creates breathing effect
+  - Gold border pulse: alternating bright/dim gold outline synced to glow
+  - Shimmer sweep: thin golden highlight sweeps left-to-right every 3 seconds
+- Uses `pygame.time.get_ticks()` internally — no changes needed in screen files
+- All 17 screens benefit automatically (all use draw_ornate_button)
+
 ### ✅ Step 14: Exploration Path Icons + Two-Line Descriptions (Session 9 — 2026-03-27)
 - Added 6 new path choice icons: Enemy_Ahead_F.png, Boss_Ahead_F.png, Shop_Ahead_F.png, Item_Ahead.png, Rest_Ahead_F.jfif, Decision_Ahead.png
 - PATH_ICON_FILES mapping in pygame_game.py: combat→Enemy, shop→Shop, rest→Rest, loot→Item, event/trap→Decision, boss→Boss
