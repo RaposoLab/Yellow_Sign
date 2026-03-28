@@ -6,7 +6,8 @@ Drawing helpers, obsidian texture generation, glow text, HUD.
 import math
 import random
 import pygame
-from shared.constants import C, SCREEN_W, SCREEN_H, CLASS_COLORS, CLASS_ICONS
+from shared.constants import C, SCREEN_W, SCREEN_H, CLASS_COLORS
+from data import CLASS_ICONS
 
 
 # ═══════════════════════════════════════════
