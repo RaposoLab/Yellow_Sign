@@ -316,3 +316,33 @@ Last updated: 2026-03-28 09:26
   - Modified: `enter()`, `update()`, `handle_event()`, `draw()`, `_end_combat()`
   - Added `import math`
 
+
+### ✅ Step 41: Split `data/classes.py` into per-class package (Session 15 — 2026-03-29)
+- **Problem**: `data/classes.py` was 74 KB / 308 dense lines with all 5 class definitions in one monolithic dict
+- **Solution**: Split into `data/classes/` package with one file per class
+- `data/classes/__init__.py` (448 bytes) — imports 5 class dicts, assembles `CLASSES` for backward compatibility
+- `data/classes/scholar.py` (14.5 KB) — SCHOLAR dict (41 skills)
+- `data/classes/brute.py` (13.7 KB) — BRUTE dict (40 skills)
+- `data/classes/warden.py` (13.8 KB) — WARDEN dict (40 skills)
+- `data/classes/shadowblade.py` (13.8 KB) — SHADOWBLADE dict (40 skills)
+- `data/classes/mad_prophet.py` (14.0 KB) — MAD_PROPHET dict (40 skills)
+- Used `repr()` to extract each class dict value — lossless, byte-identical to original
+- Zero import changes needed: `from data import CLASSES` works via `data/classes/__init__.py` re-export
+- Old `data/classes.py` deleted
+- All 271 combat tests pass
+- Commit: `3424977`
+
+### ✅ Step 42: Split `engine/combat.py` into 3 modules (Session 15 — 2026-03-29)
+- **Problem**: `engine/combat.py` was 1,275 lines doing 4 unrelated jobs: item generation, damage calc, status effects, skill handlers, enemy AI
+- **Solution**: Split into 3 focused files:
+  - `engine/items.py` (83 lines) — `determine_rarity()`, `generate_item()` — zero internal deps
+  - `engine/skills.py` (525 lines) — all `_calc_heal_*` (15), `_shield_*` (10), `_buff_*` (27) handler functions + registries (HEAL_HANDLERS, SHIELD_HANDLERS, BUFF_HANDLERS) + `_handle_self_*` dispatchers + `player_use_skill()`
+  - `engine/combat.py` (692 lines, was 1275) — damage calc, damage application, status effects, enemy AI, combat init, run attempt
+- `combat.py` reduced by 46% (1275 → 692 lines)
+- Circular dependency resolved: `player_use_skill()` uses lazy `from engine.combat import calc_player_damage, apply_damage_to_enemy` inside function body
+- `engine/__init__.py` updated to re-export from all 3 new files — zero changes to screen imports
+- `engine/world.py` updated: `from engine.combat import generate_item` → `from engine.items import generate_item`
+- `tests/test_combat.py` updated: split imports across `engine.combat`, `engine.items`, `engine.skills`
+- Added `has_status` and `apply_status` utility functions to `engine/skills.py` (duplicated from combat.py to avoid circular dep — both are 1-5 lines)
+- All 271 combat tests pass
+- Commit: `18c9816`

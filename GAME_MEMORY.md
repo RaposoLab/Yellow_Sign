@@ -392,3 +392,29 @@ Replaces the instant screen switch on combat win with a satisfying animation seq
 - Fragments use sprite pixel sampling with alpha < 20 skip (transparent pixels)
 - `import math` added for `math.cos`/`math.sin` in particle burst
 
+
+## Refactoring (Session 15 — 2026-03-29)
+
+### data/classes.py Split
+- Old: `data/classes.py` (74 KB, 308 lines, 201 skills in one dict)
+- New: `data/classes/` package (5 per-class files + `__init__.py`)
+  - `data/classes/scholar.py` — 41 skills
+  - `data/classes/brute.py` — 40 skills
+  - `data/classes/warden.py` — 40 skills
+  - `data/classes/shadowblade.py` — 40 skills
+  - `data/classes/mad_prophet.py` — 40 skills
+  - `data/classes/__init__.py` — re-exports CLASSES dict
+- Extraction method: `repr()` on each class dict — lossless, byte-identical
+- `data/__init__.py` unchanged (`from data.classes import CLASSES` resolves to package)
+
+### engine/combat.py Split
+- Old: `engine/combat.py` (1,275 lines, 47 KB)
+- New structure:
+  - `engine/items.py` (83 lines) — `determine_rarity()`, `generate_item()`
+  - `engine/skills.py` (525 lines) — handler registries (HEAL_HANDLERS, SHIELD_HANDLERS, BUFF_HANDLERS) + `player_use_skill()` dispatch
+  - `engine/combat.py` (692 lines) — damage calc, status effects, enemy AI, combat init
+- Circular dep solution: `player_use_skill()` uses lazy import `from engine.combat import calc_player_damage, apply_damage_to_enemy` inside function body
+- `has_status` and `apply_status` duplicated in skills.py (both are 1-5 lines, pure logic)
+- `engine/__init__.py` re-exports from all files — no screen imports changed
+- `engine/world.py` updated to import `generate_item` from `engine.items`
+- `tests/test_combat.py` updated: split imports across 3 modules
