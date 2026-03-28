@@ -202,6 +202,9 @@ def apply_damage_to_enemy(state, raw, skill):
         df = e.m_def
     if skill and skill.armor_pierce:
         df *= (1 - skill.armor_pierce)
+    # Weakened debuff: enemy takes more damage (DEF reduced by 20%)
+    if has_status(e, "weakened"):
+        df *= 0.8
     dr = df / (df + 50)
     dmg = max(1, int(raw * (1 - dr)))
 
@@ -1011,7 +1014,7 @@ def enemy_turn(state):
             dmg = int(dmg * 0.75)
         if stype == "magic" and has_status(e, "petrified"):
             dmg = int(dmg * 0.75)
-        if has_status(state, "weakened"):
+        if has_status(e, "weakened"):
             dmg = int(dmg * 0.8)
         is_phys = stype == "physical"
         actual, result = apply_damage_to_player(state, dmg, is_phys)
@@ -1030,7 +1033,7 @@ def enemy_turn(state):
             dmg = int(dmg * 0.75)
         if "magic" in stype and has_status(e, "petrified"):
             dmg = int(dmg * 0.75)
-        if has_status(state, "weakened"):
+        if has_status(e, "weakened"):
             dmg = int(dmg * 0.8)
         is_phys = "physical" in stype
         actual, result = apply_damage_to_player(state, dmg, is_phys)

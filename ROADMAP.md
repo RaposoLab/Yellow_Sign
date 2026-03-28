@@ -266,7 +266,7 @@ Last updated: 2026-03-28 07:52
 ---
 
 ## Improvement Batch: Bug Fixes, UX, Code Quality
-Last updated: 2026-03-28 08:29
+Last updated: 2026-03-28 09:26
 
 ### Pending
 - [x] **Step 29: Fix doom effect (Point 3)** — "Curse of the Pallid Mask" applies `doom` debuff but nothing processes it on expiry. Added handler in `process_status_effects()` to instant-kill enemy if <30% HP when doom expires.
@@ -275,10 +275,10 @@ Last updated: 2026-03-28 08:29
   - `astral`: EVA+40%, mDEF+60% (added to buff bonus functions)
   - `statSwap`: Swaps pDEF/mDEF when calculating damage taken
   - `dreadnought`: Converts 50% of damage taken into STR bonus (cleaned up on expire)
-- [ ] **Step 31: Differentiate weakened debuff (Point 8)** — Multiple skills apply `weakened` but all use the same flat 0.8x damage multiplier. Distinguish ATK vs DEF weakening effects.
-- [ ] **Step 32: Implement accuracy stat (Point 11)** — `self.accuracy` is calculated but never used. Either implement miss chance or remove dead code.
+- [x] **Step 37: Screen shake on hits (Point 22)** — Already implemented: `CombatScreen.trigger_shake(intensity=8, duration=0.3)` fires on damage dealt. Shake offsets drawn in `draw()`. No action needed.
+- [x] **Step 31: Differentiate weakened debuff (Point 8)** — Fixed bug: `enemy_turn()` checked player status instead of enemy status. Added defense reduction: enemy with `weakened` now has DEF/mDEF reduced by 20% in `apply_damage_to_enemy()`, matching skill descriptions. Weakened now reduces both ATK (-20%) and DEF (-20%). All 271 tests pass.
+- [ ] **Step 32: Implement accuracy stat (Point 11)**
 - [ ] **Step 33: Enemy intent indicator (Point 12)** — Show what the enemy will do next turn ("Enemy prepares a heavy strike", "Enemy channels dark energy", etc.) so players can plan tactically.
 - [ ] **Step 34: Damage preview on skill hover (Point 13)** — Show approximate damage on skill hover based on current stats.
 - [ ] **Step 35: Split shared.py into modules (Point 17)** — Split 892-line `shared.py` into constants, assets, rendering, textures.
 - [ ] **Step 36: Move events/traps to JSON (Point 18)** — Move hardcoded event/trap lists to JSON data files for easier content expansion.
-- [ ] **Step 37: Screen shake on hits (Point 22)** — Add subtle screen shake on heavy hits and crits for impact.

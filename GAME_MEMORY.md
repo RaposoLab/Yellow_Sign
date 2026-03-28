@@ -230,6 +230,13 @@ game/
   - `dreadnought`: `apply_damage_to_player()` adds 50% of damage taken as temp STR bonus; cleaned up on expire via STAT_BUFF_KEYS
   - Added `{d}` (duration) to message format dict for all new buff messages
 
+### Weakened Debuff Bug Fix + Defense Reduction (Fixed — Step 31, Session 14)
+- **Bug**: `enemy_turn()` checked `has_status(state, "weakened")` — this checked the *player's* status list instead of the enemy's. Player debuffs had no effect on enemy damage.
+- **Fix**: Changed to `has_status(e, "weakened")` in both physical and debuff attack paths
+- **Feature**: Added defense reduction — when enemy has `weakened`, their DEF/mDEF is reduced by 20% in `apply_damage_to_player()` (making player deal ~10-15% more damage depending on enemy defenses)
+- **Effect**: "weakened" now reduces enemy ATK damage by 20% AND reduces enemy defense by 20% (matching skill descriptions like "Curse of Frailty: DEF-25%", "Terrifying Presence: ATK-25%", "Terror of the Deep: ATK-30%, DEF-20%")
+- All 271 combat tests pass
+
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page
 - Layout: 400×400 sprite (left), info panel (right)
