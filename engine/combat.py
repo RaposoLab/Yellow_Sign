@@ -379,7 +379,15 @@ def process_status_effects(target, is_player, state):
 
     for st in to_remove:
         target.statuses.remove(st)
-        if not is_player:
+        if st.type == "doom" and not is_player:
+            # Doom triggers: instant kill if below 30% HP
+            hp_pct = target.hp / target.max_hp if target.max_hp > 0 else 0
+            if hp_pct < 0.30:
+                target.hp = 0
+                logs.append((f"━━ THE YELLOW SIGN CLAIMS {target.name}! ━━", "crit"))
+            else:
+                logs.append((f"The Pallid Mask fades... {target.name} endures.", "info"))
+        elif not is_player:
             logs.append((f"{st.type} wears off from {target.name}.", "info"))
         else:
             logs.append((f"{st.type} wears off.", "info"))

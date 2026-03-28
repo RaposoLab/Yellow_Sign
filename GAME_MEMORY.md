@@ -215,6 +215,12 @@ game/
 - `draw_text_with_glow()` renders text 8+ times per call — performance bottleneck, consider caching
 - ~~No automated tests — one bad number in skill dict can break combat silently~~ → FIXED: `tests/test_combat.py` — 19 suites, 271 assertions. Covers state init, damage calc, all 5 classes, skill types, buffs, regen, immunity, poison, cooldowns, enemy AI, boss phases, flee, item gen, madness death, HP cost, lifesteal, full combat sim. Run: `python3 tests/test_combat.py`
 
+## Bug Fixes (Session 13 — 2026-03-28)
+### Doom Effect Not Triggering (Fixed — Step 29)
+- **Symptom**: Scholar's "Curse of the Pallid Mask" applies `doom` debuff (3 turns), but when it expires nothing happens
+- **Root cause**: `process_status_effects()` had no handler for `doom` — it just logged "doom wears off"
+- **Fix**: Added doom-specific logic in the `to_remove` loop. When doom expires on enemy and HP < 30%: instant kill with dramatic log message. Otherwise: "The Pallid Mask fades..." flavor text.
+
 ## Class Select Overhaul Details (Step 10)
 - Redesigned from all-5-at-once to one-class-per-page
 - Layout: 400×400 sprite (left), info panel (right)

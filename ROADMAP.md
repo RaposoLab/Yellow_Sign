@@ -262,3 +262,19 @@ Last updated: 2026-03-28 07:52
   - Prophet's Resilience (Prophet): +5 MAD, regen 8% for 2 turns
 - apply_status_player() now checks immunity buff before applying debuffs
 - Added pallidMask to STAT_BUFF_KEYS for proper temp_stats cleanup on expire
+
+---
+
+## Improvement Batch: Bug Fixes, UX, Code Quality
+Last updated: 2026-03-28 08:29
+
+### Pending
+- [x] **Step 29: Fix doom effect (Point 3)** — "Curse of the Pallid Mask" applies `doom` debuff but nothing processes it on expiry. Added handler in `process_status_effects()` to instant-kill enemy if <30% HP when doom expires.
+- [ ] **Step 30: Implement unimplemented buff types (Point 7)** — `eldritchRebirth`, `astral`, `statSwap`, `dreadnought` are used by real skills but have no effect. Implement each.
+- [ ] **Step 31: Differentiate weakened debuff (Point 8)** — Multiple skills apply `weakened` but all use the same flat 0.8x damage multiplier. Distinguish ATK vs DEF weakening effects.
+- [ ] **Step 32: Implement accuracy stat (Point 11)** — `self.accuracy` is calculated but never used. Either implement miss chance or remove dead code.
+- [ ] **Step 33: Enemy intent indicator (Point 12)** — Show what the enemy will do next turn ("Enemy prepares a heavy strike", "Enemy channels dark energy", etc.) so players can plan tactically.
+- [ ] **Step 34: Damage preview on skill hover (Point 13)** — Show approximate damage on skill hover based on current stats.
+- [ ] **Step 35: Split shared.py into modules (Point 17)** — Split 892-line `shared.py` into constants, assets, rendering, textures.
+- [ ] **Step 36: Move events/traps to JSON (Point 18)** — Move hardcoded event/trap lists to JSON data files for easier content expansion.
+- [ ] **Step 37: Screen shake on hits (Point 22)** — Add subtle screen shake on heavy hits and crits for impact.
