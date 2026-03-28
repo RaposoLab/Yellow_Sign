@@ -703,8 +703,6 @@ def draw_hud(surface, s, assets):
               mad_color(s.madness), 620, 68)
 
     # Buff/debuff icons row (replaces raw text statuses)
-    _hud_status_rects = draw_status_icons_row(
+    draw_status_icons_row(
         surface, 480, 90, s.statuses, s.buffs, barrier=s.barrier, size=20, gap=4
     )
-    # Store on surface for tooltip access (combat screen reads this)
-    surface._hud_status_rects = _hud_status_rects

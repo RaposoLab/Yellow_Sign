@@ -20,6 +20,7 @@ class CombatScreen(Screen):
         self.turn_msg_timer = 0
         self.particles = []  # [x, y, vx, vy, size, color, alpha, life]
         self._enemy_status_rects = []  # [(Rect, effect_type), ...] for hover tooltips
+        self._player_status_rects = []  # [(Rect, effect_type), ...] for hover tooltips
 
     def enter(self):
         self.damage_numbers = []
@@ -351,12 +352,11 @@ class CombatScreen(Screen):
                 draw_status_tooltip(surface, effect_type, rect, self.assets.fonts["tiny"])
                 return  # Only show one tooltip at a time
 
-        # Check player status icons (from HUD)
-        if hasattr(surface, '_hud_status_rects'):
-            for rect, effect_type in surface._hud_status_rects:
-                if rect.collidepoint(mx, my):
-                    draw_status_tooltip(surface, effect_type, rect, self.assets.fonts["tiny"])
-                    return
+        # Check player status icons
+        for rect, effect_type in self._player_status_rects:
+            if rect.collidepoint(mx, my):
+                draw_status_tooltip(surface, effect_type, rect, self.assets.fonts["tiny"])
+                return
 
     def draw(self, surface):
         s = self.game.state
@@ -371,6 +371,11 @@ class CombatScreen(Screen):
             oy = random.randint(-self.shake_intensity, self.shake_intensity)
 
         draw_hud(surface, s, self.assets)
+
+        # Player status icons (for hover tooltips — drawn on top of HUD)
+        self._player_status_rects = draw_status_icons_row(
+            surface, 480, 90, s.statuses, s.buffs, barrier=s.barrier, size=20, gap=4
+        )
 
         # Particles (behind UI elements)
         for p in self.particles:
