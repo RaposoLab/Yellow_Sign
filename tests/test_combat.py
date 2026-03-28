@@ -11,13 +11,13 @@ import random
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from engine.models import GameState, Skill, Item, Enemy, CombatState
+from engine.models import GameState, Skill, Item, Enemy, CombatState, has_status, apply_status
 from engine.combat import (
     calc_player_damage, apply_damage_to_enemy, apply_damage_to_player,
     enemy_turn, tick_player_buffs,
     process_status_effects, process_player_status_effects,
     check_boss_phase, combat_run_attempt,
-    start_combat, apply_status, has_status,
+    start_combat,
 )
 from engine.items import generate_item
 from engine.skills import (

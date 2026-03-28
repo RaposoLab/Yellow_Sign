@@ -146,6 +146,19 @@ class StatusEffect:
         return se
 
 
+def has_status(target, status_type):
+    """Check if entity has a specific status effect."""
+    return any(s.type == status_type for s in target.statuses)
+
+def apply_status(target, effect_type, duration):
+    """Apply a status effect to an entity. Refreshes duration if already present."""
+    existing = next((s for s in target.statuses if s.type == effect_type), None)
+    if existing:
+        existing.duration = max(existing.duration, duration)
+    else:
+        target.statuses.append(StatusEffect(effect_type, duration))
+
+
 class CombatState:
     """Holds state for a combat encounter."""
     def __init__(self, enemy, is_boss):

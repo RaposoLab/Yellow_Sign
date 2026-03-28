@@ -3,24 +3,9 @@
 import random
 import math
 from data import ENEMIES, BOSS
-from engine.models import Item, StatusEffect, Enemy, CombatState
+from engine.models import Item, StatusEffect, Enemy, CombatState, has_status, apply_status
 from engine.items import generate_item
-from engine.skills import (
-    player_use_skill,
-    has_status as _skills_has_status,
-    apply_status as _skills_apply_status,
-)
-
-# Re-export has_status and apply_status for backward compat
-def has_status(target, status_type):
-    return any(s.type == status_type for s in target.statuses)
-
-def apply_status(target, effect_type, duration):
-    existing = next((s for s in target.statuses if s.type == effect_type), None)
-    if existing:
-        existing.duration = max(existing.duration, duration)
-    else:
-        target.statuses.append(StatusEffect(effect_type, duration))
+from engine.skills import player_use_skill
 
 
 # ═══════════════════════════════════════════
@@ -49,94 +34,9 @@ def start_combat(state, is_boss=False):
     if enemy.desc:
         state.combat.add_log(enemy.desc, "info")
 
-def calc_player_damage(state, skill):
-    """Calculate raw player damage for a skill."""
-    sv = state.stats.get(skill.stat, 10)
-    s2v = state.stats.get(skill.stat2, 10) if skill.stat2 else 0
-
-    if skill.type in ("physical", "physical_debuff", "mixed_phys"):
-        bd = state.atk * (skill.power or 1) + sv * 0.8
-        if skill.stat2_mult:
-            bd += s2v * skill.stat2_mult
-        if skill.def_scaling:
-            bd += state.defense * 1.0
-    elif skill.type in ("magic", "magic_debuff", "mixed_magic"):
-        bd = (5 + sv * 1.5) * (skill.power or 1)
-        if skill.stat2_mult:
-            bd += s2v * skill.stat2_mult
-    elif skill.type == "debuff":
-        bd = (5 + sv * 1.5) * (skill.power or 1)
-    elif skill.type in ("self_buff", "self_heal", "self_shield", "curse", "ultimate"):
-        bd = 0
-        if skill.type == "curse" and skill.consume_shield:
-            bd = (5 + sv * 1.5) * skill.power + state.shield
-        elif skill.type == "ultimate":
-            bd = (5 + sv * 1.5) * skill.power
-            if skill.stat2_mult:
-                bd += s2v * skill.stat2_mult
-        else:
-            bd = (5 + sv * 1.5) * (skill.power or 1) if skill.power else 0
-    else:
-        bd = (5 + sv * 1.5) * (skill.power or 1)
-
-    if skill.scaling_low_hp:
-        hr = state.hp / state.max_hp
-        bd *= 1 + (1 - hr) * 2.0
-
-    if skill.madness_scaling:
-        bd *= (1 + state.madness / 100)
-
-    if state.rage:
-        bd *= 1.6
-    if state.buffs.get("atkCritUp", 0) > 0:
-        bd *= 1.4
-    if state.buffs.get("warpTime", 0) > 0:
-        bd *= 1.2
-    if state.buffs.get("madPower", 0) > 0:
-        bd *= 1.25
-    if state.buffs.get("darkPact", 0) > 0:
-        bd *= 1.3
-    if state.buffs.get("shadowMeld", 0) > 0:
-        bd *= 2.0
-    if state.buffs.get("eclipse", 0) > 0:
-        bd *= 1.3
-    if state.buffs.get("ethereal", 0) > 0:
-        bd *= 2.5  # +150% = 2.5x total
-
-    # Random variance
-    bd *= (1 + random.random() * state.luck * 0.005)
-    bd *= (0.85 + random.random() * 0.3)
-
-    if skill.multihit and skill.multihit > 1:
-        bd *= skill.multihit
-
-    if skill.gamble:
-        gm = 0.5 + random.random() * 2.5
-        bd *= gm
-
-    if skill.coin_flip:
-        if random.random() < 0.5:
-            bd = 0
-            h = int(state.max_hp * 0.25)
-            state.hp = min(state.max_hp, state.hp + h)
-        else:
-            bd *= 1.5
-
-    if skill.execute_bonus and state.combat:
-        e = state.combat.enemy
-        if e and e.hp / e.max_hp < 0.25:
-            bd *= 2.0
-
-    if skill.luck_bonus:
-        bd *= (1 + state.luck * 0.02)
-
-    return int(bd)
-
-def calc_preview_damage(state, skill):
-    """Calculate deterministic preview damage for a skill (no random variance).
-    Returns (base_dmg, final_dmg_after_def) as approximate range center.
-    base_dmg = raw before enemy defense
-    final_dmg = after applying current enemy's defense
+def _base_damage(state, skill):
+    """Core damage calculation shared by player and preview paths.
+    Returns raw base damage as float (no random variance, no defense reduction).
     """
     sv = state.stats.get(skill.stat, 10)
     s2v = state.stats.get(skill.stat2, 10) if skill.stat2 else 0
@@ -200,6 +100,38 @@ def calc_preview_damage(state, skill):
 
     if skill.luck_bonus:
         bd *= (1 + state.luck * 0.02)
+
+    return bd
+
+
+def calc_player_damage(state, skill):
+    """Calculate raw player damage for a skill (with random variance)."""
+    bd = _base_damage(state, skill)
+
+    # Random variance
+    bd *= (1 + random.random() * state.luck * 0.005)
+    bd *= (0.85 + random.random() * 0.3)
+
+    if skill.gamble:
+        gm = 0.5 + random.random() * 2.5
+        bd *= gm
+
+    if skill.coin_flip:
+        if random.random() < 0.5:
+            bd = 0
+            h = int(state.max_hp * 0.25)
+            state.hp = min(state.max_hp, state.hp + h)
+        else:
+            bd *= 1.5
+
+    return int(bd)
+
+
+def calc_preview_damage(state, skill):
+    """Calculate deterministic preview damage for a skill (no random variance).
+    Returns (base_dmg, final_dmg_after_def) as approximate range center.
+    """
+    bd = _base_damage(state, skill)
 
     base_dmg = int(bd)
     if base_dmg <= 0:
@@ -381,16 +313,6 @@ def apply_damage_to_player(state, raw, is_phys):
         state.recalc_stats()
 
     return dmg, "hit"
-
-def has_status(target, status_type):
-    return any(s.type == status_type for s in target.statuses)
-
-def apply_status(target, effect_type, duration):
-    existing = next((s for s in target.statuses if s.type == effect_type), None)
-    if existing:
-        existing.duration = max(existing.duration, duration)
-    else:
-        target.statuses.append(StatusEffect(effect_type, duration))
 
 def process_status_effects(target, is_player, state):
     """Process burning, poison, bleeding, etc. Returns list of log messages."""
