@@ -3,7 +3,7 @@
 import random
 from data import PATH_TEMPLATES, FLOOR_NARRATIVES, EVENTS, TRAPS
 from engine.models import Item
-from engine.combat import generate_item
+from engine.items import generate_item
 
 # ═══════════════════════════════════════════
 # FLOOR PROGRESSION

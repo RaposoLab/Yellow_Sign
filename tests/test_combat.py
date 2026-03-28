@@ -14,10 +14,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from engine.models import GameState, Skill, Item, Enemy, CombatState
 from engine.combat import (
     calc_player_damage, apply_damage_to_enemy, apply_damage_to_player,
-    player_use_skill, enemy_turn, tick_player_buffs,
+    enemy_turn, tick_player_buffs,
     process_status_effects, process_player_status_effects,
-    check_boss_phase, combat_run_attempt, generate_item,
+    check_boss_phase, combat_run_attempt,
     start_combat, apply_status, has_status,
+)
+from engine.items import generate_item
+from engine.skills import (
+    player_use_skill,
     _handle_self_heal, _handle_self_shield, _handle_self_buff,
     HEAL_HANDLERS, SHIELD_HANDLERS, BUFF_HANDLERS,
 )
