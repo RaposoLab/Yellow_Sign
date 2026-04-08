@@ -4,45 +4,77 @@ import random
 from typing import List, Tuple, Dict, Any, Optional
 
 from data import (
-    ENEMIES, BOSS,
-    ENEMY_VAR_LOW, ENEMY_VAR_RANGE,
-    FLEE_BASE_CHANCE, FLEE_AGI_MULTIPLIER, FLEE_SUCCESS_MADNESS, FLEE_FAIL_MADNESS,
-    FREEZING_PHYS_MULT, PETRIFIED_MAGIC_MULT, WEAKENED_ATK_MULT,
-    SHOCK_STUN_CHANCE, BLIND_MISS_CHANCE,
-    BOSS_PHASE2_HP, BOSS_PHASE3_HP, BOSS_PHASE3_ATK_MULT,
-    XP_BASE, XP_PER_FLOOR, XP_BOSS_BONUS,
-    GOLD_BASE, GOLD_PER_FLOOR, GOLD_BOSS_BONUS, GOLD_BASE_RANDOM_MAX,
-    MADNESS_BOSS_KILL, MADNESS_NORMAL_KILL,
+    ENEMIES,
+    BOSS,
+    ENEMY_VAR_LOW,
+    ENEMY_VAR_RANGE,
+    FLEE_BASE_CHANCE,
+    FLEE_AGI_MULTIPLIER,
+    FLEE_SUCCESS_MADNESS,
+    FLEE_FAIL_MADNESS,
+    FREEZING_PHYS_MULT,
+    PETRIFIED_MAGIC_MULT,
+    WEAKENED_ATK_MULT,
+    SHOCK_STUN_CHANCE,
+    BLIND_MISS_CHANCE,
+    BOSS_PHASE2_HP,
+    BOSS_PHASE3_HP,
+    BOSS_PHASE3_ATK_MULT,
+    XP_BASE,
+    XP_PER_FLOOR,
+    XP_BOSS_BONUS,
+    GOLD_BASE,
+    GOLD_PER_FLOOR,
+    GOLD_BOSS_BONUS,
+    GOLD_BASE_RANDOM_MAX,
+    MADNESS_BOSS_KILL,
+    MADNESS_NORMAL_KILL,
 )
 from engine.models import Enemy, CombatState, GameState, has_status
 from engine.damage import (
-    calc_player_damage, calc_preview_damage,
-    apply_damage_to_enemy, apply_damage_to_player,
+    calc_player_damage,
+    calc_preview_damage,
+    apply_damage_to_enemy,
+    apply_damage_to_player,
 )
 from engine.status_effects import (
-    apply_status_effect_on_player, apply_status_player,
-    process_status_effects, process_player_status_effects,
+    apply_status_effect_on_player,
+    apply_status_player,
+    process_status_effects,
+    process_player_status_effects,
     tick_player_buffs,
 )
 
-
 # Re-export for backward compatibility (engine/__init__.py, tests, and skills.py import from here)
 from engine.damage import _base_damage, _get_buff_defense_bonus, _get_buff_evasion_bonus
-from engine.damage import calc_player_damage, calc_preview_damage, apply_damage_to_enemy, apply_damage_to_player
-from engine.status_effects import tick_player_buffs, process_status_effects, process_player_status_effects
+from engine.damage import (
+    calc_player_damage,
+    calc_preview_damage,
+    apply_damage_to_enemy,
+    apply_damage_to_player,
+)
+from engine.status_effects import (
+    tick_player_buffs,
+    process_status_effects,
+    process_player_status_effects,
+)
 from engine.status_effects import apply_status_player, apply_status_effect_on_player
-
 
 # ═══════════════════════════════════════════
 # COMBAT LIFECYCLE
 # ═══════════════════════════════════════════
+
 
 def start_combat(state: GameState, is_boss: bool = False) -> None:
     """Initialize a combat encounter."""
     if is_boss or state.floor >= state.max_floor:
         ed = dict(BOSS)
     else:
-        pool = [e for e in ENEMIES if e["level_range"][0] <= state.floor <= e["level_range"][1]]
+        pool = [
+            e
+            for e in ENEMIES
+            if e["level_range"][0] <= state.floor <= e["level_range"][1]
+        ]
         ed = dict(random.choice(pool)) if pool else dict(ENEMIES[0])
 
     enemy = Enemy(ed, state.floor)
@@ -80,6 +112,7 @@ def _get_enemy_intent_message(skill: Dict[str, Any]) -> str:
 # ═══════════════════════════════════════════
 # ENEMY AI
 # ═══════════════════════════════════════════
+
 
 def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
     """Execute enemy turn. Returns list of (text, type) log messages."""
@@ -121,7 +154,9 @@ def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
         is_phys = stype == "physical"
         actual, result = apply_damage_to_player(state, dmg, is_phys)
         if actual > 0:
-            logs.append((f"{e.name} uses {skill['name']} for {actual} damage!", "damage"))
+            logs.append(
+                (f"{e.name} uses {skill['name']} for {actual} damage!", "damage")
+            )
         elif result == "evade":
             logs.append((f"You evade {e.name}'s attack!", "info"))
         elif result == "barrier":
@@ -141,11 +176,15 @@ def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
         actual, result = apply_damage_to_player(state, dmg, is_phys)
 
         if skill.get("effect"):
-            apply_status_effect_on_player(state, skill["effect"], skill.get("duration", 2))
+            apply_status_effect_on_player(
+                state, skill["effect"], skill.get("duration", 2)
+            )
 
         if actual > 0:
             eff = skill.get("effect", "")
-            logs.append((f"{e.name} uses {skill['name']} for {actual} + {eff}!", "damage"))
+            logs.append(
+                (f"{e.name} uses {skill['name']} for {actual} + {eff}!", "damage")
+            )
         elif result == "evade":
             logs.append((f"You evade {e.name}'s attack!", "info"))
         else:
@@ -162,6 +201,7 @@ def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
 # ═══════════════════════════════════════════
 # BOSS PHASES & FLEE
 # ═══════════════════════════════════════════
+
 
 def check_boss_phase(state: GameState) -> List[Tuple[str, str]]:
     """Check and apply boss phase transitions."""
@@ -182,8 +222,24 @@ def check_boss_phase(state: GameState) -> List[Tuple[str, str]]:
 
     elif pct <= BOSS_PHASE2_HP and not c.phase2:
         c.phase2 = True
-        e.skills.append({"name": "Reality Tear", "type": "magic_debuff", "power": 2.0, "effect": "blinded", "duration": 2})
-        e.skills.append({"name": "Maddening Whisper", "type": "magic_debuff", "power": 1.0, "effect": "shocked", "duration": 2})
+        e.skills.append(
+            {
+                "name": "Reality Tear",
+                "type": "magic_debuff",
+                "power": 2.0,
+                "effect": "blinded",
+                "duration": 2,
+            }
+        )
+        e.skills.append(
+            {
+                "name": "Maddening Whisper",
+                "type": "magic_debuff",
+                "power": 1.0,
+                "effect": "shocked",
+                "duration": 2,
+            }
+        )
         logs.append(("━━ THE KING UNRAVELS REALITY! New abilities! ━━", "crit"))
 
     return logs

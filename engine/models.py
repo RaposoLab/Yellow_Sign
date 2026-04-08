@@ -5,15 +5,22 @@ import math
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional, Dict, Any
 from data import (
-    CLASSES, MAX_ACTIVE_SKILLS,
-    RARITY_DATA, CURSED_DEBUFFS, ITEM_PREFIXES,
-    WEAPON_TEMPLATES, ARMOR_TEMPLATES, ACCESSORY_TEMPLATES,
-    BOOTS_TEMPLATES, RING_TEMPLATES,
+    CLASSES,
+    MAX_ACTIVE_SKILLS,
+    RARITY_DATA,
+    CURSED_DEBUFFS,
+    ITEM_PREFIXES,
+    WEAPON_TEMPLATES,
+    ARMOR_TEMPLATES,
+    ACCESSORY_TEMPLATES,
+    BOOTS_TEMPLATES,
+    RING_TEMPLATES,
 )
 
 
 class Item:
     """Represents an equippable item."""
+
     def __init__(self, name, slot, stats, rarity, debuffs=None):
         self.name = name
         self.slot = slot  # weapon, armor, accessory, boots, ringL, ringR
@@ -22,14 +29,32 @@ class Item:
         self.debuffs = debuffs or {}  # dict of stat penalties (cursed items)
 
     def stat_text(self):
-        names = {"atk": "ATK", "def": "DEF", "int": "INT", "str": "STR", "agi": "AGI", "wis": "WIS", "luck": "LUK", "hp": "HP"}
+        names = {
+            "atk": "ATK",
+            "def": "DEF",
+            "int": "INT",
+            "str": "STR",
+            "agi": "AGI",
+            "wis": "WIS",
+            "luck": "LUK",
+            "hp": "HP",
+        }
         parts = [f"{names.get(k, k)}+{v}" for k, v in self.stats.items()]
         return " ".join(parts)
 
     def debuff_text(self):
         if not self.debuffs:
             return ""
-        names = {"atk": "ATK", "def": "DEF", "int": "INT", "str": "STR", "agi": "AGI", "wis": "WIS", "luck": "LUK", "hp": "HP"}
+        names = {
+            "atk": "ATK",
+            "def": "DEF",
+            "int": "INT",
+            "str": "STR",
+            "agi": "AGI",
+            "wis": "WIS",
+            "luck": "LUK",
+            "hp": "HP",
+        }
         parts = [f"-{v} {names.get(k, k)}" for k, v in self.debuffs.items()]
         return " ".join(parts)
 
@@ -38,8 +63,11 @@ class Item:
 
     def to_dict(self):
         return {
-            "name": self.name, "slot": self.slot, "stats": self.stats,
-            "rarity": self.rarity, "debuffs": self.debuffs,
+            "name": self.name,
+            "slot": self.slot,
+            "stats": self.stats,
+            "rarity": self.rarity,
+            "debuffs": self.debuffs,
         }
 
     @classmethod
@@ -50,6 +78,7 @@ class Item:
 @dataclass
 class Skill:
     """Represents a player skill/ability."""
+
     name: str
     icon: str = "?"
     unlock_lv: int = 1
@@ -111,6 +140,7 @@ class Skill:
 @dataclass
 class PlayerIdentity:
     """Who the player is: class choice and level."""
+
     class_id: Optional[str] = None
     class_name: str = ""
     level: int = 1
@@ -119,6 +149,7 @@ class PlayerIdentity:
 @dataclass
 class PlayerProgression:
     """Run-level progression: floors, kills, gold, XP, madness."""
+
     floor: int = 1
     max_floor: int = 20
     kills: int = 0
@@ -132,6 +163,7 @@ class PlayerProgression:
 @dataclass
 class CombatBuffs:
     """Combat-only ephemeral state, cleared on combat start."""
+
     shield: int = 0
     barrier: int = 0
     rage: bool = False
@@ -142,6 +174,7 @@ class CombatBuffs:
 
 class StatusEffect:
     """Represents a status effect on player or enemy."""
+
     def __init__(self, effect_type, duration):
         self.type = effect_type  # burning, poisoned, shocked, blinded, frozen, petrified, weakened, bleeding
         self.duration = duration
@@ -161,6 +194,7 @@ def has_status(target, status_type):
     """Check if entity has a specific status effect."""
     return any(s.type == status_type for s in target.statuses)
 
+
 def apply_status(target, effect_type, duration):
     """Apply a status effect to an entity. Refreshes duration if already present."""
     existing = next((s for s in target.statuses if s.type == effect_type), None)
@@ -172,6 +206,7 @@ def apply_status(target, effect_type, duration):
 
 class CombatState:
     """Holds state for a combat encounter."""
+
     def __init__(self, enemy, is_boss):
         self.enemy = enemy
         self.is_boss = is_boss
@@ -188,6 +223,7 @@ class CombatState:
 
 class Enemy:
     """Represents an enemy in combat."""
+
     def __init__(self, data, floor):
         self.name = data["name"]
         self.type = data.get("type", "Unknown")
@@ -238,8 +274,12 @@ class GameState:
 
         # --- Equipment & skills ---
         self.equipment = {
-            "weapon": None, "accessory": None, "armor": None,
-            "boots": None, "ringL": None, "ringR": None,
+            "weapon": None,
+            "accessory": None,
+            "armor": None,
+            "boots": None,
+            "ringL": None,
+            "ringR": None,
         }
         self.inventory = []
         self.all_skills = []
@@ -253,6 +293,7 @@ class GameState:
     @property
     def class_id(self):
         return self.identity.class_id
+
     @class_id.setter
     def class_id(self, v):
         self.identity.class_id = v
@@ -260,6 +301,7 @@ class GameState:
     @property
     def class_name(self):
         return self.identity.class_name
+
     @class_name.setter
     def class_name(self, v):
         self.identity.class_name = v
@@ -267,6 +309,7 @@ class GameState:
     @property
     def level(self):
         return self.identity.level
+
     @level.setter
     def level(self, v):
         self.identity.level = v
@@ -276,6 +319,7 @@ class GameState:
     @property
     def floor(self):
         return self.progression.floor
+
     @floor.setter
     def floor(self, v):
         self.progression.floor = v
@@ -283,6 +327,7 @@ class GameState:
     @property
     def max_floor(self):
         return self.progression.max_floor
+
     @max_floor.setter
     def max_floor(self, v):
         self.progression.max_floor = v
@@ -290,6 +335,7 @@ class GameState:
     @property
     def kills(self):
         return self.progression.kills
+
     @kills.setter
     def kills(self, v):
         self.progression.kills = v
@@ -297,6 +343,7 @@ class GameState:
     @property
     def rooms_explored(self):
         return self.progression.rooms_explored
+
     @rooms_explored.setter
     def rooms_explored(self, v):
         self.progression.rooms_explored = v
@@ -304,6 +351,7 @@ class GameState:
     @property
     def gold(self):
         return self.progression.gold
+
     @gold.setter
     def gold(self, v):
         self.progression.gold = v
@@ -311,6 +359,7 @@ class GameState:
     @property
     def xp(self):
         return self.progression.xp
+
     @xp.setter
     def xp(self, v):
         self.progression.xp = v
@@ -318,6 +367,7 @@ class GameState:
     @property
     def xp_next(self):
         return self.progression.xp_next
+
     @xp_next.setter
     def xp_next(self, v):
         self.progression.xp_next = v
@@ -325,6 +375,7 @@ class GameState:
     @property
     def madness(self):
         return self.progression.madness
+
     @madness.setter
     def madness(self, v):
         self.progression.madness = v
@@ -334,6 +385,7 @@ class GameState:
     @property
     def shield(self):
         return self.combat_buffs.shield
+
     @shield.setter
     def shield(self, v):
         self.combat_buffs.shield = v
@@ -341,6 +393,7 @@ class GameState:
     @property
     def barrier(self):
         return self.combat_buffs.barrier
+
     @barrier.setter
     def barrier(self, v):
         self.combat_buffs.barrier = v
@@ -348,6 +401,7 @@ class GameState:
     @property
     def rage(self):
         return self.combat_buffs.rage
+
     @rage.setter
     def rage(self, v):
         self.combat_buffs.rage = v
@@ -355,6 +409,7 @@ class GameState:
     @property
     def buffs(self):
         return self.combat_buffs.buffs
+
     @buffs.setter
     def buffs(self, v):
         self.combat_buffs.buffs = v
@@ -362,6 +417,7 @@ class GameState:
     @property
     def temp_stats(self):
         return self.combat_buffs.temp_stats
+
     @temp_stats.setter
     def temp_stats(self, v):
         self.combat_buffs.temp_stats = v
@@ -369,6 +425,7 @@ class GameState:
     @property
     def hits_taken(self):
         return self.combat_buffs.hits_taken
+
     @hits_taken.setter
     def hits_taken(self, v):
         self.combat_buffs.hits_taken = v
@@ -385,7 +442,9 @@ class GameState:
         self.max_hp = cls["hp_base"]
         self.hp = self.max_hp
         self.all_skills = [Skill(**s) for s in cls["skills"]]
-        self.active_skills = [Skill(**s) for s in cls["skills"] if s.get("starting", False)]
+        self.active_skills = [
+            Skill(**s) for s in cls["skills"] if s.get("starting", False)
+        ]
         self.recalc_stats()
         self.hp = self.max_hp
 
@@ -427,7 +486,13 @@ class GameState:
                 s[k] = s.get(k, 0) + v
 
         self.stats = s
-        self.max_hp = max(1, cls["hp_base"] + cls["hp_per_level"] * (self.level - 1) + int(s["str"] * 2.5) + bonus_hp)
+        self.max_hp = max(
+            1,
+            cls["hp_base"]
+            + cls["hp_per_level"] * (self.level - 1)
+            + int(s["str"] * 2.5)
+            + bonus_hp,
+        )
         self.atk = max(1, 5 + int(s["str"] * 0.8) + bonus_atk)
         self.defense = max(0, 2 + int(s["wis"] * 0.3) + int(s["str"] * 0.3) + bonus_def)
         self.m_def = max(0, 3 + int(s["wis"] * 0.6) + int(s["int"] * 0.3))
@@ -465,28 +530,34 @@ class GameState:
 
             # Filter: correct tier, not already learned
             available = [
-                s for s in self.all_skills
-                if s.tier == tier and
-                not any(a.name == s.name for a in self.active_skills)
+                s
+                for s in self.all_skills
+                if s.tier == tier
+                and not any(a.name == s.name for a in self.active_skills)
             ]
 
             if not available:
                 # Fallback: any tier not already learned
                 available = [
-                    s for s in self.all_skills
+                    s
+                    for s in self.all_skills
                     if not any(a.name == s.name for a in self.active_skills)
                 ]
 
             if available:
                 # Weighted selection based on class stat priorities
                 cls_data = CLASSES[self.class_id]
-                primary_stat = max(cls_data["base_stats"], key=cls_data["base_stats"].get)
-                second_stat = sorted(cls_data["base_stats"].items(), key=lambda x: x[1], reverse=True)[1][0]
+                primary_stat = max(
+                    cls_data["base_stats"], key=cls_data["base_stats"].get
+                )
+                second_stat = sorted(
+                    cls_data["base_stats"].items(), key=lambda x: x[1], reverse=True
+                )[1][0]
 
                 weighted_pool = []
                 for s in available:
                     weight = 1
-                    if hasattr(s, 'stat_priority') and s.stat_priority:
+                    if hasattr(s, "stat_priority") and s.stat_priority:
                         if primary_stat in s.stat_priority:
                             weight = 3
                         elif second_stat in s.stat_priority:
@@ -504,7 +575,11 @@ class GameState:
 
                 # Ensure we have 2 if possible
                 if len(chosen) < 2 and len(available) >= 2:
-                    remaining = [s for s in available if not any(c.name == s.name for c in chosen)]
+                    remaining = [
+                        s
+                        for s in available
+                        if not any(c.name == s.name for c in chosen)
+                    ]
                     if remaining:
                         chosen.append(random.choice(remaining))
 
