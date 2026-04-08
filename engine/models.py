@@ -506,6 +506,8 @@ class GameState:
     def add_madness(self, amount):
         """Add madness, returning True if game over triggered."""
         self.madness = max(0, min(100, self.madness + amount))
+        if self.buffs.get("madImmune", 0) > 0:
+            return False
         return self.madness >= 100
 
     def check_level_up(self):

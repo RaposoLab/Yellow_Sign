@@ -627,6 +627,50 @@ def _buff_permAgiLuk(state: GameState, skill: Skill) -> None:
     state.recalc_stats()
 
 
+def _buff_innerFire(state: GameState, skill: Skill) -> None:
+    """Inner Fire / Lucky Coin Toss / Threshold Sense: stat bonuses.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Adds temp stats and recalculates. Warden: WIS+3, Mad Prophet: LUCK+5.
+    """
+    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 3
+    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 5
+    state.buffs["innerFire"] = skill.buff_duration
+    state.recalc_stats()
+
+
+def _buff_luckyDodge(state: GameState, skill: Skill) -> None:
+    """Lucky Dodge / Unreliable Fortune: LUCK bonus.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Adds temp LUCK+3 and recalculates.
+    """
+    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 3
+    state.buffs["luckyDodge"] = skill.buff_duration
+    state.recalc_stats()
+
+
+def _buff_critUp(state: GameState, skill: Skill) -> None:
+    """Eldritch Sight / Fate Reading / Cartographer's Eye / Collector's Eye.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Sets critUp buff (evasion from EVASION_BUFF_TABLE, crit applied in damage calc).
+    """
+    state.buffs["critUp"] = skill.buff_duration
+
+
 def _buff_permCrit10(state: GameState, skill: Skill) -> None:
     """Sixth Sense: CRIT+25% for duration.
 
@@ -945,6 +989,9 @@ _BUFF_MESSAGES: Dict[str, str] = {
     "randStat2": "Prophetic Insight! {stats}! for 5 turns!",
     "madImmune": "Madness Mastery! MAD no longer causes death! (+15 MAD)",
     "madPower": "Empower Madness! +25% DMG! (+15 MAD)",
+    "innerFire": "Inner Fire burns! WIS+3, LUCK+5 for {d} turns!",
+    "luckyDodge": "Lucky Dodge! EVA+35%, LUCK+3 for {d} turns!",
+    "critUp": "Eldritch Sight! EVA+15% for {d} turns!",
     "calmMind": "Leng's Whisper muffles the madness. -3 MAD!",
     "eldritchBargain": "Eldritch Bargain! -3 to {stats}, +50 gold!",
     "foolLuck": "The Fool's Luck! -10 MAD, nullify next 3 attacks!",
@@ -970,6 +1017,9 @@ BUFF_HANDLERS: Dict[str, BuffApplyFn] = {
     "permWisStr": _buff_permWisStr,
     "permAgiLuk": _buff_permAgiLuk,
     "permCrit10": _buff_permCrit10,
+    "innerFire": _buff_innerFire,
+    "luckyDodge": _buff_luckyDodge,
+    "critUp": _buff_critUp,
     "permAll1": _buff_permAll1,
     "resetCds": _buff_resetCds,
     "bloodRitual": _buff_bloodRitual,
