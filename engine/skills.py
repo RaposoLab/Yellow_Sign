@@ -18,70 +18,244 @@ BuffApplyFn = Callable[[GameState, Skill], Optional[Dict[str, Any]]]
 # ═══════════════════════════════════════════
 
 def _calc_heal_int2_buff(state: GameState, skill: Skill) -> int:
+    """Calculate healing for Forbidden Knowledge skill.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Increases base INT by 3 and recalculates stats
+    """
     h = int(state.stats["int"] * 2)
     state.base_stats["int"] += 3
     state.recalc_stats()
     return h
 
 def _calc_heal_missing_hp(state: GameState, skill: Skill) -> int:
+    """Calculate healing based on missing HP percentage.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed (60% of missing HP)
+    """
     if state.max_hp <= 0:
         return 0
     missing = 1 - state.hp / state.max_hp
     return int(missing * state.max_hp * 0.6)
 
 def _calc_heal_wis2_10(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 2x WIS + 10.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    """
     return int(state.stats["wis"] * 2) + 10
 
 def _calc_heal_wis3_int1(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 3x WIS + 1.5x INT.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    """
     return int(state.stats["wis"] * 3 + state.stats["int"] * 1.5)
 
 def _calc_heal_wis2_luck1(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 2.5x WIS + LUCK, adds 5 madness.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Increases madness by 5
+    """
     h = int(state.stats["wis"] * 2.5 + state.luck * 1)
     state.madness = min(MADNESS_MAX, state.madness + 5)
     return h
 
 def _calc_heal_full_heal(state: GameState, skill: Skill) -> int:
+    """Full heal that restores HP to max, adds 25 madness.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        0 (healing handled directly via side effect)
+    
+    Side Effects:
+        Sets HP to max, increases madness by 25
+    """
     state.hp = state.max_hp
     state.madness = min(MADNESS_MAX, state.madness + 25)
     return 0
 
 def _calc_heal_int2_mend(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 2x INT.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    """
     return int(state.stats["int"] * 2)
 
 def _calc_heal_devour15(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 15% of max HP.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    """
     return int(state.max_hp * 0.15)
 
 def _calc_heal_titanResil(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 40% of max HP, cleanses all debuffs.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Clears all status effects
+    """
     state.statuses.clear()
     return int(state.max_hp * 0.40)
 
 def _calc_heal_layOnHands(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 3x WIS, cleanses all debuffs.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Clears all status effects
+    """
     state.statuses.clear()
     return int(state.stats["wis"] * 3)
 
 def _calc_heal_meditation(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 20% of max HP, reduces madness by 10.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Reduces madness by 10
+    """
     state.madness = max(0, state.madness - 10)
     return int(state.max_hp * 0.20)
 
 def _calc_heal_darkRegen(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 30% of max HP, adds dark regen buff.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Adds darkRegenBuff for 2 turns
+    """
     state.buffs["darkRegenBuff"] = 2
     return int(state.max_hp * 0.30)
 
 def _calc_heal_hasturEmbrace(state: GameState, skill: Skill) -> int:
+    """Full heal with immunity buff, adds 20 madness.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        0 (healing handled directly via side effect)
+    
+    Side Effects:
+        Sets HP to max, adds immunity buff for 2 turns, increases madness by 20
+    """
     state.hp = state.max_hp
     state.madness = min(MADNESS_MAX, state.madness + 20)
     state.buffs["immunity"] = 2
     return 0
 
 def _calc_heal_secondWind(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 20% of max HP, adds regen buff.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Adds regen buff for 2 turns
+    """
     state.buffs["regen"] = 2
     return int(state.max_hp * 0.20)
 
 def _calc_heal_nimbleRecov(state: GameState, skill: Skill) -> int:
+    """Calculate healing as 25% of max HP, adds evasion buff.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Amount of HP healed
+    
+    Side Effects:
+        Adds evasionUp buff for 2 turns
+    """
     state.buffs["evasionUp"] = 2
     return int(state.max_hp * 0.25)
 
 def _calc_heal_default(state: GameState, skill: Skill) -> int:
+    """Default healing calculation as 2x specified stat.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing stat to use for calculation
+    
+    Returns:
+        Amount of HP healed (defaults to 20 if stat not found)
+    """
     return int(state.stats.get(skill.stat, 10) * 2)
 
 # Heal handler registry: heal_calc name → (calc_fn, message)
@@ -117,39 +291,144 @@ def _handle_self_heal(state: GameState, skill: Skill) -> List[LogEntry]:
 # ── Shield handlers ──────────────────────────
 
 def _shield_int2_wis1(state: GameState, skill: Skill) -> int:
+    """Calculate shield as 2x INT + WIS.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value
+    """
     return int(state.stats["int"] * 2 + state.stats["wis"])
 
 def _shield_wis3_int1(state: GameState, skill: Skill) -> int:
+    """Calculate shield as 3x WIS + 1.5x INT.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value
+    """
     return int(state.stats["wis"] * 3 + state.stats["int"] * 1.5)
 
 def _shield_wis3_hits(state: GameState, skill: Skill) -> int:
+    """Calculate shield as 3x WIS + 5x hits taken.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value scaling with damage taken
+    """
     return int(state.stats["wis"] * 3 + state.hits_taken * 5)
 
 def _shield_sanctuary(state: GameState, skill: Skill) -> int:
+    """Sanctuary: adds 3 barrier stacks, heals 2x WIS, returns 4x WIS shield.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value (4x WIS)
+    
+    Side Effects:
+        Adds 3 barrier stacks, heals 2x WIS HP
+    """
     state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 3)
     h = int(state.stats["wis"] * 2)
     state.hp = min(state.max_hp, state.hp + h)
     return int(state.stats["wis"] * 4)
 
 def _shield_glyph_1(state: GameState, skill: Skill) -> Optional[int]:
+    """Warding Glyph: adds 1 barrier stack, no direct shield value.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        None (barrier handles absorption)
+    
+    Side Effects:
+        Adds 1 barrier stack
+    """
     state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 1)
     return None
 
 def _shield_fracSan(state: GameState, skill: Skill) -> int:
+    """Fractured Sanity: 3x INT shield, adds 10 madness.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value
+    
+    Side Effects:
+        Increases madness by 10
+    """
     state.madness = min(MADNESS_MAX, state.madness + 10)
     return int(state.stats["int"] * 3)
 
 def _shield_str3_hits(state: GameState, skill: Skill) -> int:
+    """Bone Armor: 3x STR + 5x hits taken shield.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value scaling with STR and damage taken
+    """
     return int(state.stats.get("str", 10) * 3 + state.hits_taken * 5)
 
 def _shield_madShell(state: GameState, skill: Skill) -> int:
+    """Madness Shell: 2x WIS + madness shield, adds 10 madness.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value scaling with madness
+    
+    Side Effects:
+        Increases madness by 10
+    """
     state.madness = min(MADNESS_MAX, state.madness + 10)
     return int(state.stats["wis"] * 2 + state.madness)
 
 def _shield_madBarrier(state: GameState, skill: Skill) -> int:
+    """Madness Barrier: 3x WIS + 2x LUCK shield.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value
+    """
     return int(state.stats["wis"] * 3 + state.luck * 2)
 
 def _shield_madEndur(state: GameState, skill: Skill) -> int:
+    """Madman's Endurance: 2x WIS shield, regen buff, adds 8 madness.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Shield value
+    
+    Side Effects:
+        Adds regen buff for 2 turns, increases madness by 8
+    """
     state.madness = min(MADNESS_MAX, state.madness + 8)
     state.buffs["regen"] = 2
     return int(state.stats["wis"] * 2)
@@ -187,15 +466,48 @@ def _handle_self_shield(state: GameState, skill: Skill) -> List[LogEntry]:
 # ── Buff handlers ────────────────────────────
 
 def _buff_barrier(state: GameState, skill: Skill) -> None:
+    """Add barrier stacks.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing barrier_stacks to add
+    
+    Side Effects:
+        Adds barrier stacks up to MAX_BARRIER_STACKS
+    """
     state.barrier = min(MAX_BARRIER_STACKS, state.barrier + skill.barrier_stacks)
 
 def _buff_rage(state: GameState, skill: Skill) -> Dict[str, Any]:
+    """Activate Berserker Rage: +60% damage, -12% HP.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Dict with hp_loss amount
+    
+    Side Effects:
+        Sets rage flag, reduces HP by 12%
+    """
     state.rage = True
     hp_loss = int(state.max_hp * 0.12)
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
 
 def _buff_warlord(state: GameState, skill: Skill) -> Dict[str, Any]:
+    """Warlord's Command: all combat buffs, -20% HP.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Returns:
+        Dict with hp_loss amount
+    
+    Side Effects:
+        Sets rage, adds atkCritUp and ironSkin buffs, reduces HP by 20%
+    """
     state.rage = True
     state.buffs["atkCritUp"] = skill.buff_duration
     state.buffs["ironSkin"] = skill.buff_duration
@@ -204,47 +516,131 @@ def _buff_warlord(state: GameState, skill: Skill) -> Dict[str, Any]:
     return {"hp_loss": hp_loss}
 
 def _buff_permIntWis(state: GameState, skill: Skill) -> None:
+    """Forbidden Text: INT+6, WIS+4 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp INT and WIS, sets permIntWis buff, recalculates stats
+    """
     state.temp_stats["int"] = state.temp_stats.get("int", 0) + 6
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
     state.buffs["permIntWis"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_permAtk2(state: GameState, skill: Skill) -> None:
+    """Warpaint: STR+5 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp STR, sets permAtk2 buff, recalculates stats
+    """
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 5
     state.buffs["permAtk2"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_permWisStr(state: GameState, skill: Skill) -> None:
+    """Oath of the Warden: WIS+6, STR+4 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp WIS and STR, sets permWisStr buff, recalculates stats
+    """
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 6
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
     state.buffs["permWisStr"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_permAgiLuk(state: GameState, skill: Skill) -> None:
+    """Perfect Assassin: AGI+7, LUCK+4 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp AGI and LUCK, sets permAgiLuk buff, recalculates stats
+    """
     state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 7
     state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 4
     state.buffs["permAgiLuk"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_permCrit10(state: GameState, skill: Skill) -> None:
+    """Sixth Sense: CRIT+25% for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Increases crit chance by 25% (capped at 95%), sets permCrit10 buff
+    """
     state.crit = min(95, state.crit + 25)
     state.buffs["permCrit10"] = skill.buff_duration
 
 def _buff_permAll1(state: GameState, skill: Skill) -> None:
+    """Vision of the End: All stats +4 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds +4 to all temp stats, sets permAll1 buff, recalculates stats
+    """
     for stat in ("int", "str", "agi", "wis", "luck"):
         state.temp_stats[stat] = state.temp_stats.get(stat, 0) + 4
     state.buffs["permAll1"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_resetCds(state: GameState, skill: Skill) -> None:
+    """Reset all skill cooldowns.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Side Effects:
+        Sets current_cd to 0 for all active skills
+    """
     for sk in state.active_skills:
         sk.current_cd = 0
 
 def _buff_bloodRitual(state: GameState, skill: Skill) -> None:
+    """Blood Ritual: -15% HP for 50 XP.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Side Effects:
+        Reduces HP by 15%, adds 50 XP
+    """
     state.hp = max(1, state.hp - int(state.max_hp * 0.15))
     state.xp += 50
 
 def _buff_randStat2(state: GameState, skill: Skill) -> Dict[str, Any]:
+    """Prophetic Insight: +3 to 2 random stats for 5 turns.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Dict with list of chosen stat names
+    
+    Side Effects:
+        Adds +3 to 2 random stats, sets randStat2 buff for 5 turns, recalculates stats
+    """
     stat_keys = ["int", "str", "agi", "wis", "luck"]
     chosen = random.sample(stat_keys, 2)
     for st in chosen:
@@ -254,13 +650,43 @@ def _buff_randStat2(state: GameState, skill: Skill) -> Dict[str, Any]:
     return {"stats": chosen}
 
 def _buff_madImmune(state: GameState, skill: Skill) -> None:
+    """Madness Mastery: immunity to madness death, +15 MAD.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Side Effects:
+        Sets madImmune buff for 999 turns, increases madness by 15
+    """
     state.buffs["madImmune"] = 999
     state.madness = min(MADNESS_MAX, state.madness + 15)
 
 def _buff_calmMind(state: GameState, skill: Skill) -> None:
+    """Leng's Whisper: -3 MAD.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Side Effects:
+        Reduces madness by 3 (minimum 0)
+    """
     state.madness = max(0, state.madness - 3)
 
 def _buff_eldritchBargain(state: GameState, skill: Skill) -> Dict[str, Any]:
+    """Eldritch Bargain: -3 to 3 random stats, +50 gold.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Returns:
+        Dict with list of reduced stat names
+    
+    Side Effects:
+        Reduces 3 random base stats by 3 each, adds 50 gold, recalculates stats
+    """
     stat_keys = ["int", "str", "agi", "wis", "luck"]
     chosen = random.sample(stat_keys, 3)
     for st in chosen:
@@ -270,13 +696,40 @@ def _buff_eldritchBargain(state: GameState, skill: Skill) -> Dict[str, Any]:
     return {"stats": chosen}
 
 def _buff_foolLuck(state: GameState, skill: Skill) -> None:
+    """The Fool's Luck: -10 MAD, nullify next 3 attacks.
+    
+    Args:
+        state: Current game state
+        skill: Skill being used (unused for this calculation)
+    
+    Side Effects:
+        Reduces madness by 10, sets divineInterv buff for 3 turns
+    """
     state.madness = max(0, state.madness - 10)
     state.buffs["divineInterv"] = 3
 
 def _buff_realityAnchor(state: GameState, skill: Skill) -> None:
+    """Reality Anchor: cannot die for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Sets undying buff for specified duration
+    """
     state.buffs["undying"] = skill.buff_duration
 
 def _buff_pallidMask(state: GameState, skill: Skill) -> None:
+    """The Pallid Mask: +50% all stats, immune to debuffs for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds +50% of base stats to temp stats, sets pallidMask and immunity buffs, recalculates stats
+    """
     for stat in ("int", "str", "agi", "wis", "luck"):
         state.temp_stats[stat] = state.temp_stats.get(stat, 0) + int(state.base_stats.get(stat, 5) * 0.5)
     state.buffs["pallidMask"] = skill.buff_duration
@@ -284,41 +737,122 @@ def _buff_pallidMask(state: GameState, skill: Skill) -> None:
     state.recalc_stats()
 
 def _buff_prophetRes(state: GameState, skill: Skill) -> None:
+    """Prophet's Resilience: regen 6%/turn, +5 MAD.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Increases madness by 5, sets regen buff for duration
+    """
     state.madness = min(MADNESS_MAX, state.madness + 5)
     state.buffs["regen"] = skill.buff_duration
 
 def _buff_thickSkull(state: GameState, skill: Skill) -> None:
+    """Thick Skull: STR+4, WIS+3 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp STR and WIS, sets thickSkull buff, recalculates stats
+    """
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 3
     state.buffs["thickSkull"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_perseverance(state: GameState, skill: Skill) -> None:
+    """Perseverance: WIS+4, STR+3 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp WIS and STR, sets perseverance buff, recalculates stats
+    """
     state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
     state.temp_stats["str"] = state.temp_stats.get("str", 0) + 3
     state.buffs["perseverance"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_shadowBless(state: GameState, skill: Skill) -> None:
+    """Shadow's Blessing: AGI+4, LUCK+3 for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Adds temp AGI and LUCK, sets shadowBless buff, recalculates stats
+    """
     state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 4
     state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 3
     state.buffs["shadowBless"] = skill.buff_duration
     state.recalc_stats()
 
 def _buff_abyssFort(state: GameState, skill: Skill) -> None:
+    """Abyssal Fortitude: pDEF+50%, +1 barrier.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Sets ironSkin buff for duration, adds 1 barrier stack
+    """
     state.buffs["ironSkin"] = skill.buff_duration
     state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 1)
 
 def _buff_eldritchRebirth(state: GameState, skill: Skill) -> None:
+    """Eldritch Rebirth: auto-revive at 30% HP if killed.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Sets eldritchRebirth buff for duration
+    """
     state.buffs["eldritchRebirth"] = skill.buff_duration
 
 def _buff_astral(state: GameState, skill: Skill) -> None:
+    """Astral Projection: EVA+40%, mDEF+60% for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Sets astral buff for duration
+    """
     state.buffs["astral"] = skill.buff_duration
 
 def _buff_statSwap(state: GameState, skill: Skill) -> None:
+    """Mind Over Matter: swap pDEF and mDEF for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Sets statSwap buff for duration
+    """
     state.buffs["statSwap"] = skill.buff_duration
 
 def _buff_dreadnought(state: GameState, skill: Skill) -> None:
+    """Dreadnought: damage taken converts to ATK for duration.
+    
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+    
+    Side Effects:
+        Sets dreadnought buff for duration
+    """
     state.buffs["dreadnought"] = skill.buff_duration
 
 # Static messages per buff_type
