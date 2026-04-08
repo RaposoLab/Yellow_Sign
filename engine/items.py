@@ -5,14 +5,21 @@ import math
 from typing import Optional, Dict, Any
 
 from data import (
-    RARITY_DATA, CURSED_DEBUFFS, ITEM_PREFIXES,
-    WEAPON_TEMPLATES, ARMOR_TEMPLATES, ACCESSORY_TEMPLATES,
-    BOOTS_TEMPLATES, RING_TEMPLATES,
+    RARITY_DATA,
+    CURSED_DEBUFFS,
+    ITEM_PREFIXES,
+    WEAPON_TEMPLATES,
+    ARMOR_TEMPLATES,
+    ACCESSORY_TEMPLATES,
+    BOOTS_TEMPLATES,
+    RING_TEMPLATES,
 )
 from engine.models import Item
 
 
-def determine_rarity(floor: int, luck: int, buffs: Optional[Dict[str, int]] = None) -> int:
+def determine_rarity(
+    floor: int, luck: int, buffs: Optional[Dict[str, int]] = None
+) -> int:
     """Determine item rarity based on floor, luck, and active loot buffs."""
     r = random.random() * 100 + (luck - 5) * 1.5 + floor * 0.8
     if buffs:
@@ -29,8 +36,12 @@ def determine_rarity(floor: int, luck: int, buffs: Optional[Dict[str, int]] = No
     return 1
 
 
-def generate_item(floor: int, item_type: Optional[str] = None,
-                  luck: int = 5, buffs: Optional[Dict[str, int]] = None) -> Item:
+def generate_item(
+    floor: int,
+    item_type: Optional[str] = None,
+    luck: int = 5,
+    buffs: Optional[Dict[str, int]] = None,
+) -> Item:
     """Generate a random item."""
     rarity = determine_rarity(floor, luck, buffs)
     rd = RARITY_DATA[rarity]
@@ -62,7 +73,9 @@ def generate_item(floor: int, item_type: Optional[str] = None,
     for k, v in template["base"].items():
         stats[k] = math.ceil(v * rd["stat_mul"] * fs)
 
-    bonus_count = rd["stat_range"][0] + random.randint(0, rd["stat_range"][1] - rd["stat_range"][0])
+    bonus_count = rd["stat_range"][0] + random.randint(
+        0, rd["stat_range"][1] - rd["stat_range"][0]
+    )
     used = set(stats.keys())
     pool_shuffled = list(template["bonus_pool"])
     random.shuffle(pool_shuffled)
@@ -75,7 +88,9 @@ def generate_item(floor: int, item_type: Optional[str] = None,
             available = [k for k in all_stat_keys if k not in used]
             sk = random.choice(available) if available else random.choice(all_stat_keys)
         used.add(sk)
-        stats[sk] = stats.get(sk, 0) + math.ceil((2 + random.random() * 4) * rd["stat_mul"] * fs)
+        stats[sk] = stats.get(sk, 0) + math.ceil(
+            (2 + random.random() * 4) * rd["stat_mul"] * fs
+        )
 
     debuffs: Optional[Dict[str, int]] = None
     if rarity == 4:

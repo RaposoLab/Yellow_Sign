@@ -8,10 +8,10 @@ from data import ADVANCE_FLOOR_HEAL_PCT
 from engine.models import Item, GameState
 from engine.items import generate_item
 
-
 # ═══════════════════════════════════════════
 # FLOOR PROGRESSION
 # ═══════════════════════════════════════════
+
 
 def generate_paths(floor: int) -> List[Dict[str, Any]]:
     """Generate two path choices for the player."""
@@ -48,7 +48,10 @@ def get_floor_narrative(floor: int) -> str:
 # EVENT HANDLING
 # ═══════════════════════════════════════════
 
-def resolve_event(state: GameState, event_idx: int, outcome_idx: int) -> Tuple[str, Optional[Item]]:
+
+def resolve_event(
+    state: GameState, event_idx: int, outcome_idx: int
+) -> Tuple[str, Optional[Item]]:
     """Resolve an event outcome. Returns (message, loot_item_or_None)."""
     ev = EVENTS[event_idx]
     outcome = ev["outcomes"][outcome_idx]
@@ -135,6 +138,7 @@ def resolve_event(state: GameState, event_idx: int, outcome_idx: int) -> Tuple[s
 # TRAP HANDLING
 # ═══════════════════════════════════════════
 
+
 def resolve_trap(state: GameState, trap_idx: int) -> Tuple[str, bool]:
     """Resolve a trap. Returns (message, game_over)."""
     trap = TRAPS[trap_idx]
@@ -157,15 +161,23 @@ def resolve_trap(state: GameState, trap_idx: int) -> Tuple[str, bool]:
 # SHOP
 # ═══════════════════════════════════════════
 
+
 def generate_shop(state: GameState) -> Tuple[List[Item], List[int]]:
     """Generate shop items and prices."""
-    items = [generate_item(state.floor, luck=state.luck, buffs=state.buffs) for _ in range(4)]
+    items = [
+        generate_item(state.floor, luck=state.luck, buffs=state.buffs) for _ in range(4)
+    ]
     prices = [10 + (item.rarity or 1) * 8 + random.randint(0, 10) for item in items]
     return items, prices
 
 
-def buy_shop_item(state: GameState, shop_items: List[Item], shop_prices: List[int],
-                  shop_sold: List[bool], idx: int) -> Tuple[bool, str]:
+def buy_shop_item(
+    state: GameState,
+    shop_items: List[Item],
+    shop_prices: List[int],
+    shop_sold: List[bool],
+    idx: int,
+) -> Tuple[bool, str]:
     """Buy an item from the shop. Returns (success, message)."""
     if shop_sold[idx]:
         return False, "Already sold!"

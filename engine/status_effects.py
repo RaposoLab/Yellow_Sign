@@ -4,18 +4,25 @@ import random
 from typing import List, Tuple
 
 from data import (
-    BURNING_HP_PCT, POISON_HP_PCT, BLEEDING_HP_PCT, POISON_MAX_STACKS,
+    BURNING_HP_PCT,
+    POISON_HP_PCT,
+    BLEEDING_HP_PCT,
+    POISON_MAX_STACKS,
     DOOM_HP_THRESHOLD,
-    REGEN_HP_PCT, REGEN5_HP_PCT, OATH_HP_PCT,
+    REGEN_HP_PCT,
+    REGEN5_HP_PCT,
+    OATH_HP_PCT,
 )
 from engine.models import StatusEffect, GameState
-
 
 # ═══════════════════════════════════════════
 # STATUS EFFECT APPLICATION
 # ═══════════════════════════════════════════
 
-def apply_status_effect_on_player(state: GameState, effect_type: str, duration: int) -> None:
+
+def apply_status_effect_on_player(
+    state: GameState, effect_type: str, duration: int
+) -> None:
     """Apply a status effect to the player."""
     if effect_type:
         apply_status_player(state, effect_type, duration)
@@ -43,24 +50,39 @@ def apply_status_player(state: GameState, effect_type: str, duration: int) -> No
 # STATUS EFFECT PROCESSING
 # ═══════════════════════════════════════════
 
-def process_status_effects(target, is_player: bool, state: GameState) -> List[Tuple[str, str]]:
+
+def process_status_effects(
+    target, is_player: bool, state: GameState
+) -> List[Tuple[str, str]]:
     """Process burning, poison, bleeding, etc. on any target. Returns list of log messages."""
     logs: List[Tuple[str, str]] = []
     to_remove: List[StatusEffect] = []
     for st in target.statuses:
         if st.type == "burning":
-            d = int(target.max_hp * BURNING_HP_PCT) if hasattr(target, 'max_hp') else int(state.max_hp * BURNING_HP_PCT)
+            d = (
+                int(target.max_hp * BURNING_HP_PCT)
+                if hasattr(target, "max_hp")
+                else int(state.max_hp * BURNING_HP_PCT)
+            )
             target.hp = max(0, target.hp - d)
             who = "You burn" if is_player else f"{target.name} burns"
             logs.append((f"{who} for {d}!", "damage"))
         elif st.type == "poisoned":
-            stacks = getattr(st, 'stacks', 1)
-            d = int(target.max_hp * POISON_HP_PCT * stacks) if hasattr(target, 'max_hp') else int(state.max_hp * POISON_HP_PCT * stacks)
+            stacks = getattr(st, "stacks", 1)
+            d = (
+                int(target.max_hp * POISON_HP_PCT * stacks)
+                if hasattr(target, "max_hp")
+                else int(state.max_hp * POISON_HP_PCT * stacks)
+            )
             target.hp = max(0, target.hp - d)
             who = "Poison" if is_player else f"Poison on {target.name}"
             logs.append((f"{who} deals {d}! ({stacks} stacks)", "damage"))
         elif st.type == "bleeding":
-            d = int(target.max_hp * BLEEDING_HP_PCT) if hasattr(target, 'max_hp') else int(state.max_hp * BLEEDING_HP_PCT)
+            d = (
+                int(target.max_hp * BLEEDING_HP_PCT)
+                if hasattr(target, "max_hp")
+                else int(state.max_hp * BLEEDING_HP_PCT)
+            )
             target.hp = max(0, target.hp - d)
             who = "You bleed" if is_player else f"{target.name} bleeds"
             logs.append((f"{who} for {d}!", "damage"))
@@ -77,7 +99,9 @@ def process_status_effects(target, is_player: bool, state: GameState) -> List[Tu
                 target.hp = 0
                 logs.append((f"━━ THE YELLOW SIGN CLAIMS {target.name}! ━━", "crit"))
             else:
-                logs.append((f"The Pallid Mask fades... {target.name} endures.", "info"))
+                logs.append(
+                    (f"The Pallid Mask fades... {target.name} endures.", "info")
+                )
         elif not is_player:
             logs.append((f"{st.type} wears off from {target.name}.", "info"))
         else:
@@ -95,7 +119,7 @@ def process_player_status_effects(state: GameState) -> List[Tuple[str, str]]:
             state.hp = max(0, state.hp - d)
             logs.append((f"You burn for {d}!", "damage"))
         elif st.type == "poisoned":
-            stacks = getattr(st, 'stacks', 1)
+            stacks = getattr(st, "stacks", 1)
             d = int(state.max_hp * POISON_HP_PCT * stacks)
             state.hp = max(0, state.hp - d)
             logs.append((f"Poison deals {d}! ({stacks} stacks)", "damage"))
@@ -115,6 +139,7 @@ def process_player_status_effects(state: GameState) -> List[Tuple[str, str]]:
 # ═══════════════════════════════════════════
 # BUFF MANAGEMENT
 # ═══════════════════════════════════════════
+
 
 def tick_player_buffs(state: GameState) -> List[Tuple[str, str]]:
     """Tick player buff durations and apply regen/oath effects."""
