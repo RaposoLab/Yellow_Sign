@@ -12,6 +12,213 @@ from data import (XP_BASE, XP_PER_FLOOR, XP_BOSS_BONUS,
                   GOLD_BASE, GOLD_PER_FLOOR, GOLD_BOSS_BONUS, GOLD_BASE_RANDOM_MAX,
                   MADNESS_BOSS_KILL, MADNESS_NORMAL_KILL)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARTICLE TYPE DEFINITIONS
+# Centralized particle configurations for consistent visual effects
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ParticleType:
+    """Defines a particle effect type with color palette, size range, speed, and behavior."""
+
+    def __init__(self, colors, size_range, speed_range, alpha_range, life_range,
+                 gravity=0, rotation=False, special=None):
+        self.colors = colors
+        self.size_range = size_range  # (min, max)
+        self.speed_range = speed_range  # velocity multiplier
+        self.alpha_range = alpha_range
+        self.life_range = life_range
+        self.gravity = gravity
+        self.rotation = rotation
+        self.special = special  # Optional special behavior
+
+
+# Pre-defined particle types for easy reuse
+PARTICLE_TYPES = {
+    # Combat particles
+    "blood": ParticleType(
+        colors=[(196, 30, 58), (139, 0, 0), (220, 50, 50), (180, 20, 40)],
+        size_range=(2, 5), speed_range=(0.5, 1.5), alpha_range=(120, 220),
+        life_range=(0.5, 1.5), gravity=150
+    ),
+    "crit_blood": ParticleType(
+        colors=[(255, 215, 0), (255, 180, 0), (220, 50, 50), (196, 30, 58)],
+        size_range=(3, 7), speed_range=(1.0, 2.5), alpha_range=(150, 255),
+        life_range=(0.8, 2.0), gravity=120
+    ),
+
+    # Magic/skill particles
+    "magic": ParticleType(
+        colors=[(175, 130, 225), (140, 100, 200), (80, 50, 130), (200, 160, 255)],
+        size_range=(2, 5), speed_range=(0.3, 0.8), alpha_range=(80, 160),
+        life_range=(1.0, 2.5)
+    ),
+    "magic_burst": ParticleType(
+        colors=[(200, 160, 255), (175, 130, 225), (255, 200, 100)],
+        size_range=(3, 8), speed_range=(1.5, 3.0), alpha_range=(100, 200),
+        life_range=(0.5, 1.5), gravity=-30  # Floats upward
+    ),
+
+    # Healing particles
+    "heal": ParticleType(
+        colors=[(143, 188, 143), (46, 204, 113), (152, 251, 152), (100, 255, 100)],
+        size_range=(2, 4), speed_range=(0.2, 0.6), alpha_range=(100, 180),
+        life_range=(1.0, 2.0), gravity=-50  # Floats upward
+    ),
+
+    # Shield/barrier particles
+    "shield": ParticleType(
+        colors=[(100, 180, 255), (70, 130, 200), (150, 200, 255)],
+        size_range=(1, 3), speed_range=(0.1, 0.4), alpha_range=(60, 120),
+        life_range=(1.5, 3.0), gravity=-20
+    ),
+
+    # Eldritch/cosmic particles (ambient)
+    "eldritch": ParticleType(
+        colors=[(175, 130, 225), (140, 100, 200), (80, 50, 130), (200, 160, 40)],
+        size_range=(1, 3), speed_range=(0.1, 0.3), alpha_range=(20, 60),
+        life_range=(2.0, 6.0)
+    ),
+
+    # Victory particles
+    "victory_gold": ParticleType(
+        colors=[(255, 215, 0), (175, 130, 225), (220, 180, 50), (140, 100, 200)],
+        size_range=(2, 6), speed_range=(2.0, 5.0), alpha_range=(150, 255),
+        life_range=(1.0, 2.5), gravity=80
+    ),
+    "victory_spark": ParticleType(
+        colors=[(255, 240, 200), (255, 220, 100), (255, 200, 50)],
+        size_range=(1, 2), speed_range=(3.0, 8.0), alpha_range=(200, 255),
+        life_range=(0.3, 0.8)
+    ),
+
+    # Damage numbers burst
+    "damage_burst": ParticleType(
+        colors=[(255, 255, 255), (255, 200, 100), (255, 150, 50)],
+        size_range=(1, 2), speed_range=(2.0, 4.0), alpha_range=(100, 180),
+        life_range=(0.3, 0.8), gravity=-40
+    ),
+
+    # Debuff particles
+    "poison": ParticleType(
+        colors=[(50, 200, 50), (30, 150, 30), (100, 200, 100)],
+        size_range=(2, 4), speed_range=(0.15, 0.4), alpha_range=(60, 120),
+        life_range=(1.0, 2.0), gravity=30
+    ),
+    "burn": ParticleType(
+        colors=[(255, 100, 0), (255, 50, 0), (255, 200, 50)],
+        size_range=(2, 5), speed_range=(0.3, 0.7), alpha_range=(80, 150),
+        life_range=(0.5, 1.5), gravity=-60
+    ),
+
+    # Madness particles
+    "madness": ParticleType(
+        colors=[(255, 99, 71), (255, 215, 0), (139, 0, 0), (200, 100, 50)],
+        size_range=(2, 5), speed_range=(0.3, 0.8), alpha_range=(80, 150),
+        life_range=(1.0, 2.5), gravity=20
+    ),
+
+    # Enemy action intent particles
+    "intent_attack": ParticleType(
+        colors=[(196, 30, 58), (255, 80, 80), (180, 40, 40)],
+        size_range=(2, 4), speed_range=(0.2, 0.5), alpha_range=(60, 100),
+        life_range=(1.0, 2.0)
+    ),
+    "intent_spell": ParticleType(
+        colors=[(175, 130, 225), (200, 160, 255), (120, 80, 180)],
+        size_range=(2, 4), speed_range=(0.15, 0.4), alpha_range=(60, 100),
+        life_range=(1.0, 2.0)
+    ),
+    "intent_buff": ParticleType(
+        colors=[(100, 200, 255), (150, 220, 255), (80, 180, 220)],
+        size_range=(2, 4), speed_range=(0.1, 0.3), alpha_range=(50, 90),
+        life_range=(1.0, 2.0), gravity=-30
+    ),
+}
+
+
+def create_particle(particle_type_name, x, y, count=1, spread=15, base_vx=0, base_vy=0):
+    """
+    Factory function to create particles of a given type.
+
+    Args:
+        particle_type_name: Key from PARTICLE_TYPES dict
+        x, y: Center position for particle spawn
+        count: Number of particles to create
+        spread: Random position offset from center
+        base_vx, base_vy: Base velocity to add to random velocity
+
+    Returns:
+        List of particle dictionaries ready to be added to the particle system
+    """
+    ptype = PARTICLE_TYPES.get(particle_type_name, PARTICLE_TYPES["eldritch"])
+    particles = []
+
+    for _ in range(count):
+        particle = {
+            "x": x + random.uniform(-spread, spread),
+            "y": y + random.uniform(-spread, spread),
+            "vx": base_vx + random.uniform(-ptype.speed_range[0], ptype.speed_range[1]) * 50,
+            "vy": base_vy + random.uniform(-ptype.speed_range[0], ptype.speed_range[1]) * 50,
+            "size": random.randint(ptype.size_range[0], ptype.size_range[1]),
+            "color": random.choice(ptype.colors),
+            "alpha": random.randint(ptype.alpha_range[0], ptype.alpha_range[1]),
+            "life": random.uniform(ptype.life_range[0], ptype.life_range[1]),
+        }
+
+        if ptype.gravity != 0:
+            particle["gravity"] = ptype.gravity
+        if ptype.rotation:
+            particle["rot"] = random.uniform(0, 360)
+            particle["rot_v"] = random.uniform(-180, 180)
+
+        particles.append(particle)
+
+    return particles
+
+
+def create_burst(x, y, particle_type_name, count=30, outward=True, upward_bias=0):
+    """
+    Create an outward burst of particles from a center point.
+
+    Args:
+        x, y: Center of burst
+        particle_type_name: Type of particles
+        count: Number of particles
+        outward: If True, particles move away from center; if False, random directions
+        upward_bias: Add upward velocity component (negative = more upward)
+    """
+    ptype = PARTICLE_TYPES.get(particle_type_name, PARTICLE_TYPES["victory_gold"])
+    particles = []
+
+    for _ in range(count):
+        if outward:
+            angle = random.uniform(0, math.pi * 2)
+            speed = random.uniform(ptype.speed_range[0], ptype.speed_range[1]) * 100
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed + upward_bias
+        else:
+            vx = random.uniform(-100, 100)
+            vy = random.uniform(-150, 50) + upward_bias
+
+        particle = {
+            "x": x + random.uniform(-10, 10),
+            "y": y + random.uniform(-10, 10),
+            "vx": vx * ptype.speed_range[1] * 0.3,
+            "vy": vy * ptype.speed_range[1] * 0.3,
+            "size": random.randint(ptype.size_range[0], ptype.size_range[1]),
+            "color": random.choice(ptype.colors),
+            "alpha": random.randint(ptype.alpha_range[0], ptype.alpha_range[1]),
+            "life": random.uniform(ptype.life_range[0], ptype.life_range[1]),
+        }
+
+        if ptype.gravity != 0:
+            particle["gravity"] = ptype.gravity
+
+        particles.append(particle)
+
+    return particles
+
 class CombatScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
@@ -20,6 +227,9 @@ class CombatScreen(Screen):
         self.damage_numbers = []  # [text, x, y, color, timer, vy]
         self.shake_timer = 0
         self.shake_intensity = 0
+        self.shake_offset_x = 0  # For directional shake
+        self.shake_offset_y = 0
+        self.shake_direction = 0  # 0=random, 1=horizontal, 2=vertical
         self.turn_message = ""
         self.turn_msg_timer = 0
         self.particles = []  # [x, y, vx, vy, size, color, alpha, life]
@@ -27,6 +237,19 @@ class CombatScreen(Screen):
         self._player_status_rects = []  # [(Rect, effect_type), ...] for hover tooltips
         self._enemy_action_text = None  # (text, x, y, color, timer, vy) floating text
         self._enemy_flash_timer = 0  # brief flash when enemy acts
+
+        # ─────────────────────────────────────────────────────────────────────────────
+        # ENEMY INTENT DISPLAY SYSTEM
+        # Shows what the enemy will do on their next turn
+        # ─────────────────────────────────────────────────────────────────────────────
+        self._intent_panel_visible = True
+        self._intent_hover = False
+        self._intent_pulse = 0  # For pulsing animation
+        self._intent_particles = []  # Particles around intent indicator
+
+        # Player hit feedback
+        self._player_hit_flash = 0  # Flash timer for player damage
+        self._player_hit_direction = 0  # 0=left, 1=right (where damage came from)
 
         # Victory animation state machine
         # States: None (normal) → "hp_drain" → "disintegrate" → "dramatic_pause" → "fade_out" → done
@@ -42,6 +265,12 @@ class CombatScreen(Screen):
     def enter(self):
         self.damage_numbers = []
         self.shake_timer = 0
+        self.shake_intensity = 0
+        self.shake_offset_x = 0
+        self.shake_offset_y = 0
+        self._player_hit_flash = 0
+        self._intent_pulse = 0
+        self._intent_particles = []
         self._build_buttons()
         self.turn_message = ""
         self.turn_msg_timer = 0
@@ -51,41 +280,66 @@ class CombatScreen(Screen):
         self._fragments = []
         self._victory_text_alpha = 0
         self._victory_fade_alpha = 0
-        # Ambient eldritch particles
+        # Ambient eldritch particles using new particle system
         for _ in range(25):
-            self.particles.append(self._new_ambient_particle())
+            self.particles.extend(create_particle("eldritch",
+                random.uniform(0, SCREEN_W),
+                random.uniform(120, SCREEN_H),
+                count=1, spread=5))
         # Pre-select enemy's first action and show intent
         s = self.game.state
         if s.combat:
             s.combat.next_enemy_skill = random.choice(s.combat.enemy.skills)
             intent_msg = _get_enemy_intent_message(s.combat.next_enemy_skill)
             s.combat.add_log(intent_msg, "info")
+            # Spawn intent particles to draw attention
+            self._spawn_intent_particles()
 
-    def _new_ambient_particle(self):
-        return {
-            "x": random.uniform(0, SCREEN_W),
-            "y": random.uniform(120, SCREEN_H),
-            "vx": random.uniform(-0.3, 0.3),
-            "vy": random.uniform(-1.0, -0.2),
-            "size": random.randint(1, 3),
-            "color": random.choice([(175, 130, 225), (140, 100, 200), (80, 50, 130)]),
-            "alpha": random.randint(20, 60),
-            "life": random.uniform(2, 6),
-        }
+    def _spawn_intent_particles(self):
+        """Spawn atmospheric particles around the enemy intent indicator."""
+        if not self._intent_panel_visible:
+            return
+        sprite_w = 240
+        sprite_x = SCREEN_W - sprite_w - 40
+        sprite_y = 202
+        # Spawn particles near the enemy sprite to hint at their intent
+        for _ in range(8):
+            self.particles.extend(create_particle(
+                self._get_intent_particle_type(),
+                sprite_x + sprite_w // 2,
+                sprite_y - 20,
+                count=1, spread=30))
 
-    def _spawn_blood_particles(self, x, y, count=8):
-        """Spawn blood splatter particles at (x, y)."""
-        for _ in range(count):
-            self.particles.append({
-                "x": x + random.uniform(-15, 15),
-                "y": y + random.uniform(-10, 10),
-                "vx": random.uniform(-2, 2),
-                "vy": random.uniform(-3, -0.5),
-                "size": random.randint(2, 5),
-                "color": random.choice([(196, 30, 58), (139, 0, 0), (220, 50, 50)]),
-                "alpha": random.randint(120, 200),
-                "life": random.uniform(0.5, 1.5),
-            })
+    def _get_intent_particle_type(self):
+        """Get the appropriate particle type based on enemy intent."""
+        s = self.game.state
+        if not s or not s.combat or not s.combat.next_enemy_skill:
+            return "eldritch"
+        skill = s.combat.next_enemy_skill
+        skill_type = skill.get("type", "")
+        if "magic" in skill_type or "spell" in skill_type:
+            return "intent_spell"
+        elif "buff" in skill_type or "heal" in skill_type:
+            return "intent_buff"
+        else:
+            return "intent_attack"
+
+    def _spawn_blood_particles(self, x, y, count=8, is_crit=False):
+        """Spawn blood splatter particles at (x, y) using new particle system."""
+        particle_type = "crit_blood" if is_crit else "blood"
+        self.particles.extend(create_particle(particle_type, x, y, count=count, spread=15))
+
+    def _spawn_magic_particles(self, x, y, count=5):
+        """Spawn magic effect particles."""
+        self.particles.extend(create_particle("magic", x, y, count=count, spread=10))
+
+    def _spawn_heal_particles(self, x, y, count=8):
+        """Spawn healing particles that float upward."""
+        self.particles.extend(create_particle("heal", x, y, count=count, spread=12, base_vy=-20))
+
+    def _spawn_shield_particles(self, x, y, count=6):
+        """Spawn shield/barrier effect particles."""
+        self.particles.extend(create_particle("shield", x, y, count=count, spread=15, base_vy=-10))
 
     def _build_buttons(self):
         s = self.game.state
@@ -111,17 +365,57 @@ class CombatScreen(Screen):
             "save": pygame.Rect(320, cmd_y, 135, 36),
         }
 
-    def add_damage_number(self, text, x, y, color):
-        self.damage_numbers.append([text, x, y, color, 1.5, -60])
-        # Spawn blood particles on damage
-        if color == C.CRIMSON:
-            self._spawn_blood_particles(x, y, count=10)
-        elif color == C.YELLOW:  # crit
-            self._spawn_blood_particles(x, y, count=16)
+    def add_damage_number(self, text, x, y, color, is_player_damage=False, is_crit=False):
+        """Add a floating damage number with appropriate particle effects.
 
-    def trigger_shake(self, intensity=8, duration=0.3):
+        Args:
+            text: Damage value string
+            x, y: Position for the damage number
+            color: Text color
+            is_player_damage: If True, this is damage dealt to the player
+            is_crit: If True, this was a critical hit
+        """
+        # Adjust particle counts based on damage type
+        if is_player_damage:
+            # Damage to player - spawn on their sprite
+            player_x, player_y = 100, 300
+            self._spawn_blood_particles(player_x, player_y, count=10 if is_crit else 6)
+            # Add directional hit flash
+            self._player_hit_flash = 0.3
+            self._player_hit_direction = 1 if x > SCREEN_W // 2 else 0  # Damage came from enemy side
+        else:
+            # Damage to enemy
+            if is_crit:
+                self._spawn_blood_particles(x, y, count=16, is_crit=True)
+                self._spawn_magic_particles(x, y, count=8)
+            else:
+                self._spawn_blood_particles(x, y, count=10)
+                self._spawn_magic_particles(x, y, count=4)
+
+        self.damage_numbers.append([text, x, y, color, 1.5, -60])
+
+    def trigger_shake(self, intensity=8, duration=0.3, direction=0, is_enemy_damage=False):
+        """Trigger screen shake with enhanced options.
+
+        Args:
+            intensity: How strong the shake is (pixels offset)
+            duration: How long the shake lasts (seconds)
+            direction: 0=random, 1=horizontal only, 2=vertical only
+            is_enemy_damage: If True, shake is from dealing damage to enemy
+        """
         self.shake_intensity = intensity
         self.shake_timer = duration
+        self.shake_direction = direction
+
+        # Spawn impact particles based on what caused the shake
+        if is_enemy_damage:
+            # Dealing damage to enemy - spawn at enemy position
+            sprite_w = 240
+            sprite_x = SCREEN_W - sprite_w - 40
+            self.particles.extend(create_burst(sprite_x + sprite_w // 2, 280, "damage_burst", count=15))
+        else:
+            # Taking damage - spawn at player position
+            self.particles.extend(create_burst(100, 300, "blood", count=12))
 
     def update(self, dt):
         # --- Victory animation state machine ---
@@ -213,12 +507,7 @@ class CombatScreen(Screen):
                     return
 
             # During victory animation, update particles but skip normal logic
-            for p in self.particles:
-                p["x"] += p["vx"] * dt
-                p["y"] += p["vy"] * dt
-                p["life"] -= dt
-                p["alpha"] = max(0, p["alpha"] - dt * 40)
-            self.particles = [p for p in self.particles if p["life"] > 0 and p["alpha"] > 0]
+            self._update_particles(dt)
             # Update damage numbers
             for dn in self.damage_numbers:
                 dn[2] += dn[5] * dt
@@ -246,18 +535,33 @@ class CombatScreen(Screen):
         # Enemy flash
         if self._enemy_flash_timer > 0:
             self._enemy_flash_timer -= dt
-        # Update particles
+        # Player hit flash
+        if self._player_hit_flash > 0:
+            self._player_hit_flash -= dt
+        # Intent pulse animation
+        self._intent_pulse += dt
+        # Update particles with physics
+        self._update_particles(dt)
+        # Respawn ambient particles to maintain count
+        ambient_count = sum(1 for p in self.particles if p.get("size", 0) <= 3 and p.get("life", 0) > 0)
+        while ambient_count < 25:
+            self.particles.extend(create_particle("eldritch",
+                random.uniform(0, SCREEN_W),
+                random.uniform(120, SCREEN_H),
+                count=1, spread=5))
+            ambient_count += 1
+
+    def _update_particles(self, dt):
+        """Update all particles with physics including gravity."""
         for p in self.particles:
-            p["x"] += p["vx"]
-            p["y"] += p["vy"]
+            p["x"] += p["vx"] * dt * 50  # Scale velocity by dt
+            p["y"] += p["vy"] * dt * 50
+            # Apply gravity if defined
+            if "gravity" in p:
+                p["vy"] += p["gravity"] * dt
             p["life"] -= dt
             p["alpha"] = max(0, p["alpha"] - dt * 40)
         self.particles = [p for p in self.particles if p["life"] > 0 and p["alpha"] > 0]
-        # Respawn ambient particles to maintain count
-        ambient_count = sum(1 for p in self.particles if p["size"] <= 3)
-        while ambient_count < 25:
-            self.particles.append(self._new_ambient_particle())
-            ambient_count += 1
 
     def handle_event(self, event):
         s = self.game.state
@@ -315,10 +619,13 @@ class CombatScreen(Screen):
         for text, log_type in logs:
             c.add_log(text, log_type)
             if log_type in ("damage", "crit"):
-                color = C.YELLOW if log_type == "crit" else C.BONE
+                is_crit = log_type == "crit"
+                color = C.YELLOW if is_crit else C.BONE
                 dmg_val = text.split()[-1] if any(ch.isdigit() for ch in text) else ""
-                # Damage number floats above enemy sprite (right side)
-                self.add_damage_number(dmg_val, 1120, 200, color)
+                # Damage number floats above enemy sprite (right side) with enhanced effects
+                self.add_damage_number(dmg_val, 1120, 200, color, is_crit=is_crit)
+                # Screen shake when dealing damage
+                self.trigger_shake(intensity=6, duration=0.15, direction=1, is_enemy_damage=True)
 
         phase_logs = check_boss_phase(s)
         for text, log_type in phase_logs:
@@ -327,6 +634,9 @@ class CombatScreen(Screen):
         buff_logs = tick_player_buffs(s)
         for text, log_type in buff_logs:
             c.add_log(text, log_type)
+            # Healing particles
+            if log_type == "heal":
+                self._spawn_heal_particles(100, 300, count=12)
 
         se_logs = process_status_effects(c.enemy, False, s)
         for text, log_type in se_logs:
@@ -354,10 +664,11 @@ class CombatScreen(Screen):
         for text, log_type in logs:
             c.add_log(text, log_type)
             if log_type == "damage":
-                self.trigger_shake()
+                # Enhanced screen shake for player damage
+                self.trigger_shake(intensity=10, duration=0.25, direction=0, is_enemy_damage=False)
                 dmg_val = text.split()[-1] if any(ch.isdigit() for ch in text) else ""
-                # Damage number floats above player sprite (left side)
-                self.add_damage_number(dmg_val, 140, 250, C.CRIMSON)
+                # Damage number floats above player sprite (left side) with player damage flag
+                self.add_damage_number(dmg_val, 140, 250, C.CRIMSON, is_player_damage=True)
 
         # Enemy action floating text (shows what the enemy did)
         if enemy_skill_name:
@@ -394,6 +705,8 @@ class CombatScreen(Screen):
         c.next_enemy_skill = random.choice(c.enemy.skills)
         intent_msg = _get_enemy_intent_message(c.next_enemy_skill)
         c.add_log(intent_msg, "info")
+        # Spawn particles to indicate new intent
+        self._spawn_intent_particles()
 
         self._build_buttons()
 
@@ -636,6 +949,85 @@ class CombatScreen(Screen):
                 draw_status_tooltip(surface, effect_type, rect, self.assets.fonts["tiny"])
                 return
 
+    def _draw_enemy_intent(self, surface, panel_x, panel_y, ox, oy):
+        """Draw the enemy intent panel showing what the enemy will do next turn.
+
+        Displays:
+        - Intent icon (based on skill type)
+        - Skill name
+        - Estimated damage or effect description
+        """
+        c = self.game.state.combat
+        skill = c.next_enemy_skill
+        if not skill:
+            return
+
+        # Intent panel positioning - below the main enemy panel
+        intent_w = 200
+        intent_h = 50
+        intent_x = panel_x + panel_w - intent_w + ox
+        intent_y = panel_y + panel_h + 8 + oy
+
+        # Determine intent type and colors
+        skill_type = skill.get("type", "")
+        if "magic" in skill_type or "spell" in skill_type:
+            intent_color = C.ELDRITCH
+            intent_icon = "*"
+            intent_label = "Magic"
+        elif "buff" in skill_type or "heal" in skill_type:
+            intent_color = C.MIST
+            intent_icon = "+"
+            intent_label = "Buff"
+        elif "debuff" in skill_type:
+            intent_color = C.HP_YELLOW
+            intent_icon = "!"
+            intent_label = "Debuff"
+        else:
+            intent_color = C.CRIMSON
+            intent_icon = "!"
+            intent_label = "Attack"
+
+        # Pulsing animation
+        pulse = abs(math.sin(self._intent_pulse * 3))
+        glow_alpha = int(40 + 30 * pulse)
+
+        # Draw intent panel background with glow
+        intent_bg = pygame.Surface((intent_w, intent_h), pygame.SRCALPHA)
+        intent_bg.fill((10, 8, 20, 200))
+        # Glow effect
+        glow_surf = pygame.Surface((intent_w + 16, intent_h + 16), pygame.SRCALPHA)
+        glow_r, glow_g, glow_b = intent_color
+        for i in range(8):
+            alpha = int((8 - i) * 4 + glow_alpha * 0.5)
+            pygame.draw.rect(glow_surf, (glow_r, glow_g, glow_b, alpha),
+                           (8 - i, 8 - i, intent_w + i * 2, intent_h + i * 2), 1)
+        surface.blit(glow_surf, (intent_x - 8, intent_y - 8))
+        surface.blit(intent_bg, (intent_x, intent_y))
+        pygame.draw.rect(surface, intent_color, (intent_x, intent_y, intent_w, intent_h), 2, border_radius=4)
+
+        # Intent label at top
+        draw_text_with_glow(surface, f"NEXT: {intent_label}", self.assets.fonts["tiny"],
+                           intent_color, intent_x + 8, intent_y + 4, glow_color=intent_color)
+
+        # Skill name
+        skill_name = fit_text(self.assets.fonts["small"], skill.get("name", "Unknown"), intent_w - 16)
+        draw_text_with_glow(surface, skill_name, self.assets.fonts["small"],
+                           C.PARCHMENT_EDGE, intent_x + intent_w // 2, intent_y + 24,
+                           align="center", glow_color=intent_color)
+
+        # Draw small intent indicator icon
+        icon_x = intent_x + intent_w - 28
+        icon_y = intent_y + 8
+        icon_radius = 10
+        pygame.draw.circle(surface, intent_color, (icon_x + icon_radius, icon_y + icon_radius), icon_radius)
+        pygame.draw.circle(surface, tuple(min(255, c + 60) for c in intent_color),
+                         (icon_x + icon_radius, icon_y + icon_radius), icon_radius, 2)
+        # Icon letter - use light color for contrast
+        icon_font = self.assets.fonts["tiny"]
+        icon_text = icon_font.render(intent_icon, True, C.BONE)
+        icon_rect = icon_text.get_rect(center=(icon_x + icon_radius, icon_y + icon_radius))
+        surface.blit(icon_text, icon_rect)
+
     def draw(self, surface):
         s = self.game.state
         c = s.combat
@@ -643,10 +1035,18 @@ class CombatScreen(Screen):
             return
         e = c.enemy
 
+        # Enhanced directional screen shake
         ox, oy = 0, 0
         if self.shake_timer > 0:
-            ox = random.randint(-self.shake_intensity, self.shake_intensity)
-            oy = random.randint(-self.shake_intensity, self.shake_intensity)
+            if self.shake_direction == 1:  # Horizontal only
+                ox = random.randint(-self.shake_intensity, self.shake_intensity)
+                oy = 0
+            elif self.shake_direction == 2:  # Vertical only
+                ox = 0
+                oy = random.randint(-self.shake_intensity, self.shake_intensity)
+            else:  # Random (default)
+                ox = random.randint(-self.shake_intensity, self.shake_intensity)
+                oy = random.randint(-self.shake_intensity, self.shake_intensity)
 
         draw_hud(surface, s, self.assets)
 
@@ -707,6 +1107,13 @@ class CombatScreen(Screen):
                 surface, panel_x + 12, panel_y + 65, enemy_statuses, {},
                 size=26, gap=5
             )
+
+        # ─────────────────────────────────────────────────────────────────────────────
+        # ENEMY INTENT DISPLAY PANEL
+        # Shows what the enemy will do on their next turn
+        # ─────────────────────────────────────────────────────────────────────────────
+        if not self._victory_state and c.next_enemy_skill:
+            self._draw_enemy_intent(surface, panel_x, panel_y, ox, oy)
 
         # --- Enemy sprite rendering ---
         if self._victory_state == "disintegrate":
@@ -772,7 +1179,19 @@ class CombatScreen(Screen):
         if not self._victory_state or self._victory_state == "hp_drain":
             class_sprite = self.assets.get_class_combat(s.class_id)
             if class_sprite:
-                surface.blit(class_sprite, (30 + ox, 250 + oy))
+                # Player hit flash effect - red flash when taking damage
+                if self._player_hit_flash > 0:
+                    flash = class_sprite.copy()
+                    flash_overlay = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
+                    # Directional flash based on damage source (enemy is on the right)
+                    if self._player_hit_direction == 1:  # Damage from right
+                        flash_overlay.fill((255, 30, 30, int(100 * (self._player_hit_flash / 0.3))))
+                    else:  # Damage from left
+                        flash_overlay.fill((255, 50, 50, int(80 * (self._player_hit_flash / 0.3))))
+                    flash.blit(flash_overlay, (0, 0))
+                    surface.blit(flash, (30 + ox, 250 + oy))
+                else:
+                    surface.blit(class_sprite, (30 + ox, 250 + oy))
 
         # --- Combat log (center, parchment panel) — dimmed during victory ---
         log_x, log_y = 280, 250
