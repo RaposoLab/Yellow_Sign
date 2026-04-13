@@ -49,6 +49,9 @@ class Game:
 
         self.assets = Assets()
 
+        # Track total game time for animations
+        self.time_seconds = 0.0
+
         # Apply custom cursor if available
         if self.assets.cursor:
             try:
@@ -176,6 +179,9 @@ class Game:
 
             if not self.transition or self.transition == "fadeIn":
                 self.current_screen.update(dt)
+                
+            # Update total game time for animations
+            self.time_seconds += dt
 
             # Draw background
             bg = self.get_bg()
