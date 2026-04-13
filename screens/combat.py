@@ -365,15 +365,16 @@ class CombatScreen(Screen):
             "save": pygame.Rect(320, cmd_y, 135, 36),
         }
 
-    def add_damage_number(self, text, x, y, color, is_player_damage=False, is_crit=False):
-        """Add a floating damage number with appropriate particle effects.
+    def add_damage_number(self, text, x, y, color, is_player_damage=False, is_crit=False, is_heal=False):
+        """Add a floating damage/healing number with appropriate particle effects.
 
         Args:
-            text: Damage value string
+            text: Damage/heal value string
             x, y: Position for the damage number
             color: Text color
             is_player_damage: If True, this is damage dealt to the player
             is_crit: If True, this was a critical hit
+            is_heal: If True, this is healing (green float text)
         """
         # Adjust particle counts based on damage type
         if is_player_damage:
@@ -383,6 +384,9 @@ class CombatScreen(Screen):
             # Add directional hit flash
             self._player_hit_flash = 0.3
             self._player_hit_direction = 1 if x > SCREEN_W // 2 else 0  # Damage came from enemy side
+        elif is_heal:
+            # Healing - spawn heal particles
+            self._spawn_heal_particles(x, y, count=12 if is_crit else 8)
         else:
             # Damage to enemy
             if is_crit:
@@ -392,7 +396,9 @@ class CombatScreen(Screen):
                 self._spawn_blood_particles(x, y, count=10)
                 self._spawn_magic_particles(x, y, count=4)
 
-        self.damage_numbers.append([text, x, y, color, 1.5, -60])
+        # Damage numbers now have: [text, x, y, color, timer, vy, scale, is_crit]
+        # scale starts at 1.5 for pop effect, decays to 1.0
+        self.damage_numbers.append([text, x, y, color, 1.5, -60, 1.5 if is_crit else 1.2, is_crit])
 
     def trigger_shake(self, intensity=8, duration=0.3, direction=0, is_enemy_damage=False):
         """Trigger screen shake with enhanced options.
@@ -508,19 +514,26 @@ class CombatScreen(Screen):
 
             # During victory animation, update particles but skip normal logic
             self._update_particles(dt)
-            # Update damage numbers
+            # Update damage numbers with scale animation
             for dn in self.damage_numbers:
-                dn[2] += dn[5] * dt
-                dn[4] -= dt
+                dn[2] += dn[5] * dt  # y position
+                dn[4] -= dt  # timer
+                # Animate scale from pop (1.5) down to normal (1.0)
+                if dn[6] > 1.0:
+                    dn[6] -= 2.0 * dt  # Scale decay rate
             self.damage_numbers = [dn for dn in self.damage_numbers if dn[4] > 0]
             if self.shake_timer > 0:
                 self.shake_timer -= dt
             return
 
         # --- Normal update (non-victory) ---
+        # Update damage numbers with scale animation
         for dn in self.damage_numbers:
-            dn[2] += dn[5] * dt
-            dn[4] -= dt
+            dn[2] += dn[5] * dt  # y position
+            dn[4] -= dt  # timer
+            # Animate scale from pop (1.5) down to normal (1.0)
+            if dn[6] > 1.0:
+                dn[6] -= 2.0 * dt  # Scale decay rate
         self.damage_numbers = [dn for dn in self.damage_numbers if dn[4] > 0]
         if self.shake_timer > 0:
             self.shake_timer -= dt
@@ -1319,10 +1332,32 @@ class CombatScreen(Screen):
             fade_surf.fill((0, 0, 0, self._victory_fade_alpha))
             surface.blit(fade_surf, (0, 0))
 
-        # Damage numbers
+        # Damage numbers with scale animation and crit styling
         for dn in self.damage_numbers:
-            text, x, y, color, timer, vy = dn
-            draw_text(surface, text, self.assets.fonts["heading"], color, int(x) + ox, int(y) + oy)
+            text, x, y, color, timer, vy, scale, is_crit = dn
+            font_key = "heading"
+            # Apply scale transform for pop effect
+            if scale != 1.0:
+                font_size = int(self.assets.fonts[font_key].get_height() * scale)
+                scaled_font = pygame.font.Font(None, max(24, font_size))
+            else:
+                scaled_font = self.assets.fonts[font_key]
+            
+            text_surf = scaled_font.render(text, True, color)
+            
+            # Crit damage gets extra outline/glow
+            if is_crit:
+                # Create glow surface
+                glow_surf = scaled_font.render(text, True, (255, 220, 100))
+                glow_rect = glow_surf.get_rect(center=(int(x) + ox, int(y) + oy))
+                # Offset glow slightly for dramatic effect
+                surface.blit(glow_surf, (glow_rect.x - 2, glow_rect.y - 2))
+                surface.blit(glow_surf, (glow_rect.x + 2, glow_rect.y - 2))
+                surface.blit(glow_surf, (glow_rect.x - 2, glow_rect.y + 2))
+                surface.blit(glow_surf, (glow_rect.x + 2, glow_rect.y + 2))
+            
+            text_rect = text_surf.get_rect(center=(int(x) + ox, int(y) + oy))
+            surface.blit(text_surf, text_rect)
 
         # Status effect tooltips on hover
         self._draw_status_tooltips(surface)
