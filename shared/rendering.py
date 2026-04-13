@@ -804,6 +804,203 @@ def draw_text_fitted_glow(surface, text, font, color, x, y, max_width,
 
 
 # ═══════════════════════════════════════════
+# TYPEWRITER TEXT EFFECT SYSTEM
+# ═══════════════════════════════════════════
+
+class TypewriterText:
+    """Manages typewriter-style text reveal effect."""
+    
+    def __init__(self, full_text, reveal_speed=30.0):
+        """
+        Args:
+            full_text: The complete text to display
+            reveal_speed: Characters revealed per second
+        """
+        self.full_text = full_text
+        self.reveal_speed = reveal_speed
+        self.current_index = 0
+        self.timer = 0.0
+        self.complete = False
+        self.skip_requested = False
+    
+    def update(self, dt):
+        """Update the typewriter effect. Call every frame with delta time."""
+        if self.complete or self.skip_requested:
+            self.current_index = len(self.full_text)
+            self.complete = True
+            return
+        
+        self.timer += dt
+        # Calculate how many characters should be revealed
+        chars_to_reveal = int(self.timer * self.reveal_speed)
+        if chars_to_reveal > 0:
+            self.current_index = min(len(self.full_text), self.current_index + chars_to_reveal)
+            self.timer = 0.0  # Reset timer after revealing
+        
+        if self.current_index >= len(self.full_text):
+            self.complete = True
+    
+    def skip(self):
+        """Instantly complete the typewriter effect."""
+        self.skip_requested = True
+        self.update(0)
+    
+    def get_visible_text(self):
+        """Get the currently visible portion of text."""
+        return self.full_text[:self.current_index]
+    
+    def reset(self):
+        """Reset the typewriter effect to start."""
+        self.current_index = 0
+        self.timer = 0.0
+        self.complete = False
+        self.skip_requested = False
+
+
+# ═══════════════════════════════════════════
+# MADNESS VIGNETTE EFFECT
+# ═══════════════════════════════════════════
+
+_madness_vignette_cache = {}
+_VIGNETTE_CACHE_MAX = 8
+
+def _make_vignette_cache_key(intensity, pulse_phase):
+    """Create a cache key for vignette surfaces."""
+    return f"{intensity}_{pulse_phase:.2f}"
+
+def draw_madness_vignette(surface, madness_level, dt, time_seconds):
+    """Draw a darkness vignette around screen edges based on madness level.
+    
+    As madness increases beyond 50%, the screen edges darken with a subtle
+    pulsing effect to create visual tension without obscuring UI elements.
+    
+    Args:
+        surface: Target pygame surface
+        madness_level: Current madness value (0-100)
+        dt: Delta time in seconds
+        time_seconds: Total game time for pulse calculation
+    """
+    # Only activate when madness is above 50%
+    if madness_level <= 50:
+        return
+    
+    # Calculate intensity: 0 at 50% madness, up to 0.7 at 100% madness
+    intensity = ((madness_level - 50) / 50) * 0.7
+    
+    # Add subtle pulsing using sine wave
+    pulse_speed = 0.8  # Slow, eerie pulse
+    pulse = 0.5 + 0.5 * math.sin(time_seconds * pulse_speed)
+    pulsed_intensity = intensity * (0.85 + 0.15 * pulse)
+    
+    cache_key = _make_vignette_cache_key(int(pulsed_intensity * 100), pulse)
+    
+    if cache_key not in _madness_vignette_cache:
+        # Create vignette surface with radial gradient
+        vignette = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        
+        # Draw multiple concentric ellipses for smooth gradient
+        max_radius = max(SCREEN_W, SCREEN_H) // 2
+        num_rings = 50
+        
+        for i in range(num_rings):
+            ratio = i / num_rings
+            # Alpha increases toward edges
+            alpha = int(255 * pulsed_intensity * ratio * ratio)
+            if alpha < 5:
+                continue
+            
+            # Ellipse that fills the screen, growing outward
+            rx = int(SCREEN_W // 2 + (max_radius * ratio))
+            ry = int(SCREEN_H // 2 + (max_radius * 0.6 * ratio))
+            
+            # Dark purple-black color for eldritch feel
+            color = (20, 10, 30, alpha)
+            pygame.draw.ellipse(vignette, color, 
+                              (SCREEN_W // 2 - rx, SCREEN_H // 2 - ry, rx * 2, ry * 2))
+        
+        if len(_madness_vignette_cache) >= _VIGNETTE_CACHE_MAX:
+            keys_to_remove = list(_madness_vignette_cache.keys())[:_VIGNETTE_CACHE_MAX // 4]
+            for k in keys_to_remove:
+                del _madness_vignette_cache[k]
+        
+        _madness_vignette_cache[cache_key] = vignette
+    
+    vignette = _madness_vignette_cache[cache_key]
+    surface.blit(vignette, (0, 0))
+
+
+# ═══════════════════════════════════════════
+# ELDRITCH PULSING AURA
+# ═══════════════════════════════════════════
+
+def draw_eldritch_aura(surface, rect, time_seconds, intensity=1.0, color=None):
+    """Draw a pulsing eldritch aura around an enemy or area.
+    
+    Creates a threatening purple/pink glowing effect that pulses,
+    used for bosses or dangerous enemies to highlight threat level.
+    
+    Args:
+        surface: Target pygame surface
+        rect: pygame.Rect defining the area to surround
+        time_seconds: Total game time for pulse calculation
+        intensity: Aura intensity multiplier (default 1.0)
+        color: Custom color tuple (default: purple/pink eldritch colors)
+    """
+    if color is None:
+        # Default eldritch purple-pink gradient colors
+        base_color = (140, 60, 180)  # Purple
+        accent_color = (200, 80, 150)  # Pink
+    else:
+        base_color = color
+        accent_color = tuple(min(255, c + 40) for c in color)
+    
+    # Pulsing animation using sine wave
+    pulse_speed = 2.0  # Moderate pulse speed
+    pulse = 0.5 + 0.5 * math.sin(time_seconds * pulse_speed)
+    eased_pulse = ease_in_out_quad(pulse)  # Smooth easing
+    
+    # Expand rect for aura layers
+    max_expand = int(20 * intensity)
+    
+    # Draw multiple expanding layers for gradient effect
+    for i in range(5, 0, -1):
+        layer_ratio = i / 5.0
+        expand = int(max_expand * layer_ratio * eased_pulse)
+        alpha = int(40 * intensity * layer_ratio * (1.0 - layer_ratio * 0.3))
+        
+        if alpha < 5:
+            continue
+        
+        aura_rect = pygame.Rect(
+            rect.x - expand,
+            rect.y - expand,
+            rect.w + expand * 2,
+            rect.h + expand * 2
+        )
+        
+        # Interpolate between base and accent color
+        r = int(base_color[0] * layer_ratio + accent_color[0] * (1 - layer_ratio))
+        g = int(base_color[1] * layer_ratio + accent_color[1] * (1 - layer_ratio))
+        b = int(base_color[2] * layer_ratio + accent_color[2] * (1 - layer_ratio))
+        
+        aura_surf = pygame.Surface((aura_rect.w, aura_rect.h), pygame.SRCALPHA)
+        pygame.draw.rect(aura_surf, (r, g, b, alpha), 
+                        (0, 0, aura_rect.w, aura_rect.h), 
+                        border_radius=8)
+        surface.blit(aura_surf, (aura_rect.x, aura_rect.y))
+    
+    # Occasional spark particles for extra eldritch feel
+    if random.random() < 0.02 * intensity:
+        spark_x = rect.x + random.randint(-max_expand, rect.w + max_expand)
+        spark_y = rect.y + random.randint(-max_expand, rect.h + max_expand)
+        spark_size = random.randint(2, 4)
+        spark_surf = pygame.Surface((spark_size * 2, spark_size * 2), pygame.SRCALPHA)
+        spark_color = (200, 160, 255, random.randint(100, 200))
+        pygame.draw.circle(spark_surf, spark_color, (spark_size, spark_size), spark_size)
+        surface.blit(spark_surf, (spark_x - spark_size, spark_y - spark_size))
+
+
+# ═══════════════════════════════════════════
 # HUD DRAWING
 # ═══════════════════════════════════════════
 

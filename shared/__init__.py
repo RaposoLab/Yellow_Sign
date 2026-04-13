@@ -31,6 +31,10 @@ from shared.rendering import (
     ease_out_quad, ease_in_quad, ease_in_out_quad,
     ease_out_cubic, ease_in_cubic, ease_in_out_cubic,
     ease_out_bounce, lerp, animate_value,
+    # Typewriter text effect
+    TypewriterText,
+    # Madness vignette and eldritch aura effects
+    draw_madness_vignette, draw_eldritch_aura,
 )
 
 # Also re-export data imports that were previously in shared.py's namespace

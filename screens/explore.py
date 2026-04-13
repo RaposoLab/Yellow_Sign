@@ -1,5 +1,5 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, TypewriterText, draw_madness_vignette
 import random
 from screens.base import Screen
 from data import EVENTS, TRAPS, FLOOR_NARRATIVES
@@ -13,10 +13,16 @@ class ExploreScreen(Screen):
         self.cmd_buttons = {}
         self.narrative = ""
         self.particles = []
+        self.typewriter = None  # TypewriterText for floor narrative
+        self.narrative_complete = False
 
     def enter(self):
         s = self.game.state
         self.narrative = FLOOR_NARRATIVES[min(s.floor - 1, len(FLOOR_NARRATIVES) - 1)]
+        # Initialize typewriter effect for floor narrative
+        self.typewriter = TypewriterText(self.narrative, reveal_speed=40.0)
+        self.narrative_complete = False
+        
         is_boss = s.floor >= s.max_floor
         if is_boss:
             self.paths = []
@@ -68,6 +74,7 @@ class ExploreScreen(Screen):
         }
 
     def update(self, dt):
+        """Update particles and typewriter animation."""
         for p in self.particles:
             p["x"] += p["vx"]
             p["y"] += p["vy"]
@@ -76,37 +83,54 @@ class ExploreScreen(Screen):
             if p["life"] <= 0 or p["y"] < 120:
                 new_p = self._new_dust_particle()
                 p.update(new_p)
+        
+        # Update typewriter animation
+        if self.typewriter and not self.typewriter.complete:
+            self.typewriter.update(dt)
+            self.narrative_complete = self.typewriter.complete
+        else:
+            self.narrative_complete = True
 
     def handle_event(self, event):
+        # Allow skipping typewriter animation with any input
+        if self.typewriter and not self.typewriter.complete:
+            if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1):
+                self.typewriter.skip()
+                return  # Consume the event
+        
         # Track hover for all buttons
         all_btns = self.path_buttons + list(self.cmd_buttons.values())
         self.update_hover(event, all_btns)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for i, btn in enumerate(self.path_buttons):
-                if btn.collidepoint(event.pos):
-                    self._choose_path(i)
-            for name, btn in self.cmd_buttons.items():
-                if btn.collidepoint(event.pos):
-                    if name == "inventory":
-                        self.game.switch_screen("inventory")
-                    elif name == "stats":
-                        self.game.switch_screen("stats")
-                    elif name == "save":
-                        self.game.switch_screen("save")
-                    elif name == "menu":
-                        self.game.switch_screen("title")
+            # Only allow interaction when narrative is complete
+            if self.narrative_complete:
+                for i, btn in enumerate(self.path_buttons):
+                    if btn.collidepoint(event.pos):
+                        self._choose_path(i)
+                for name, btn in self.cmd_buttons.items():
+                    if btn.collidepoint(event.pos):
+                        if name == "inventory":
+                            self.game.switch_screen("inventory")
+                        elif name == "stats":
+                            self.game.switch_screen("stats")
+                        elif name == "save":
+                            self.game.switch_screen("save")
+                        elif name == "menu":
+                            self.game.switch_screen("title")
         elif event.type == pygame.KEYDOWN:
-            if pygame.K_1 <= event.key <= pygame.K_9:
-                idx = event.key - pygame.K_1
-                if idx < len(self.paths):
-                    self._choose_path(idx)
-            elif event.key == pygame.K_i:
-                self.game.switch_screen("inventory")
-            elif event.key == pygame.K_t:
-                self.game.switch_screen("stats")
-            elif event.key == pygame.K_s:
-                self.game.switch_screen("save")
+            # Only allow keyboard interaction when narrative is complete
+            if self.narrative_complete:
+                if pygame.K_1 <= event.key <= pygame.K_9:
+                    idx = event.key - pygame.K_1
+                    if idx < len(self.paths):
+                        self._choose_path(idx)
+                elif event.key == pygame.K_i:
+                    self.game.switch_screen("inventory")
+                elif event.key == pygame.K_t:
+                    self.game.switch_screen("stats")
+                elif event.key == pygame.K_s:
+                    self.game.switch_screen("save")
 
     def _choose_path(self, idx):
         s = self.game.state
@@ -172,8 +196,20 @@ class ExploreScreen(Screen):
         panel_x = SCREEN_W // 2 - panel_w // 2
         draw_parchment_panel(surface, panel_x, 130, panel_w, panel_h)
 
-        draw_text_wrapped_glow(surface, self.narrative, self.assets.fonts["small"],
-                          C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22)
+        # Draw narrative text with typewriter effect
+        if self.typewriter:
+            visible_text = self.typewriter.get_visible_text()
+            draw_text_wrapped_glow(surface, visible_text, self.assets.fonts["small"],
+                              C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22)
+            
+            # Show "click to skip" hint if still typing
+            if not self.typewriter.complete:
+                skip_hint = "Click to skip..."
+                draw_text_with_glow(surface, skip_hint, self.assets.fonts["tiny"],
+                          C.ASH, SCREEN_W // 2, 310, align="center")
+        else:
+            draw_text_wrapped_glow(surface, self.narrative, self.assets.fonts["small"],
+                              C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22)
 
         # Path choices — side by side cards
         if self.paths:
@@ -224,3 +260,6 @@ class ExploreScreen(Screen):
             labels = {"inventory": "Inventory [I]", "stats": "Stats [T]", "save": "Save [S]", "menu": "Menu"}
             draw_ornate_button(surface, btn, labels[name], self.assets.fonts["small"],
                                hover=((len(self.path_buttons) + ci) == self.hover_idx), color=C.PARCHMENT_EDGE)
+        
+        # Draw madness vignette effect (darkness at screen edges based on madness level)
+        draw_madness_vignette(surface, s.madness, 0.016, self.game.time_seconds)

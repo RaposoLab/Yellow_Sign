@@ -1,5 +1,5 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, TypewriterText
 import random
 from screens.base import Screen
 from data import EVENTS
@@ -12,15 +12,30 @@ class EventScreen(Screen):
         self.result_msg = ""
         self.result_loot = None
         self.showing_result = False
+        self.typewriter = None  # TypewriterText instance for narrative text
+        self.narrative_complete = False  # Track if typewriter animation is done
 
     def enter(self):
         self.showing_result = False
         self.result_msg = ""
+        self.narrative_complete = False
+        # Initialize typewriter effect for narrative text
         event = self.game.pending_event
+        self.typewriter = TypewriterText(event["text"], reveal_speed=35.0)
+        
         n = len(event["outcomes"])
         bw, bh = 500, 50
         cx = SCREEN_W // 2
         self.outcome_buttons = [pygame.Rect(cx - bw // 2, 360 + i * 62, bw, bh) for i in range(n)]
+
+    def update(self, dt):
+        """Update typewriter animation."""
+        if self.typewriter and not self.typewriter.complete:
+            self.typewriter.update(dt)
+            # Only allow interaction when text is complete
+            self.narrative_complete = self.typewriter.complete
+        else:
+            self.narrative_complete = True
 
     def handle_event(self, event):
         s = self.game.state
@@ -33,17 +48,27 @@ class EventScreen(Screen):
                     self.game.switch_screen("explore")
             return
 
+        # Allow skipping typewriter animation with any input
+        if self.typewriter and not self.typewriter.complete:
+            if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1):
+                self.typewriter.skip()
+                return  # Consume the event
+        
         self.update_hover(event, self.outcome_buttons)
         pe = self.game.pending_event
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for i, btn in enumerate(self.outcome_buttons):
-                if btn.collidepoint(event.pos) and i < len(pe["outcomes"]):
-                    self._resolve(i)
+            # Only allow button clicks when narrative is complete
+            if self.narrative_complete:
+                for i, btn in enumerate(self.outcome_buttons):
+                    if btn.collidepoint(event.pos) and i < len(pe["outcomes"]):
+                        self._resolve(i)
         elif event.type == pygame.KEYDOWN:
-            if pygame.K_1 <= event.key <= pygame.K_9:
-                idx = event.key - pygame.K_1
-                if idx < len(pe["outcomes"]):
-                    self._resolve(idx)
+            # Only allow keyboard selection when narrative is complete
+            if self.narrative_complete:
+                if pygame.K_1 <= event.key <= pygame.K_9:
+                    idx = event.key - pygame.K_1
+                    if idx < len(pe["outcomes"]):
+                        self._resolve(idx)
 
     def _resolve(self, idx):
         s = self.game.state
@@ -65,8 +90,21 @@ class EventScreen(Screen):
         draw_text_with_glow(surface, pe["title"], self.assets.fonts["heading"],
                   C.PARCHMENT_EDGE, SCREEN_W // 2, 145, align="center")
         draw_gold_divider(surface, SCREEN_W // 2 - 180, 178, 360)
-        draw_text_wrapped_glow(surface, pe["text"], self.assets.fonts["body"],
-                          C.INK, SCREEN_W // 2 - 270, 195, 540)
+        
+        # Draw narrative text with typewriter effect
+        if self.typewriter:
+            visible_text = self.typewriter.get_visible_text()
+            draw_text_wrapped_glow(surface, visible_text, self.assets.fonts["body"],
+                              C.INK, SCREEN_W // 2 - 270, 195, 540)
+            
+            # Show "click to skip" hint if still typing
+            if not self.typewriter.complete:
+                skip_hint = "Click to skip..."
+                draw_text_with_glow(surface, skip_hint, self.assets.fonts["tiny"],
+                          C.ASH, SCREEN_W // 2, 340, align="center")
+        else:
+            draw_text_wrapped_glow(surface, pe["text"], self.assets.fonts["body"],
+                              C.INK, SCREEN_W // 2 - 270, 195, 540)
 
         if self.showing_result:
             color = C.MIST if "heal" in self.result_msg.lower() or "+" not in self.result_msg else C.CRIMSON
