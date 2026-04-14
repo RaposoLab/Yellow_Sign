@@ -241,26 +241,33 @@ class Assets:
                     print(f"  ✗ Font '{key}' using arial fallback (last resort)")
 
         # ── Eldritch Combat Fonts ──
-        # Dedicated fonts for floating damage numbers — heavier, more ornate
-        # CinzelDecorative-Bold is unused elsewhere and perfect for dramatic combat text
+        # Slender Victorian serif for menacing, elegant damage numbers
         try:
-            eld_path = decor_bold_path if os.path.exists(decor_bold_path) else (
-                decor_path if os.path.exists(decor_path) else None)
-            if eld_path:
+            # Use DejaVu Serif Condensed for a slender, elegant, Victorian look
+            eld_path = "/usr/share/fonts/truetype/dejavu/DejaVuSerifCondensed-Bold.ttf"
+            if os.path.exists(eld_path):
                 self._font_paths["eldritch"] = eld_path
-                self.fonts["eldritch_crit"] = _try_load_font(eld_path, 30, "eldritch_crit") or self.fonts.get("heading")
-                self.fonts["eldritch"] = _try_load_font(eld_path, 24, "eldritch") or self.fonts.get("heading")
-                self.fonts["eldritch_rune"] = _try_load_font(eld_path, 14, "eldritch_rune") or self.fonts.get("small")
-                print(f"  ✓ Eldritch combat fonts loaded from {eld_path}")
+                self.fonts["eldritch_crit"] = _try_load_font(eld_path, 28, "eldritch_crit") or self.fonts.get("heading")
+                self.fonts["eldritch"] = _try_load_font(eld_path, 22, "eldritch") or self.fonts.get("heading")
+                self.fonts["eldritch_rune"] = _try_load_font(eld_path, 12, "eldritch_rune") or self.fonts.get("small")
+                print(f"  ✓ Victorian combat fonts loaded from {eld_path}")
             else:
-                # Store heading font path for dynamic scaling
-                self._font_paths["eldritch"] = None
-                self.fonts["eldritch_crit"] = self.fonts.get("heading")
-                self.fonts["eldritch"] = self.fonts.get("heading")
-                self.fonts["eldritch_rune"] = self.fonts.get("small")
-                print(f"  ✗ Eldritch combat fonts using heading fallback")
+                # Fallback to Cinzel Decorative Bold if condensed serif unavailable
+                eld_path = decor_bold_path if os.path.exists(decor_bold_path) else None
+                if eld_path:
+                    self._font_paths["eldritch"] = eld_path
+                    self.fonts["eldritch_crit"] = _try_load_font(eld_path, 28, "eldritch_crit") or self.fonts.get("heading")
+                    self.fonts["eldritch"] = _try_load_font(eld_path, 22, "eldritch") or self.fonts.get("heading")
+                    self.fonts["eldritch_rune"] = _try_load_font(eld_path, 12, "eldritch_rune") or self.fonts.get("small")
+                    print(f"  ✓ Combat fonts loaded from {eld_path}")
+                else:
+                    self._font_paths["eldritch"] = None
+                    self.fonts["eldritch_crit"] = self.fonts.get("heading")
+                    self.fonts["eldritch"] = self.fonts.get("heading")
+                    self.fonts["eldritch_rune"] = self.fonts.get("small")
+                    print(f"  ✗ Combat fonts using heading fallback")
         except Exception as e:
-            print(f"  ✗ Eldritch font error: {e}")
+            print(f"  ✗ Combat font error: {e}")
             self.fonts["eldritch_crit"] = self.fonts.get("heading")
             self.fonts["eldritch"] = self.fonts.get("heading")
             self.fonts["eldritch_rune"] = self.fonts.get("small")

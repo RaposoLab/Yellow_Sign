@@ -1354,14 +1354,14 @@ class CombatScreen(Screen):
         # Cinzel Decorative Bold — refined, elegant, wrong.
         # ═══════════════════════════════════════════════════════════════════════════════
 
-        # Palette: strictly purple / crimson / gold
-        _PURPLE = (175, 130, 225)
-        _PURPLE_DEEP = (120, 60, 180)
-        _PURPLE_VOID = (74, 14, 78)
-        _CRIMSON = (196, 30, 58)
-        _CRIMSON_DARK = (120, 15, 30)
-        _GOLD = (212, 160, 23)
-        _GOLD_BRIGHT = (232, 185, 45)
+        # Palette: dark menacing Victorian colors - deep purples, blood crimsons, tarnished golds
+        _PURPLE = (90, 40, 110)           # Deep dark purple
+        _PURPLE_DEEP = (50, 15, 80)        # Even darker purple shadow
+        _PURPLE_VOID = (30, 5, 50)         # Near-black purple void
+        _CRIMSON = (120, 20, 35)           # Dark blood red
+        _CRIMSON_DARK = (70, 10, 20)       # Dried blood crimson
+        _GOLD = (160, 120, 20)             # Dark tarnished gold
+        _GOLD_BRIGHT = (190, 150, 30)      # Slightly brighter dark gold
 
         # Victorian decorative runes
         _ELDRITCH_RUNES = ["\u2020", "\u2726", "\u263D", "\u2694", "\u2736", "\u2625", "\u271D"]
