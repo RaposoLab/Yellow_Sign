@@ -6,6 +6,7 @@ from shared import (C, SCREEN_W, SCREEN_H, draw_text, draw_text_wrapped, draw_te
                     draw_gold_divider, hp_color, mad_color, draw_parchment_panel,
                     draw_text_with_glow, draw_status_icons_row, draw_status_tooltip,
                     generate_parchment_texture, draw_hud)
+from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from engine import calc_preview_damage, _get_enemy_intent_message
 from screens.combat.particles import create_particle, PARTICLE_TYPES
 
@@ -209,14 +210,7 @@ class CombatRendererMixin:
             surface.blit(ps, (int(p["x"]) + ox, int(p["y"]) + oy))
 
         # --- Enemy info panel (compact nameplate above sprite) ---
-        # During victory, HP bar shows draining animation
-        if self._victory_state == "hp_drain":
-            e_hp_pct = max(0, self._victory_hp_display / e.max_hp * 100)
-        elif self._victory_state:
-            e_hp_pct = 0  # Zero during disintegrate/pause
-        else:
-            e_hp_pct = max(0, e.hp / e.max_hp * 100)
-
+        # During horror death animation, panel glitches
         panel_w = 495
         panel_h = 100
         sprite_w = 240
@@ -224,29 +218,89 @@ class CombatRendererMixin:
         sprite_y = 202 + oy
         panel_x = sprite_x + sprite_w - panel_w
         panel_y = 120
-        draw_parchment_panel(surface, panel_x, panel_y, panel_w, panel_h)
+
+        # Panel position jitter during glitch phases
+        panel_ox, panel_oy = 0, 0
+        if self._victory_state in ("glitch_onset", "reality_break"):
+            panel_ox = int(self._glitch_bar_flicker)
+            panel_oy = int(random.uniform(-2, 2) * self._glitch_intensity)
+
+        draw_parchment_panel(surface, panel_x + panel_ox, panel_y + panel_oy, panel_w, panel_h)
 
         if c.is_boss:
-            draw_text_with_glow(surface, "BOSS", self.assets.fonts["tiny"], C.CRIMSON, panel_x + 12, panel_y + 5)
-        draw_text_with_glow(surface, e.name, self.assets.fonts["small"], C.PARCHMENT_EDGE, panel_x + 12, panel_y + 22)
+            draw_text_with_glow(surface, "BOSS", self.assets.fonts["tiny"], C.CRIMSON,
+                                panel_x + 12 + panel_ox, panel_y + 5 + panel_oy)
 
-        # Enemy HP bar — during victory animation, show draining HP
-        if self._victory_state == "hp_drain":
-            display_hp = max(0, int(self._victory_hp_display))
-            draw_bar(surface, panel_x + 12, panel_y + 44, 330, 14, display_hp, e.max_hp,
-                     hp_color(display_hp, e.max_hp))
-            draw_text_with_glow(surface, f"{display_hp}/{e.max_hp}", self.assets.fonts["tiny"],
-                      C.INK, panel_x + 350, panel_y + 44)
-        elif self._victory_state:
-            # Empty bar during disintegrate/pause
-            draw_bar(surface, panel_x + 12, panel_y + 44, 330, 14, 0, e.max_hp, C.CRIMSON)
-            draw_text_with_glow(surface, f"0/{e.max_hp}", self.assets.fonts["tiny"],
-                      C.CRIMSON, panel_x + 350, panel_y + 44)
+        # Enemy name — corrupted during glitch phases
+        if self._victory_state in ("glitch_onset", "reality_break"):
+            display_name = self._glitch_name_corrupted
+            # RGB split on the name text
+            name_x = panel_x + 12 + panel_ox
+            name_y = panel_y + 22 + panel_oy
+            name_font = self.assets.fonts["small"]
+            # Red channel offset
+            red_offset = int(self._glitch_intensity * random.uniform(2, 6))
+            # Blue channel offset
+            blue_offset = int(self._glitch_intensity * random.uniform(2, 6))
+            # Render RGB split layers
+            red_surf = name_font.render(display_name, True, (200, 0, 0))
+            blue_surf = name_font.render(display_name, True, (0, 0, 200))
+            main_surf = name_font.render(display_name, True, C.ELDRITCH_PURPLE)
+            surface.blit(red_surf, (name_x + red_offset, name_y))
+            surface.blit(blue_surf, (name_x - blue_offset, name_y))
+            surface.blit(main_surf, (name_x, name_y))
         else:
-            draw_bar(surface, panel_x + 12, panel_y + 44, 330, 14, e.hp, e.max_hp,
+            draw_text_with_glow(surface, e.name, self.assets.fonts["small"], C.PARCHMENT_EDGE,
+                                panel_x + 12 + panel_ox, panel_y + 22 + panel_oy)
+
+        # Enemy HP bar — glitch effects during death animation
+        bar_x = panel_x + 12 + panel_ox
+        bar_y = panel_y + 44 + panel_oy
+        bar_w = 330
+        bar_h = 14
+
+        if self._victory_state in ("glitch_onset", "reality_break"):
+            if self._glitch_bar_snap:
+                # Bar has snapped to 0 — show empty with glitch
+                draw_bar(surface, bar_x, bar_y, bar_w, bar_h, 0, e.max_hp, C.CRIMSON)
+                # Glitch text: scrambled numbers
+                glitch_text = f"{''.join(random.choice('0123456789-!?') for _ in range(3))}/{e.max_hp}"
+                draw_text_with_glow(surface, glitch_text, self.assets.fonts["tiny"],
+                          C.CRIMSON, panel_x + 350 + panel_ox, bar_y)
+            else:
+                # Flickering bar — random value jumps
+                if random.random() < self._glitch_intensity * 0.3:
+                    # Brief flash to wrong value
+                    flicker_hp = random.randint(0, e.max_hp)
+                    bar_color = C.ELDRITCH_PURPLE if random.random() < 0.3 else hp_color(flicker_hp, e.max_hp)
+                    draw_bar(surface, bar_x, bar_y, bar_w, bar_h, flicker_hp, e.max_hp, bar_color)
+                    draw_text_with_glow(surface, f"{flicker_hp}/{e.max_hp}", self.assets.fonts["tiny"],
+                              C.ELDRITCH_PURPLE, panel_x + 350 + panel_ox, bar_y)
+                else:
+                    # Normal HP display but with jitter offset
+                    draw_bar(surface, bar_x, bar_y, bar_w, bar_h, e.hp, e.max_hp,
+                             hp_color(e.hp, e.max_hp))
+                    draw_text_with_glow(surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"],
+                              C.INK, panel_x + 350 + panel_ox, bar_y)
+            # Horizontal scanline glitch on bar
+            if random.random() < self._glitch_intensity * 0.4:
+                glitch_y = bar_y + random.randint(0, bar_h)
+                glitch_w = random.randint(30, bar_w)
+                glitch_x = bar_x + random.randint(0, bar_w - glitch_w)
+                glitch_surf = pygame.Surface((glitch_w, 2), pygame.SRCALPHA)
+                glitch_surf.fill((140, 60, 180, int(180 * self._glitch_intensity)))
+                surface.blit(glitch_surf, (glitch_x, glitch_y))
+        elif self._victory_state:
+            # After reality_break: empty bar
+            draw_bar(surface, bar_x, bar_y, bar_w, bar_h, 0, e.max_hp, (30, 5, 50))
+            draw_text_with_glow(surface, f"0/{e.max_hp}", self.assets.fonts["tiny"],
+                      (30, 5, 50), panel_x + 350 + panel_ox, bar_y)
+        else:
+            # Normal combat
+            draw_bar(surface, bar_x, bar_y, bar_w, bar_h, e.hp, e.max_hp,
                      hp_color(e.hp, e.max_hp))
             draw_text_with_glow(surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"],
-                      C.INK, panel_x + 350, panel_y + 44)
+                      C.INK, panel_x + 350 + panel_ox, bar_y)
 
         # Enemy status icons — below HP bar, left side (hide during victory)
         if not self._victory_state:
@@ -268,40 +322,122 @@ class CombatRendererMixin:
             self._draw_enemy_intent(surface, panel_x, panel_y, ox, oy)
 
         # --- Enemy sprite rendering ---
-        if self._victory_state == "disintegrate":
-            # Draw disintegration fragments
-            for f in self._fragments:
-                if f["alpha"] <= 0:
-                    continue
-                frag_surf = pygame.Surface((f["w"], f["h"]), pygame.SRCALPHA)
-                r, g, b = f["color"]
-                a = max(0, min(255, int(f["alpha"])))
-                frag_surf.fill((r, g, b, a))
-                # Apply rotation
-                if abs(f["rot"]) > 0.5:
-                    frag_surf = pygame.transform.rotate(frag_surf, f["rot"])
-                surface.blit(frag_surf, (int(f["x"]) + ox - f["w"] // 2, int(f["y"]) + oy - f["h"] // 2))
-        elif self._victory_state == "dramatic_pause":
-            # No sprite — just particles, maybe a faint ghostly outline
-            if self._victory_timer < 0.5:
-                # Brief ghost flash of the enemy sprite
-                enemy_sprite = self.assets.get_sprite(e.name)
-                if enemy_sprite:
-                    ghost = enemy_sprite.copy()
-                    ghost.set_alpha(int(60 * (1.0 - self._victory_timer * 2)))
-                    surface.blit(ghost, (sprite_x, sprite_y))
-        elif self._victory_state == "hp_drain":
-            # Normal sprite, but with red flash during drain
+        if self._victory_state == "glitch_onset":
+            # Sprite with subtle flicker/distortion
             enemy_sprite = self.assets.get_sprite(e.name)
             if enemy_sprite:
-                # Pulsing red tint during drain
-                pulse = abs(math.sin(self._victory_timer * 8))
-                flash_alpha = int(40 + 40 * pulse)
-                flash = enemy_sprite.copy()
-                flash_overlay = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
-                flash_overlay.fill((255, 30, 30, flash_alpha))
-                flash.blit(flash_overlay, (0, 0))
-                surface.blit(flash, (sprite_x, sprite_y))
+                # Scale to combat size
+                sw, sh = enemy_sprite.get_size()
+                if sw != sprite_w:
+                    enemy_sprite = pygame.transform.scale(enemy_sprite, (sprite_w, int(sh * sprite_w / sw)))
+                # Occasional color flicker
+                if random.random() < self._glitch_intensity * 0.15:
+                    # Flash purple tint
+                    flash = enemy_sprite.copy()
+                    flash_overlay = pygame.Surface(flash.get_size(), pygame.SRCALPHA)
+                    flash_overlay.fill((140, 60, 180, int(60 * self._glitch_intensity)))
+                    flash.blit(flash_overlay, (0, 0))
+                    surface.blit(flash, (sprite_x + int(random.uniform(-2, 2) * self._glitch_intensity), sprite_y))
+                else:
+                    # Slight horizontal displacement
+                    jitter_x = int(random.uniform(-1, 1) * self._glitch_intensity * 3)
+                    surface.blit(enemy_sprite, (sprite_x + jitter_x, sprite_y))
+
+        elif self._victory_state == "reality_break":
+            # More intense distortion, sprite warps
+            enemy_sprite = self.assets.get_sprite(e.name)
+            if enemy_sprite:
+                sw, sh = enemy_sprite.get_size()
+                if sw != sprite_w:
+                    enemy_sprite = pygame.transform.scale(enemy_sprite, (sprite_w, int(sh * sprite_w / sw)))
+                # Draw sprite with horizontal shear/slice distortion
+                src_w, src_h = enemy_sprite.get_size()
+                dest_surface = pygame.Surface((src_w + 20, src_h), pygame.SRCALPHA)
+                # Slice sprite into horizontal strips with random offsets
+                strip_h = 4
+                for sy in range(0, src_h, strip_h):
+                    strip = enemy_sprite.subsurface((0, sy, src_w, min(strip_h, src_h - sy)))
+                    # Random horizontal offset per strip — increases with glitch intensity
+                    offset_x = int(random.uniform(-8, 8) * self._glitch_intensity)
+                    dest_surface.blit(strip, (10 + offset_x, sy))
+                # Color overlay — pulsing between purple and crimson
+                color_flash = pygame.Surface(dest_surface.get_size(), pygame.SRCALPHA)
+                pulse_color = C.ELDRITCH_PURPLE if random.random() < 0.5 else C.CRIMSON
+                color_flash.fill((*pulse_color, int(40 * self._glitch_intensity)))
+                dest_surface.blit(color_flash, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                surface.blit(dest_surface, (sprite_x - 10, sprite_y))
+
+        elif self._victory_state == "implosion":
+            # Sprite compresses toward center with distortion
+            enemy_sprite = self.assets.get_sprite(e.name)
+            if enemy_sprite:
+                sw, sh = enemy_sprite.get_size()
+                if sw != sprite_w:
+                    enemy_sprite = pygame.transform.scale(enemy_sprite, (sprite_w, int(sh * sprite_w / sw)))
+                src_w, src_h = enemy_sprite.get_size()
+                progress = self._implosion_progress
+                cx, cy = self._implosion_center
+
+                # Scale down the sprite as implosion progresses
+                scale_factor = max(0.05, 1.0 - ease_in_cubic(progress) * 0.95)
+                new_w = max(4, int(src_w * scale_factor))
+                new_h = max(4, int(src_h * scale_factor))
+                scaled = pygame.transform.scale(enemy_sprite, (new_w, new_h))
+
+                # Darken the sprite as it implodes
+                dark_factor = int(200 * progress)
+                dark_overlay = pygame.Surface(scaled.get_size(), pygame.SRCALPHA)
+                dark_overlay.fill((0, 0, 0, min(220, dark_factor)))
+                scaled.blit(dark_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+                # Apply per-column distortion for warping effect
+                if len(self._implosion_distortion) > 0 and new_w > 10:
+                    col_w = max(1, new_w // len(self._implosion_distortion))
+                    dest_surf = pygame.Surface((new_w + 20, new_h + 20), pygame.SRCALPHA)
+                    for i, offset in enumerate(self._implosion_distortion):
+                        col_x = i * col_w
+                        actual_w = min(col_w, new_w - col_x)
+                        if actual_w <= 0 or col_x >= new_w:
+                            continue
+                        strip = scaled.subsurface((col_x, 0, actual_w, new_h))
+                        dest_surf.blit(strip, (col_x + 10, int(offset * progress * 3) + 10))
+                    # Center on implosion center
+                    blit_x = cx - dest_surf.get_width() // 2
+                    blit_y = cy - dest_surf.get_height() // 2
+                    surface.blit(dest_surf, (blit_x + ox, blit_y + oy))
+                else:
+                    # Simple centered implosion
+                    blit_x = cx - new_w // 2
+                    blit_y = cy - new_h // 2
+                    surface.blit(scaled, (blit_x + ox, blit_y + oy))
+
+                # Draw inward-pulling distortion lines (tendril hints)
+                if progress > 0.3:
+                    for _ in range(int(4 * progress)):
+                        angle = random.uniform(0, math.pi * 2)
+                        dist = random.uniform(40, 140) * (1.0 - progress * 0.5)
+                        start_x = cx + math.cos(angle) * dist + ox
+                        start_y = cy + math.sin(angle) * dist + oy
+                        end_x = cx + ox
+                        end_y = cy + oy
+                        line_alpha = int(80 * progress)
+                        # Draw thin tendril line
+                        line_surf = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+                        pygame.draw.line(line_surf, (90, 30, 110, line_alpha),
+                                       (int(start_x), int(start_y)), (int(end_x), int(end_y)), 1)
+                        surface.blit(line_surf, (0, 0))
+
+        elif self._victory_state == "void_flash":
+            # No sprite — void flash renders below
+            pass
+
+        elif self._victory_state == "afterimage":
+            # Burned-in silhouette fading
+            if self._afterimage_surface and self._afterimage_alpha > 0:
+                afterimage = self._afterimage_surface.copy()
+                afterimage.set_alpha(self._afterimage_alpha)
+                surface.blit(afterimage, (sprite_x + ox, sprite_y + oy))
+
         else:
             # Normal combat sprite
             enemy_sprite = self.assets.get_sprite(e.name)
@@ -315,6 +451,22 @@ class CombatRendererMixin:
                     surface.blit(flash, (sprite_x, sprite_y))
                 else:
                     surface.blit(enemy_sprite, (sprite_x, sprite_y))
+
+        # --- Void flash rendering (expanding/contracting black circle) ---
+        if self._victory_state == "void_flash" and self._void_flash_radius > 2:
+            cx, cy = self._implosion_center
+            void_surf = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+            # Draw the void circle
+            pygame.draw.circle(void_surf, (0, 0, 0, self._void_flash_alpha),
+                             (int(cx) + ox, int(cy) + oy), int(self._void_flash_radius))
+            # Draw eldritch ring around the void edge
+            if self._void_flash_radius > 10:
+                ring_alpha = min(200, self._void_flash_alpha)
+                for ring_i in range(3):
+                    ring_r = int(self._void_flash_radius) + ring_i * 3
+                    pygame.draw.circle(void_surf, (140, 60, 180, int(ring_alpha * (1.0 - ring_i * 0.3))),
+                                     (int(cx) + ox, int(cy) + oy), ring_r, 2)
+            surface.blit(void_surf, (0, 0))
 
         # Enemy action floating text — eldritch styled
         if self._enemy_action_text:
@@ -341,8 +493,8 @@ class CombatRendererMixin:
             text_rect = text_surf.get_rect(center=(int(fx) + wave_offset, int(fy)))
             surface.blit(text_surf, text_rect)
 
-        # --- Character sprite (left side) — hidden during dramatic pause ---
-        if not self._victory_state or self._victory_state == "hp_drain":
+        # --- Character sprite (left side) — hidden during implosion and after ---
+        if not self._victory_state or self._victory_state in ("glitch_onset", "reality_break"):
             class_sprite = self.assets.get_class_combat(s.class_id)
             if class_sprite:
                 # Player hit flash effect - red flash when taking damage
@@ -359,31 +511,29 @@ class CombatRendererMixin:
                 else:
                     surface.blit(class_sprite, (30 + ox, 250 + oy))
 
-        # --- Combat log (center, parchment panel) — dimmed during victory ---
+        # --- Combat log (center, parchment panel) ---
         log_x, log_y = 280, 250
         log_w, log_h = 560, 180
         draw_parchment_panel(surface, log_x, log_y, log_w, log_h)
-        if self._victory_state == "dramatic_pause":
-            # Show dramatic victory text in the log panel
-            alpha = min(255, int(self._victory_timer * 400))
-            if self._victory_is_boss:
-                victory_lines = [
-                    "The Spiral collapses.",
-                    "Hastur screams as reality reasserts itself.",
-                    "The Yellow Sign fades to a whisper.",
-                ]
-            else:
-                victory_lines = [
-                    "The creature dissolves into shadow.",
-                    "The air grows still. You survive.",
-                ]
+        if self._victory_state in ("afterimage", "fade"):
+            # Show horror victory text in the log panel
+            alpha = min(255, int(self._victory_timer * 300)) if self._victory_state == "afterimage" else 255
+            # The death message was already added to the combat log
+            # Show it with typewriter-style reveal
             draw_text_with_glow(surface, "— VICTORY —", self.assets.fonts["body"],
-                      C.PARCHMENT_EDGE, log_x + log_w // 2, log_y + 40, align="center")
-            for i, line in enumerate(victory_lines):
-                line_alpha = min(255, max(0, alpha - i * 60))
-                if line_alpha > 0:
-                    draw_text_with_glow(surface, line, self.assets.fonts["tiny"],
-                              C.INK_LIGHT, log_x + log_w // 2, log_y + 70 + i * 24, align="center")
+                      C.ELDRITCH_PURPLE, log_x + log_w // 2, log_y + 40, align="center")
+            # Show latest log entries (the death message was added)
+            if c.log:
+                for i, (text, log_type) in enumerate(c.log[-3:]):
+                    colors = {"damage": C.CRIMSON, "crit": C.PARCHMENT_EDGE, "heal": C.MIST,
+                              "shield": C.FROST, "effect": C.ELDRITCH, "info": C.INK_LIGHT}
+                    color = colors.get(log_type, C.INK)
+                    line_alpha = min(255, max(0, alpha - i * 40))
+                    text = fit_text(self.assets.fonts["tiny"], text, log_w - 30)
+                    if line_alpha > 0:
+                        text_surf = self.assets.fonts["tiny"].render(text, True, color)
+                        text_surf.set_alpha(line_alpha)
+                        surface.blit(text_surf, (log_x + 15, log_y + 70 + i * 24))
         else:
             draw_text_with_glow(surface, "Combat Log", self.assets.fonts["tiny"], C.PARCHMENT_EDGE, log_x + 15, log_y + 8)
             draw_gold_divider(surface, log_x + 15, log_y + 26, log_w - 30)
@@ -459,19 +609,26 @@ class CombatRendererMixin:
             draw_text_with_glow(surface, self.turn_message, self.assets.fonts["body"],
                       C.CRIMSON, SCREEN_W // 2, 245, align="center")
 
-        # --- "DEFEATED" text overlay during dramatic pause and fade ---
-        if self._victory_state in ("dramatic_pause", "fade_out"):
-            alpha = min(255, int(self._victory_timer * 500)) if self._victory_state == "dramatic_pause" else 255
-            if alpha > 0:
-                # Render "DEFEATED" with glow, centered on screen
-                defeated_surf = self.assets.fonts["heading"].render("D E F E A T E D", True, C.PARCHMENT_EDGE)
-                defeated_surf.set_alpha(alpha)
-                defeated_rect = defeated_surf.get_rect(center=(SCREEN_W // 2, 150))
-                surface.blit(defeated_surf, defeated_rect)
-                # Gold underline that grows
-                line_w = min(300, int(self._victory_timer * 300)) if self._victory_state == "dramatic_pause" else 300
-                if line_w > 0:
-                    draw_gold_divider(surface, SCREEN_W // 2 - line_w // 2, 175, line_w)
+        # --- Victory vignette tightening (afterimage + fade phases) ---
+        if self._victory_vignette_intensity > 0:
+            vignette = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+            # Draw tight dark vignette around edges
+            max_alpha = int(180 * self._victory_vignette_intensity)
+            for i in range(40):
+                ratio = i / 40.0
+                alpha = int(max_alpha * (1.0 - ratio) * (1.0 - ratio))
+                if alpha < 3:
+                    continue
+                # Dark purple-black vignette
+                color = (10, 5, 20, alpha)
+                # Shrink the clear area as intensity increases
+                margin = int((1.0 - self._victory_vignette_intensity * 0.6) * max(SCREEN_W, SCREEN_H) * ratio * 0.5)
+                rx = SCREEN_W // 2 - margin
+                ry = SCREEN_H // 2 - margin
+                if rx > 0 and ry > 0:
+                    pygame.draw.ellipse(vignette, color,
+                                      (rx, ry, (SCREEN_W - 2*rx), (SCREEN_H - 2*ry)))
+            surface.blit(vignette, (0, 0))
 
         # --- Victory fade-to-black overlay ---
         if self._victory_fade_alpha > 0:

@@ -2,6 +2,7 @@ import pygame
 import math
 import random
 from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, draw_status_icons_row, draw_status_tooltip
+from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from screens.base import Screen
 from screens.combat.particles import ParticleType, PARTICLE_TYPES, create_particle, create_burst
 from screens.combat.renderer import CombatRendererMixin
@@ -48,16 +49,41 @@ class CombatScreen(CombatRendererMixin, Screen):
         self._player_hit_flash = 0  # Flash timer for player damage
         self._player_hit_direction = 0  # 0=left, 1=right (where damage came from)
 
-        # Victory animation state machine
-        # States: None (normal) → "hp_drain" → "disintegrate" → "dramatic_pause" → "fade_out" → done
+        # ─────────────────────────────────────────────────────────────────────────────
+        # HORROR DEATH ANIMATION STATE MACHINE
+        # States: None → "glitch_onset" → "reality_break" → "implosion" →
+        #         "void_flash" → "afterimage" → "fade" → done
+        # ─────────────────────────────────────────────────────────────────────────────
         self._victory_state = None
         self._victory_timer = 0.0
-        self._victory_hp_target = 0  # HP we're draining toward
-        self._victory_hp_display = 0.0  # Smooth float for HP bar display
         self._victory_is_boss = False
-        self._fragments = []  # Disintegration fragments: [x, y, vx, vy, w, h, color, alpha, rot, rot_v]
-        self._victory_text_alpha = 0  # For "DEFEATED" text fade-in
-        self._victory_fade_alpha = 0  # For final fade-to-black
+
+        # Glitch phase data
+        self._glitch_intensity = 0.0       # 0-1, ramps up over glitch phases
+        self._glitch_name_corrupted = ""   # Corrupted enemy name string
+        self._glitch_name_timer = 0.0      # Timer for name scramble refresh
+        self._glitch_bar_snap = False      # True when HP bar snaps to 0
+        self._glitch_bar_flicker = 0.0     # HP bar flicker offset (random per frame)
+
+        # Implosion phase data
+        self._implosion_progress = 0.0     # 0-1, how compressed the sprite is
+        self._implosion_center = (0, 0)    # Center point the sprite implodes toward
+        self._implosion_distortion = []    # Per-column distortion offsets
+
+        # Void flash data
+        self._void_flash_radius = 0.0      # Expanding circle radius
+        self._void_flash_alpha = 0         # Alpha of the void circle
+
+        # Afterimage data
+        self._afterimage_alpha = 0         # Fading silhouette alpha
+        self._afterimage_surface = None    # Cached silhouette surface
+
+        # Shared victory state
+        self._victory_fade_alpha = 0       # Final fade-to-black
+        self._victory_vignette_intensity = 0.0  # Tightening vignette
+
+        # Eldritch symbols for name corruption
+        self._eldritch_symbols = list("\u2726\u263D\u2694\u2736\u2625\u271D\u2020\u2720\u263C\u2735\u2606\u2605\u263E\u2628\u2629\u262A")
 
     def enter(self):
         self.damage_numbers = []
@@ -75,9 +101,19 @@ class CombatScreen(CombatRendererMixin, Screen):
         self.particles = []
         self._victory_state = None
         self._victory_timer = 0.0
-        self._fragments = []
-        self._victory_text_alpha = 0
         self._victory_fade_alpha = 0
+        self._glitch_intensity = 0.0
+        self._glitch_name_corrupted = ""
+        self._glitch_name_timer = 0.0
+        self._glitch_bar_snap = False
+        self._glitch_bar_flicker = 0.0
+        self._implosion_progress = 0.0
+        self._implosion_distortion = []
+        self._void_flash_radius = 0.0
+        self._void_flash_alpha = 0
+        self._afterimage_alpha = 0
+        self._afterimage_surface = None
+        self._victory_vignette_intensity = 0.0
         # Ambient eldritch particles using new particle system
         for _ in range(25):
             self.particles.extend(create_particle("eldritch",
@@ -223,101 +259,203 @@ class CombatScreen(CombatRendererMixin, Screen):
             self.particles.extend(create_burst(100, 300, "blood", count=12))
 
     def update(self, dt):
-        # --- Victory animation state machine ---
+        # --- Horror death animation state machine ---
         if self._victory_state:
             self._victory_timer += dt
 
-            if self._victory_state == "hp_drain":
-                # Accelerating drain: starts slow, ends fast
-                max_hp = max(1, int(self._victory_hp_display) + 1)  # avoid /0
-                # fraction goes from 1.0 (full) to 0.0 (empty) as display drops
-                fraction = max(0.0, self._victory_hp_display / max(1, self._victory_hp_display + 1))
-                # Speed ramps from ~150 at start to ~700 at end
-                drain_speed = 150.0 + (1.0 - fraction) * 550.0
-                # Apply a power curve for smoother acceleration
-                drain_amount = drain_speed * dt
-                self._victory_hp_display -= drain_amount
+            if self._victory_state == "glitch_onset":
+                # Phase 1: HP bar + name start glitching (0.8s)
+                # Glitch intensity ramps from 0 to 0.5
+                self._glitch_intensity = min(0.5, self._victory_timer / 0.8 * 0.5)
+                self._glitch_bar_flicker = random.uniform(-8, 8) * self._glitch_intensity
+                # Corrupt the name progressively
+                self._glitch_name_timer += dt
+                if self._glitch_name_timer > 0.08:
+                    self._glitch_name_timer = 0.0
+                    self._corrupt_enemy_name()
+                # Occasional flicker-damage numbers
+                if random.random() < 0.08:
+                    self.add_damage_number(str(random.randint(1, 9)),
+                        random.uniform(880, 1050), random.uniform(180, 280),
+                        C.ELDRITCH_PURPLE)
+                # Screen micro-shake at random intervals
+                if random.random() < 0.05:
+                    self.trigger_shake(intensity=2, duration=0.05)
 
-                if self._victory_hp_display <= 0:
-                    self._victory_hp_display = 0
-                    # Final big damage number
-                    self.add_damage_number(str(random.randint(30, 99)),
-                        random.uniform(880, 1020), random.uniform(200, 260),
-                        random.choice([C.YELLOW, C.CRIMSON]))
-                    # HP drained — transition to disintegration
-                    self.trigger_shake(intensity=18, duration=0.5)
-                    self._build_disintegration_fragments()
-                    if self._victory_state != "dramatic_pause":  # fragments may have skipped
-                        self._victory_state = "disintegrate"
-                        self._victory_timer = 0.0
-                else:
-                    # Continuously spawn floating damage numbers while draining
-                    if random.random() < 0.25:
-                        dmg_val = str(random.randint(5, 35))
-                        self.add_damage_number(dmg_val,
-                            random.uniform(860, 1050), random.uniform(180, 280),
-                            random.choice([C.BONE, C.YELLOW, C.CRIMSON]))
-
-            elif self._victory_state == "disintegrate":
-                # Update fragment physics
-                for f in self._fragments:
-                    f["x"] += f["vx"] * dt
-                    f["vy"] += f["gravity"] * dt  # Gravity pulls down
-                    f["y"] += f["vy"] * dt
-                    f["rot"] += f["rot_v"]
-                    f["alpha"] -= 120 * dt  # Fade out
-                self._fragments = [f for f in self._fragments if f["alpha"] > 0]
-
-                # Spawn occasional eldritch wisps from disintegration area
-                if self._victory_timer < 1.2 and random.random() < 0.2:
-                    self.particles.append({
-                        "x": random.uniform(860, 1050), "y": random.uniform(200, 350),
-                        "vx": random.uniform(-0.5, 0.5), "vy": random.uniform(-1.5, -0.5),
-                        "size": random.randint(2, 5),
-                        "color": random.choice([(255, 215, 0), (175, 130, 225), (220, 180, 50)]),
-                        "alpha": random.randint(80, 180),
-                        "life": random.uniform(0.5, 1.5),
-                    })
-
-                # Once fragments are mostly gone or time elapsed
-                if len(self._fragments) == 0 or self._victory_timer > 2.0:
-                    self._fragments = []
-                    self._victory_state = "dramatic_pause"
+                if self._victory_timer >= 0.8:
+                    self._victory_state = "reality_break"
                     self._victory_timer = 0.0
 
-            elif self._victory_state == "dramatic_pause":
-                # Fade in "DEFEATED" text
-                self._victory_text_alpha = min(255, int(self._victory_timer * 400))
-                # Continue spawning a few final particles
+            elif self._victory_state == "reality_break":
+                # Phase 2: Glitch intensifies, bar shatters, name becomes symbols (0.5s)
+                # Intensity ramps from 0.5 to 1.0
+                self._glitch_intensity = 0.5 + min(0.5, self._victory_timer / 0.5 * 0.5)
+                self._glitch_bar_flicker = random.uniform(-20, 20) * self._glitch_intensity
+                # Name scrambles faster
+                self._glitch_name_timer += dt
+                if self._glitch_name_timer > 0.04:
+                    self._glitch_name_timer = 0.0
+                    self._corrupt_enemy_name()
+                # More intense screen jitter
                 if random.random() < 0.1:
+                    self.trigger_shake(intensity=4, duration=0.05)
+                # Spawn glitch particles (digital noise fragments)
+                if random.random() < 0.15:
                     self.particles.append({
-                        "x": random.uniform(400, 900), "y": random.uniform(200, 400),
-                        "vx": random.uniform(-0.3, 0.3), "vy": random.uniform(-1.0, -0.3),
-                        "size": random.randint(1, 3),
-                        "color": (255, 215, 0),
-                        "alpha": random.randint(40, 100),
-                        "life": random.uniform(1.0, 2.0),
+                        "x": random.uniform(820, 1100), "y": random.uniform(120, 240),
+                        "vx": random.uniform(-2, 2), "vy": random.uniform(-1, 1),
+                        "size": random.randint(1, 4),
+                        "color": random.choice([C.ELDRITCH_PURPLE, C.CRIMSON, C.YELLOW]),
+                        "alpha": random.randint(100, 200),
+                        "life": random.uniform(0.2, 0.6),
                     })
-                # After pause, transition to fade-out
-                if self._victory_timer > 1.8:
-                    self._victory_state = "fade_out"
+                # At end: snap HP bar to 0
+                if self._victory_timer >= 0.5:
+                    self._glitch_bar_snap = True
+                    # Big screen crack shake
+                    self.trigger_shake(intensity=14, duration=0.3)
+                    self._victory_state = "implosion"
+                    self._victory_timer = 0.0
+                    # Initialize implosion center
+                    sprite_w = 240
+                    sprite_x = SCREEN_W - sprite_w - 40
+                    sprite_y = 202
+                    enemy_sprite = self.assets.get_sprite(
+                        self.game.state.combat.enemy.name if self.game.state.combat else "")
+                    if enemy_sprite:
+                        sw, sh = enemy_sprite.get_size()
+                        if sw != sprite_w:
+                            sh = int(sh * sprite_w / sw)
+                        self._implosion_center = (
+                            sprite_x + sprite_w // 2,
+                            sprite_y + sh // 2
+                        )
+                    else:
+                        self._implosion_center = (sprite_x + 120, sprite_y + 120)
+                    # Build distortion table for per-column offsets
+                    self._implosion_distortion = [
+                        random.uniform(-3, 3) for _ in range(sprite_w // 4)
+                    ]
+
+            elif self._victory_state == "implosion":
+                # Phase 3: Enemy sprite compresses/distorts toward center (1.0s)
+                self._implosion_progress = min(1.0, self._victory_timer / 1.0)
+                # Shake intensifies as implosion progresses
+                if random.random() < 0.08 * self._implosion_progress:
+                    self.trigger_shake(intensity=int(3 + 8 * self._implosion_progress), duration=0.05)
+                # Spawn inward-pulling eldritch tendrils (particles that move toward center)
+                if random.random() < 0.25:
+                    cx, cy = self._implosion_center
+                    angle = random.uniform(0, math.pi * 2)
+                    dist = random.uniform(80, 160)
+                    px = cx + math.cos(angle) * dist
+                    py = cy + math.sin(angle) * dist
+                    # Particle velocity points INWARD toward center
+                    dx, dy = cx - px, cy - py
+                    d = max(1, (dx*dx + dy*dy) ** 0.5)
+                    speed = random.uniform(1.5, 3.0)
+                    self.particles.append({
+                        "x": px, "y": py,
+                        "vx": (dx / d) * speed, "vy": (dy / d) * speed,
+                        "size": random.randint(2, 5),
+                        "color": random.choice([
+                            (140, 60, 180), (90, 30, 110), (50, 15, 80),
+                            (200, 80, 150), (30, 5, 50),
+                        ]),
+                        "alpha": random.randint(80, 180),
+                        "life": random.uniform(0.4, 1.0),
+                    })
+                # Update distortion table (wobble)
+                for i in range(len(self._implosion_distortion)):
+                    self._implosion_distortion[i] += random.uniform(-2, 2) * self._implosion_progress
+                    self._implosion_distortion[i] *= 0.9  # damping
+
+                if self._victory_timer >= 1.0:
+                    # Cache the afterimage silhouette before sprite is gone
+                    self._build_afterimage()
+                    self._victory_state = "void_flash"
+                    self._victory_timer = 0.0
+                    self._void_flash_radius = 0.0
+                    self._void_flash_alpha = 0
+
+            elif self._victory_state == "void_flash":
+                # Phase 4: Circle of absolute black expands then snaps shut (0.3s)
+                flash_dur = 0.3
+                t = min(1.0, self._victory_timer / flash_dur)
+                if t < 0.5:
+                    # Expand phase: black circle grows from center
+                    self._void_flash_radius = ease_out_cubic(t * 2) * 200
+                    self._void_flash_alpha = 255
+                else:
+                    # Snap-shut phase: circle contracts rapidly
+                    snap_t = (t - 0.5) * 2  # 0→1
+                    self._void_flash_radius = max(0, (1.0 - ease_in_cubic(snap_t)) * 200)
+                    self._void_flash_alpha = int(255 * (1.0 - snap_t))
+                # Silence shake at start of void flash
+                if self._victory_timer < 0.05:
+                    self.trigger_shake(intensity=20, duration=0.15)
+
+                if self._victory_timer >= flash_dur:
+                    self._void_flash_radius = 0
+                    self._void_flash_alpha = 0
+                    self._victory_state = "afterimage"
+                    self._victory_timer = 0.0
+                    self._afterimage_alpha = 180
+
+            elif self._victory_state == "afterimage":
+                # Phase 5: Burned-in silhouette fades, wisps drift (1.2s)
+                # Fade the afterimage
+                fade_dur = 1.2
+                t = min(1.0, self._victory_timer / fade_dur)
+                self._afterimage_alpha = int(180 * (1.0 - ease_in_quad(t)))
+                # Start tightening vignette
+                self._victory_vignette_intensity = min(0.7, t * 0.7)
+                # Drift wisps upward from where the enemy was
+                if random.random() < 0.2:
+                    cx, cy = self._implosion_center
+                    self.particles.append({
+                        "x": cx + random.uniform(-40, 40),
+                        "y": cy + random.uniform(-20, 20),
+                        "vx": random.uniform(-0.3, 0.3),
+                        "vy": random.uniform(-1.2, -0.4),
+                        "size": random.randint(2, 5),
+                        "color": random.choice([
+                            (140, 100, 200), (80, 50, 130), (50, 15, 80),
+                            (200, 160, 40), (30, 5, 50),
+                        ]),
+                        "alpha": random.randint(40, 120),
+                        "life": random.uniform(0.8, 2.0),
+                    })
+                # Add combat log horror message
+                if self._victory_timer > 0.3 and not hasattr(self, '_afterimage_logged'):
+                    self._afterimage_logged = True
+                    s = self.game.state
+                    c = s.combat
+                    if c:
+                        msg = self._get_death_message(c.is_boss, c.enemy.name)
+                        c.add_log(msg, "info")
+
+                if self._victory_timer >= fade_dur:
+                    self._victory_state = "fade"
                     self._victory_timer = 0.0
 
-            elif self._victory_state == "fade_out":
-                # Smooth fade to black over 1.0s, then switch screen
-                fade_dur = 1.0
-                self._victory_fade_alpha = min(255, int(255 * (self._victory_timer / fade_dur)))
+            elif self._victory_state == "fade":
+                # Phase 6: Vignette tightens, screen darkens, transition (0.8s)
+                fade_dur = 0.8
+                t = min(1.0, self._victory_timer / fade_dur)
+                self._victory_fade_alpha = min(255, int(255 * ease_in_cubic(t)))
+                self._victory_vignette_intensity = min(1.0, 0.7 + t * 0.3)
+
                 if self._victory_timer >= fade_dur:
                     self._finish_victory()
                     return
 
             # During victory animation, update particles but skip normal logic
             self._update_particles(dt)
-            # Update damage numbers with scale animation
+            # Update damage numbers
             for dn in self.damage_numbers:
                 dn[2] += dn[5] * dt  # y position
                 dn[4] -= dt  # timer
-                # Animate scale from pop (1.5) down to normal (1.0)
                 if dn[6] > 1.0:
                     dn[6] -= 2.0 * dt  # Scale decay rate
             self.damage_numbers = [dn for dn in self.damage_numbers if dn[4] > 0]
@@ -555,113 +693,104 @@ class CombatScreen(CombatRendererMixin, Screen):
             self.game.switch_screen("gameover")
 
     def _start_victory_animation(self):
-        """Begin the multi-phase victory animation."""
+        """Begin the multi-phase horror death animation."""
         s = self.game.state
         c = s.combat
         self._victory_is_boss = c.is_boss
-        # Start from max HP so the drain animation is always visible
-        self._victory_hp_display = float(c.enemy.max_hp)
-        self._victory_hp_target = 0
         self._victory_timer = 0.0
-        self._victory_text_alpha = 0
         self._victory_fade_alpha = 0
-        self._victory_state = "hp_drain"
-        # Big screen shake on victory start
-        self.trigger_shake(intensity=12, duration=0.5)
+        self._victory_vignette_intensity = 0.0
+        self._glitch_intensity = 0.0
+        self._glitch_name_corrupted = c.enemy.name
+        self._glitch_name_timer = 0.0
+        self._glitch_bar_snap = False
+        self._glitch_bar_flicker = 0.0
+        self._implosion_progress = 0.0
+        self._implosion_center = (0, 0)
+        self._implosion_distortion = []
+        self._void_flash_radius = 0.0
+        self._void_flash_alpha = 0
+        self._afterimage_alpha = 0
+        self._afterimage_surface = None
+        # Clear any stale logged flag
+        if hasattr(self, '_afterimage_logged'):
+            del self._afterimage_logged
+        self._victory_state = "glitch_onset"
+        # Initial screen crack
+        self.trigger_shake(intensity=8, duration=0.2)
 
-    def _build_disintegration_fragments(self):
-        """Split the enemy sprite into vertical strips that will scatter."""
+    def _corrupt_enemy_name(self):
+        """Progressively replace characters in the enemy name with eldritch symbols."""
         s = self.game.state
         c = s.combat
         if not c:
             return
-        e = c.enemy
-        enemy_sprite = self.assets.get_sprite(e.name)
-        if not enemy_sprite:
-            # No sprite — just skip to dramatic pause
-            self._victory_state = "dramatic_pause"
-            self._victory_timer = 0.0
+        original = c.enemy.name
+        # How many characters to corrupt based on glitch intensity
+        num_to_corrupt = int(len(original) * self._glitch_intensity * 1.5)
+        name_chars = list(original)
+        indices = list(range(len(name_chars)))
+        random.shuffle(indices)
+        for i in indices[:num_to_corrupt]:
+            if name_chars[i] != ' ':
+                name_chars[i] = random.choice(self._eldritch_symbols)
+        self._glitch_name_corrupted = ''.join(name_chars)
+
+    def _build_afterimage(self):
+        """Create a dark silhouette surface from the enemy sprite for the afterimage phase."""
+        s = self.game.state
+        c = s.combat
+        if not c:
             return
-
+        enemy_sprite = self.assets.get_sprite(c.enemy.name)
+        if not enemy_sprite:
+            self._afterimage_surface = None
+            return
+        # Scale to combat size
         sprite_w = 240
-        sprite_x = SCREEN_W - sprite_w - 40
-        sprite_y = 202
-
-        # Scale sprite to match combat size
         sw, sh = enemy_sprite.get_size()
         if sw != sprite_w:
             scale_h = int(sh * sprite_w / sw)
             enemy_sprite = pygame.transform.scale(enemy_sprite, (sprite_w, scale_h))
-            sw, sh = enemy_sprite.get_size()
+        # Create a dark silhouette using pygame surface operations (fast, no per-pixel loop)
+        # Step 1: Create a dark purple-black overlay
+        dark_overlay = pygame.Surface(enemy_sprite.get_size(), pygame.SRCALPHA)
+        dark_overlay.fill((30, 5, 50, 220))  # Dark purple-black
+        # Step 2: Copy sprite alpha mask, apply dark color where sprite is opaque
+        silhouette = enemy_sprite.copy()
+        silhouette.blit(dark_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        # Step 3: Add subtle edge glow by blitting a purple-tinted version underneath
+        glow_version = enemy_sprite.copy()
+        purple_overlay = pygame.Surface(enemy_sprite.get_size(), pygame.SRCALPHA)
+        purple_overlay.fill((140, 60, 180, 60))
+        glow_version.blit(purple_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        # Combine: glow behind, dark silhouette on top
+        combined = pygame.Surface(enemy_sprite.get_size(), pygame.SRCALPHA)
+        combined.blit(glow_version, (0, 0))
+        combined.blit(silhouette, (0, 0))
+        self._afterimage_surface = combined
 
-        # Create vertical strip fragments
-        strip_w = 8  # Each strip is 8px wide
-        self._fragments = []
-        for fx in range(0, sw, strip_w):
-            for fy in range(0, sh, 6):  # Also split vertically into chunks
-                fw = min(strip_w, sw - fx)
-                fh = min(6, sh - fy)
-                if fw <= 0 or fh <= 0:
-                    continue
-                # Get average color of this strip chunk
-                try:
-                    pixel = enemy_sprite.get_at((min(fx + fw // 2, sw - 1), min(fy + fh // 2, sh - 1)))
-                    if pixel.a < 20:  # Skip nearly transparent pixels
-                        continue
-                except Exception:
-                    continue
-                # Velocity: outward from center + upward bias + randomness
-                cx, cy = sprite_x + sw / 2, sprite_y + sh / 2
-                px, py = sprite_x + fx + fw / 2, sprite_y + fy + fh / 2
-                dx, dy = px - cx, py - cy
-                dist = max(1.0, (dx * dx + dy * dy) ** 0.5)
-                speed = random.uniform(60, 180)
-                self._fragments.append({
-                    "x": float(px), "y": float(py),
-                    "vx": (dx / dist) * speed + random.uniform(-20, 20),
-                    "vy": (dy / dist) * speed - random.uniform(30, 80),  # Upward bias
-                    "w": fw, "h": fh,
-                    "color": (pixel.r, pixel.g, pixel.b),
-                    "alpha": 255.0,
-                    "rot": 0.0,
-                    "rot_v": random.uniform(-5, 5),
-                    "gravity": random.uniform(80, 150),  # Gravity to bring them down
-                })
-        # Also spawn a burst of eldritch particles from center
-        self._spawn_victory_particle_burst(sprite_x + sw // 2, sprite_y + sh // 2)
-
-    def _spawn_victory_particle_burst(self, cx, cy):
-        """Eldritch energy burst + yellow sign particles at combat end."""
-        for _ in range(60):
-            angle = random.uniform(0, 6.283)
-            speed = random.uniform(40, 200)
-            self.particles.append({
-                "x": cx + random.uniform(-20, 20),
-                "y": cy + random.uniform(-20, 20),
-                "vx": math.cos(angle) * speed * 0.3,
-                "vy": math.sin(angle) * speed * 0.3 - random.uniform(20, 60),
-                "size": random.randint(2, 6),
-                "color": random.choice([
-                    (255, 215, 0),   # Gold (Yellow Sign)
-                    (175, 130, 225),  # Purple
-                    (220, 180, 50),   # Amber
-                    (140, 100, 200),  # Eldritch purple
-                ]),
-                "alpha": random.randint(150, 255),
-                "life": random.uniform(1.0, 2.5),
-            })
-        for _ in range(30):
-            angle = random.uniform(0, 6.283)
-            speed = random.uniform(80, 300)
-            self.particles.append({
-                "x": cx, "y": cy,
-                "vx": math.cos(angle) * speed * 0.4,
-                "vy": math.sin(angle) * speed * 0.4,
-                "size": 1,
-                "color": (255, 240, 200),
-                "alpha": 255,
-                "life": random.uniform(0.3, 0.8),
-            })
+    def _get_death_message(self, is_boss, enemy_name):
+        """Return a thematic horror death message for the combat log."""
+        boss_messages = [
+            "The Spiral collapses. Reality shudders.",
+            "The form unravels. Something vast recedes.",
+            "It does not die. It... leaves. For now.",
+            "The Yellow Sign flickers. The gate closes.",
+            "Hastur's echo fades, but the memory lingers.",
+        ]
+        normal_messages = [
+            f"The {enemy_name} dissolves into shadow.",
+            f"Reality reasserts itself. The {enemy_name} is unmade.",
+            f"The {enemy_name} collapses inward. Nothing remains.",
+            f"The form of the {enemy_name} peels away like wet parchment.",
+            f"The {enemy_name} implodes. Silence follows.",
+            f"Something pulls the {enemy_name} apart from within.",
+            f"The {enemy_name} flickers once more, then is gone.",
+        ]
+        if is_boss:
+            return random.choice(boss_messages)
+        return random.choice(normal_messages)
 
     def _finish_victory(self):
         """Actually compute rewards and switch to result screen."""
