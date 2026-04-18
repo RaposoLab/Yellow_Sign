@@ -184,7 +184,11 @@ def tick_player_buffs(state: GameState) -> List[Tuple[str, str]]:
 
     for key in to_remove:
         del state.buffs[key]
-        if key in STAT_BUFF_KEYS:
+        if key == "rage":
+            # When the rage buff expires, clear the rage flag
+            state.rage = False
+            logs.append(("Berserker Rage fades.", "info"))
+        elif key in STAT_BUFF_KEYS:
             for sk in STAT_BUFF_KEYS[key]:
                 state.temp_stats.pop(sk, None)
             state.recalc_stats()

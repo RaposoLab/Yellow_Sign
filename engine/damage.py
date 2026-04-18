@@ -62,16 +62,17 @@ def _base_damage(state: GameState, skill: Skill) -> float:
             bd += s2v * skill.stat2_mult
     elif skill.type == "debuff":
         bd = (5 + sv * 1.5) * (skill.power or 1)
-    elif skill.type in ("self_buff", "self_heal", "self_shield", "curse", "ultimate"):
+    elif skill.type in ("self_buff", "self_heal", "self_shield"):
+        # Non-damage skill types — base damage is always 0.
+        # These are handled by dedicated handlers in skills.py and should
+        # not reach _base_damage during normal execution, but we guard here.
         bd = 0
-        if skill.type == "curse" and skill.consume_shield:
-            bd = (5 + sv * 1.5) * skill.power + state.shield
-        elif skill.type == "ultimate":
-            bd = (5 + sv * 1.5) * skill.power
-            if skill.stat2_mult:
-                bd += s2v * skill.stat2_mult
-        else:
-            bd = (5 + sv * 1.5) * (skill.power or 1) if skill.power else 0
+    elif skill.type == "curse":
+        bd = (5 + sv * 1.5) * skill.power + state.shield if skill.consume_shield else (5 + sv * 1.5) * skill.power
+    elif skill.type == "ultimate":
+        bd = (5 + sv * 1.5) * skill.power
+        if skill.stat2_mult:
+            bd += s2v * skill.stat2_mult
     else:
         bd = (5 + sv * 1.5) * (skill.power or 1)
 
@@ -204,7 +205,10 @@ def apply_damage_to_enemy(
         cc += 25
     if skill and skill.flat_crit_bonus:
         cc += skill.flat_crit_bonus
-    if skill and skill.guaranteed_crit:
+    # Eclipse: all attacks are guaranteed criticals
+    if state.buffs.get("eclipse", 0) > 0:
+        is_crit = True
+    elif skill and skill.guaranteed_crit:
         is_crit = True
     elif random.random() * 100 < cc:
         is_crit = True

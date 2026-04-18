@@ -305,14 +305,21 @@ HEAL_HANDLERS: Dict[str, Tuple[HealCalcFn, str]] = {
 
 
 def _handle_self_heal(state: GameState, skill: Skill) -> List[LogEntry]:
-    """Handle self_heal skill type. Returns list of log messages."""
+    """Handle self_heal skill type. Returns list of log messages.
+
+    Note: Some heal handlers (full_heal, hasturEmbrace) return 0 because they
+    set HP directly as a side effect. The message template is always formatted
+    so those handlers can display their special text (e.g. 'Full heal!').
+    """
     calc_fn, msg_template = HEAL_HANDLERS.get(
-        skill.heal_calc, (_calc_heal_default, "Recovered {h} HP!")
+        skill.heal_calc or "", (_calc_heal_default, "Recovered {h} HP!")
     )
     h = calc_fn(state, skill)
     if h > 0:
         state.hp = min(state.max_hp, state.hp + h)
-    msg = msg_template.format(h=h) if h > 0 else msg_template
+    # Always format the template — handlers that set HP directly still
+    # produce meaningful messages even when h == 0.
+    msg = msg_template.format(h=h)
     return [(msg, "heal")]
 
 
@@ -437,8 +444,11 @@ def _shield_madShell(state: GameState, skill: Skill) -> int:
     Side Effects:
         Increases madness by 10
     """
+    # Calculate shield BEFORE adding madness so the value reflects
+    # the player's current madness state, not the post-cost madness.
+    shield_val = int(state.stats["wis"] * 2 + state.madness)
     state.madness = min(MADNESS_MAX, state.madness + 10)
-    return int(state.stats["wis"] * 2 + state.madness)
+    return shield_val
 
 
 def _shield_madBarrier(state: GameState, skill: Skill) -> int:
@@ -494,7 +504,9 @@ SHIELD_HANDLERS: Dict[str, Tuple[ShieldCalcFn, str]] = {
 
 def _handle_self_shield(state: GameState, skill: Skill) -> List[LogEntry]:
     """Handle self_shield skill type. Returns list of log messages."""
-    handler, msg_template = SHIELD_HANDLERS.get(skill.shield_calc, (None, None))
+    handler, msg_template = SHIELD_HANDLERS.get(
+        skill.shield_calc or "", (None, None)
+    )
     if handler is None:
         return [(f"{skill.name} activated!", "shield")]
 
@@ -529,15 +541,16 @@ def _buff_rage(state: GameState, skill: Skill) -> Dict[str, Any]:
 
     Args:
         state: Current game state
-        skill: Skill being used (unused for this calculation)
+        skill: Skill containing buff_duration
 
     Returns:
         Dict with hp_loss amount
 
     Side Effects:
-        Sets rage flag, reduces HP by 12%
+        Sets rage flag, tracks rage duration in state.buffs, reduces HP by 12%
     """
     state.rage = True
+    state.buffs["rage"] = skill.buff_duration
     hp_loss = int(state.max_hp * 0.12)
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
@@ -554,9 +567,11 @@ def _buff_warlord(state: GameState, skill: Skill) -> Dict[str, Any]:
         Dict with hp_loss amount
 
     Side Effects:
-        Sets rage, adds atkCritUp and ironSkin buffs, reduces HP by 20%
+        Sets rage, adds atkCritUp and ironSkin buffs, tracks rage duration
+        in state.buffs, reduces HP by 20%
     """
     state.rage = True
+    state.buffs["rage"] = skill.buff_duration
     state.buffs["atkCritUp"] = skill.buff_duration
     state.buffs["ironSkin"] = skill.buff_duration
     hp_loss = int(state.max_hp * 0.20)
@@ -973,6 +988,94 @@ def _buff_dreadnought(state: GameState, skill: Skill) -> None:
     state.buffs["dreadnought"] = skill.buff_duration
 
 
+def _buff_madPower(state: GameState, skill: Skill) -> None:
+    """Empower Madness: +25% DMG, +15 MAD.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Sets madPower buff for duration, increases madness by 15
+    """
+    state.buffs["madPower"] = skill.buff_duration
+    state.madness = min(MADNESS_MAX, state.madness + 15)
+
+
+def _buff_darkPact(state: GameState, skill: Skill) -> Dict[str, Any]:
+    """Dark Pact: +30% DMG, debuffs extended, -15% HP.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Returns:
+        Dict with hp_loss amount
+
+    Side Effects:
+        Sets darkPact buff for duration, reduces HP by 15%
+    """
+    state.buffs["darkPact"] = skill.buff_duration
+    hp_loss = int(state.max_hp * 0.15)
+    state.hp = max(1, state.hp - hp_loss)
+    return {"hp_loss": hp_loss}
+
+
+def _buff_warpTime(state: GameState, skill: Skill) -> None:
+    """Warp Time: reset all cooldowns, +20% DMG for duration.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Resets all skill cooldowns, sets warpTime buff for duration
+    """
+    for sk in state.active_skills:
+        sk.current_cd = 0
+    state.buffs["warpTime"] = skill.buff_duration
+
+
+def _buff_fortress(state: GameState, skill: Skill) -> None:
+    """Divine Fortress: pDEF/mDEF+80%, +2 barriers for duration.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Sets fortress buff for duration, adds 2 barrier stacks
+    """
+    state.buffs["fortress"] = skill.buff_duration
+    state.barrier = min(MAX_BARRIER_STACKS, state.barrier + 2)
+
+
+def _buff_undyingPact(state: GameState, skill: Skill) -> None:
+    """Undying Pact: cannot die, +50% ATK for duration.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Sets undyingPact buff for duration
+    """
+    state.buffs["undyingPact"] = skill.buff_duration
+
+
+def _buff_eclipse(state: GameState, skill: Skill) -> None:
+    """Eclipse: all attacks crit, +30% DMG for duration.
+
+    Args:
+        state: Current game state
+        skill: Skill containing buff_duration
+
+    Side Effects:
+        Sets eclipse buff for duration
+    """
+    state.buffs["eclipse"] = skill.buff_duration
+
+
 # Static messages per buff_type
 _BUFF_MESSAGES: Dict[str, str] = {
     "barrier": "Barrier! ({v} stacks)",
@@ -1004,7 +1107,6 @@ _BUFF_MESSAGES: Dict[str, str] = {
     "abyssFort": "Abyssal Fortitude! pDEF+50%, +1 barrier!",
     "eldritchRebirth": "Eldritch Rebirth! Auto-revive at 30% HP if killed! ({d} turns)",
     "astral": "Astral Projection! EVA+40%, mDEF+60% for {d} turns!",
-    "statSwap": "Mind Over Matter! pDEF and mDEF swapped for {d} turns!",
     "dreadnought": "Dreadnought! Damage taken converts to ATK for {d} turns!",
     # --- Previously missing messages ---
     "atkCritUp": "Blood Scent! ATK+20%, CRIT+15% for {d} turns!",
@@ -1013,7 +1115,7 @@ _BUFF_MESSAGES: Dict[str, str] = {
     "bulwark": "Bulwark! pDEF+60%, mDEF+60% for {d} turns!",
     "chant": "Guttural Chant! pDEF+20%, mDEF+20% for {d} turns!",
     "copyAttack": "Living Shadow active! Copies enemy attack for {d} turns!",
-    "darkPact": "Dark Pact! +30% DMG, debuffs extended! (-15% HP)",
+    "darkPact": "Dark Pact! +30% DMG, debuffs extended! -{hp_loss} HP!",
     "divineInterv": "Divine Intervention! Next {v} attacks nullified!",
     "dreamShell": "Dream Shell! EVA+50%, mDEF+80% for {d} turns!",
     "dreamVeil": "Veil of the Dream! EVA+35% for {d} turns!",
@@ -1034,7 +1136,7 @@ _BUFF_MESSAGES: Dict[str, str] = {
     "shadowMeld": "Shadow Meld! Invisible 1 turn, next attack +100%!",
     "skipCombat": "Shadow Step! Next combat encounter skipped!",
     "smokeScreen": "Smoke Screen! EVA+25% for {d} turns!",
-    "statSwap": "Mind Over Matter! pDEF/mDEF swapped for {d} turns!",
+    "statSwap": "Mind Over Matter! pDEF and mDEF swapped for {d} turns!",
     "thoughtform": "Thoughtform Armor! pDEF+30%, mDEF+30% for {d} turns!",
     "umbralAegis": "Umbral Aegis! EVA+60%, pDEF+40% for {d} turns!",
     "undying": "Undying Fury! Cannot die for {d} turns!",
@@ -1077,6 +1179,12 @@ BUFF_HANDLERS: Dict[str, BuffApplyFn] = {
     "astral": _buff_astral,
     "statSwap": _buff_statSwap,
     "dreadnought": _buff_dreadnought,
+    "madPower": _buff_madPower,
+    "darkPact": _buff_darkPact,
+    "warpTime": _buff_warpTime,
+    "fortress": _buff_fortress,
+    "undyingPact": _buff_undyingPact,
+    "eclipse": _buff_eclipse,
 }
 
 

@@ -93,6 +93,7 @@ DAMAGE_BUFF_MULTIPLIERS = {
     "shadowMeld":  2.0,
     "eclipse":     1.3,
     "ethereal":    2.5,
+    "undyingPact": 1.5,
 }
 
 # ═══════════════════════════════════════════
