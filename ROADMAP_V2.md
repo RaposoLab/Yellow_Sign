@@ -28,7 +28,13 @@ shared/                 Rendering & constants
 engine/                 Game logic
   models.py             Item, Skill (@dataclass), StatusEffect, Enemy, CombatState, GameState (composed: PlayerIdentity + PlayerProgression + CombatBuffs)
   damage.py             _base_damage(), calc_player_damage(), calc_preview_damage(), apply_damage_to_enemy(), apply_damage_to_player(), buff defense/evasion registries
-  skills.py             Heal/Shield/Buff handler registries + player_use_skill() dispatcher
+  skills/               Skill handler package (split from former ~1,347-line monolith)
+    _types.py           Shared type aliases (LogEntry, HealCalcFn, ShieldCalcFn, BuffApplyFn)
+    heal.py             15 heal calculation functions + HEAL_HANDLERS registry + dispatcher
+    shield.py           10 shield calculation functions + SHIELD_HANDLERS registry + dispatcher
+    buff.py             28 buff handlers + _BUFF_MESSAGES (67 entries) + BUFF_HANDLERS registry + dispatcher
+    dispatch.py         player_use_skill() — main skill usage orchestrator
+    __init__.py         Re-exports all public symbols for backward compatibility
   status_effects.py     Status application, DOT processing, buff ticking/expiry
   items.py              determine_rarity(), generate_item()
   world.py              Floor progression, events, traps, shop
@@ -106,7 +112,7 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 - `EVASION_BUFF_TABLE`: buff_key → eva_bonus (6 entries)
 - `HEAL_HANDLERS`: 15 heal calculation functions
 - `SHIELD_HANDLERS`: 10 shield calculation functions
-- `BUFF_HANDLERS`: 27 buff application functions
+- `BUFF_HANDLERS`: 36 buff application functions (28 with custom logic + 8 fallback-only)
 - All registries: add one entry = new effect works, no engine code changes
 
 ---
@@ -227,7 +233,7 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 ### P4 — Technical Debt & Infrastructure
 
 #### Code Refactoring Opportunities
-- [ ] Split `engine/skills.py` (~1,200 lines) into `engine/skills/` package (handlers.py, heal_calcs.py, shield_calcs.py, buff_calcs.py, dispatcher.py)
+- [x] ~~Split `engine/skills.py` (~1,347 lines) into `engine/skills/` package~~ — Done! Now 6 files, largest is buff.py at 456 lines
 - [ ] Split `screens/combat.py` (~900 lines) into `screens/combat/` package (screen.py, renderer.py, input_handler.py, animations.py)
 - [ ] Add TypedDict definitions for rarity data, event/trap structures (fix 17 mypy warnings)
 - [ ] Add input validation in skill handlers (None checks before registry lookup with logging)
@@ -252,7 +258,7 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 - **271 combat tests passing** — covers all classes, damage, buffs, debuffs, cooldowns, AI, boss phases, flee, items, madness
 - **0 flake8 errors** (strict checks)
 - **17 mypy warnings** (non-critical Dict typing — recommend TypedDict fix)
-- **100% docstring coverage** in `engine/skills.py` and `engine/damage.py`
+- **100% docstring coverage** in `engine/skills/` package and `engine/damage.py`
 - **All engine functions type-annotated**
 - **Save system v2** with backward compatibility
 
@@ -270,4 +276,4 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 
 ---
 
-*Last updated: 2026-04-19 (Commit 61817b6)*
+*Last updated: 2026-04-19 (Skills refactoring commit)*
