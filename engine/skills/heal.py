@@ -9,7 +9,6 @@ from data import MADNESS_MAX
 from engine.models import Skill, GameState
 from engine.skills._types import LogEntry, HealCalcFn
 
-
 # ═══════════════════════════════════════════
 # HEAL CALCULATION FUNCTIONS
 # ═══════════════════════════════════════════
@@ -317,9 +316,7 @@ def _handle_self_heal(state: GameState, skill: Skill) -> List[LogEntry]:
     set HP directly as a side effect. The message template is always formatted
     so those handlers can display their special text (e.g. 'Full heal!').
     """
-    calc_fn, msg_template = HEAL_HANDLERS.get(
-        skill.heal_calc or "", (_calc_heal_default, "Recovered {h} HP!")
-    )
+    calc_fn, msg_template = HEAL_HANDLERS.get(skill.heal_calc or "", (_calc_heal_default, "Recovered {h} HP!"))
     h = calc_fn(state, skill)
     if h > 0:
         state.hp = min(state.max_hp, state.hp + h)

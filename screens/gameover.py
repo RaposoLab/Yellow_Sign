@@ -1,6 +1,29 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 from screens.base import Screen
+
 
 class GameOverScreen(Screen):
     def __init__(self, game):
@@ -28,16 +51,30 @@ class GameOverScreen(Screen):
 
     def draw(self, surface):
         # The Game_Over_Screen background is already drawn by main loop
-        draw_text_with_glow(surface, "GAME OVER", self.assets.fonts["title"],
-                  C.CRIMSON, SCREEN_W // 2, 40, align="center")
+        draw_text_with_glow(
+            surface, "GAME OVER", self.assets.fonts["title"], C.CRIMSON, SCREEN_W // 2, 40, align="center"
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 180, 120, 360)
-        draw_text_wrapped_glow(surface, self.game.gameover_msg, self.assets.fonts["body"],
-                          C.INK, SCREEN_W // 2 - 300, 140, 600)
+        draw_text_wrapped_glow(
+            surface, self.game.gameover_msg, self.assets.fonts["body"], C.INK, SCREEN_W // 2 - 300, 140, 600
+        )
 
         cx = SCREEN_W // 2
         self.restart_btn = pygame.Rect(cx - 170, 300, 160, 45)
         self.menu_btn = pygame.Rect(cx + 10, 300, 160, 45)
-        draw_ornate_button(surface, self.restart_btn, "[R] Retry", self.assets.fonts["body"],
-                           hover=(0 == self.hover_idx), color=C.PARCHMENT_EDGE)
-        draw_ornate_button(surface, self.menu_btn, "[Q] Menu", self.assets.fonts["body"],
-                           hover=(1 == self.hover_idx), color=C.PARCHMENT_EDGE)
+        draw_ornate_button(
+            surface,
+            self.restart_btn,
+            "[R] Retry",
+            self.assets.fonts["body"],
+            hover=(0 == self.hover_idx),
+            color=C.PARCHMENT_EDGE,
+        )
+        draw_ornate_button(
+            surface,
+            self.menu_btn,
+            "[Q] Menu",
+            self.assets.fonts["body"],
+            hover=(1 == self.hover_idx),
+            color=C.PARCHMENT_EDGE,
+        )

@@ -1,7 +1,31 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_hud,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 from screens.base import Screen
 from engine import advance_floor
+
 
 class RestScreen(Screen):
     def __init__(self, game):
@@ -68,15 +92,36 @@ class RestScreen(Screen):
         panel_x = SCREEN_W // 2 - panel_w // 2
         draw_parchment_panel(surface, panel_x, 135, panel_w, panel_h)
 
-        draw_text_with_glow(surface, "A MOMENT OF RESPITE", self.assets.fonts["heading"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 145, align="center")
-        draw_text_with_glow(surface, "You find a quiet corner. The madness recedes, briefly.",
-                  self.assets.fonts["tiny"], C.INK, SCREEN_W // 2, 185, align="center")
+        draw_text_with_glow(
+            surface,
+            "A MOMENT OF RESPITE",
+            self.assets.fonts["heading"],
+            C.PARCHMENT_EDGE,
+            SCREEN_W // 2,
+            145,
+            align="center",
+        )
+        draw_text_with_glow(
+            surface,
+            "You find a quiet corner. The madness recedes, briefly.",
+            self.assets.fonts["tiny"],
+            C.INK,
+            SCREEN_W // 2,
+            185,
+            align="center",
+        )
 
         for i, (name, desc, _) in enumerate(self.options):
-            draw_ornate_button(surface, self.buttons[i], f"[{i+1}] {name} — {desc}",
-                               self.assets.fonts["body"], hover=(i == self.hover_idx), color=C.PARCHMENT_EDGE)
+            draw_ornate_button(
+                surface,
+                self.buttons[i],
+                f"[{i+1}] {name} — {desc}",
+                self.assets.fonts["body"],
+                hover=(i == self.hover_idx),
+                color=C.PARCHMENT_EDGE,
+            )
 
         if self.result_msg:
-            draw_text_with_glow(surface, self.result_msg, self.assets.fonts["body"],
-                      C.MIST, SCREEN_W // 2, 560, align="center")
+            draw_text_with_glow(
+                surface, self.result_msg, self.assets.fonts["body"], C.MIST, SCREEN_W // 2, 560, align="center"
+            )

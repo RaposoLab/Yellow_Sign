@@ -1,11 +1,27 @@
 import pygame
 import math
 import random
-from shared import (C, SCREEN_W, SCREEN_H, draw_text, draw_text_wrapped, draw_text_fitted,
-                    fit_text, draw_bar, draw_ornate_panel, draw_ornate_button,
-                    draw_gold_divider, hp_color, mad_color, draw_parchment_panel,
-                    draw_text_with_glow, draw_status_icons_row, draw_status_tooltip,
-                    generate_parchment_texture, draw_hud)
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    draw_text,
+    draw_text_wrapped,
+    draw_text_fitted,
+    fit_text,
+    draw_bar,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_status_icons_row,
+    draw_status_tooltip,
+    generate_parchment_texture,
+    draw_hud,
+)
 from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from engine import calc_preview_damage, _get_enemy_intent_message
 from screens.combat.particles import create_particle, PARTICLE_TYPES
@@ -71,8 +87,7 @@ class CombatRendererMixin:
 
         for i, l in enumerate(lines):
             color = C.PARCHMENT_EDGE if i == len(lines) - 1 else C.INK
-            draw_text_with_glow(surface, l, font, color,
-                                tip_x + padding, tip_y + padding + i * line_h)
+            draw_text_with_glow(surface, l, font, color, tip_x + padding, tip_y + padding + i * line_h)
 
     # ── Status tooltips ────────────────────────────────────────────────────────
 
@@ -150,29 +165,49 @@ class CombatRendererMixin:
         glow_r, glow_g, glow_b = intent_color
         for i in range(8):
             alpha = int((8 - i) * 4 + glow_alpha * 0.5)
-            pygame.draw.rect(glow_surf, (glow_r, glow_g, glow_b, alpha),
-                           (8 - i, 8 - i, intent_w + i * 2, intent_h + i * 2), 1)
+            pygame.draw.rect(
+                glow_surf, (glow_r, glow_g, glow_b, alpha), (8 - i, 8 - i, intent_w + i * 2, intent_h + i * 2), 1
+            )
         surface.blit(glow_surf, (intent_x - 8, intent_y - 8))
         surface.blit(intent_bg, (intent_x, intent_y))
         pygame.draw.rect(surface, intent_color, (intent_x, intent_y, intent_w, intent_h), 2, border_radius=4)
 
         # Intent label at top
-        draw_text_with_glow(surface, f"NEXT: {intent_label}", self.assets.fonts["tiny"],
-                           intent_color, intent_x + 8, intent_y + 4, glow_color=intent_color)
+        draw_text_with_glow(
+            surface,
+            f"NEXT: {intent_label}",
+            self.assets.fonts["tiny"],
+            intent_color,
+            intent_x + 8,
+            intent_y + 4,
+            glow_color=intent_color,
+        )
 
         # Skill name
         skill_name = fit_text(self.assets.fonts["small"], skill.get("name", "Unknown"), intent_w - 16)
-        draw_text_with_glow(surface, skill_name, self.assets.fonts["small"],
-                           C.PARCHMENT_EDGE, intent_x + intent_w // 2, intent_y + 24,
-                           align="center", glow_color=intent_color)
+        draw_text_with_glow(
+            surface,
+            skill_name,
+            self.assets.fonts["small"],
+            C.PARCHMENT_EDGE,
+            intent_x + intent_w // 2,
+            intent_y + 24,
+            align="center",
+            glow_color=intent_color,
+        )
 
         # Draw small intent indicator icon
         icon_x = intent_x + intent_w - 28
         icon_y = intent_y + 8
         icon_radius = 10
         pygame.draw.circle(surface, intent_color, (icon_x + icon_radius, icon_y + icon_radius), icon_radius)
-        pygame.draw.circle(surface, tuple(min(255, c + 60) for c in intent_color),
-                         (icon_x + icon_radius, icon_y + icon_radius), icon_radius, 2)
+        pygame.draw.circle(
+            surface,
+            tuple(min(255, c + 60) for c in intent_color),
+            (icon_x + icon_radius, icon_y + icon_radius),
+            icon_radius,
+            2,
+        )
         # Icon letter - use light color for contrast
         icon_font = self.assets.fonts["tiny"]
         icon_text = icon_font.render(intent_icon, True, C.BONE)
@@ -228,8 +263,9 @@ class CombatRendererMixin:
         draw_parchment_panel(surface, panel_x + panel_ox, panel_y + panel_oy, panel_w, panel_h)
 
         if c.is_boss:
-            draw_text_with_glow(surface, "BOSS", self.assets.fonts["tiny"], C.CRIMSON,
-                                panel_x + 12 + panel_ox, panel_y + 5 + panel_oy)
+            draw_text_with_glow(
+                surface, "BOSS", self.assets.fonts["tiny"], C.CRIMSON, panel_x + 12 + panel_ox, panel_y + 5 + panel_oy
+            )
 
         # Enemy name — corrupted during glitch phases
         if self._victory_state in ("glitch_onset", "reality_break"):
@@ -250,8 +286,14 @@ class CombatRendererMixin:
             surface.blit(blue_surf, (name_x - blue_offset, name_y))
             surface.blit(main_surf, (name_x, name_y))
         else:
-            draw_text_with_glow(surface, e.name, self.assets.fonts["small"], C.PARCHMENT_EDGE,
-                                panel_x + 12 + panel_ox, panel_y + 22 + panel_oy)
+            draw_text_with_glow(
+                surface,
+                e.name,
+                self.assets.fonts["small"],
+                C.PARCHMENT_EDGE,
+                panel_x + 12 + panel_ox,
+                panel_y + 22 + panel_oy,
+            )
 
         # Enemy HP bar — glitch effects during death animation
         bar_x = panel_x + 12 + panel_ox
@@ -265,8 +307,9 @@ class CombatRendererMixin:
                 draw_bar(surface, bar_x, bar_y, bar_w, bar_h, 0, e.max_hp, C.CRIMSON)
                 # Glitch text: scrambled numbers
                 glitch_text = f"{''.join(random.choice('0123456789-!?') for _ in range(3))}/{e.max_hp}"
-                draw_text_with_glow(surface, glitch_text, self.assets.fonts["tiny"],
-                          C.CRIMSON, panel_x + 350 + panel_ox, bar_y)
+                draw_text_with_glow(
+                    surface, glitch_text, self.assets.fonts["tiny"], C.CRIMSON, panel_x + 350 + panel_ox, bar_y
+                )
             else:
                 # Flickering bar — random value jumps
                 if random.random() < self._glitch_intensity * 0.3:
@@ -274,14 +317,20 @@ class CombatRendererMixin:
                     flicker_hp = random.randint(0, e.max_hp)
                     bar_color = C.ELDRITCH_PURPLE if random.random() < 0.3 else hp_color(flicker_hp, e.max_hp)
                     draw_bar(surface, bar_x, bar_y, bar_w, bar_h, flicker_hp, e.max_hp, bar_color)
-                    draw_text_with_glow(surface, f"{flicker_hp}/{e.max_hp}", self.assets.fonts["tiny"],
-                              C.ELDRITCH_PURPLE, panel_x + 350 + panel_ox, bar_y)
+                    draw_text_with_glow(
+                        surface,
+                        f"{flicker_hp}/{e.max_hp}",
+                        self.assets.fonts["tiny"],
+                        C.ELDRITCH_PURPLE,
+                        panel_x + 350 + panel_ox,
+                        bar_y,
+                    )
                 else:
                     # Normal HP display but with jitter offset
-                    draw_bar(surface, bar_x, bar_y, bar_w, bar_h, e.hp, e.max_hp,
-                             hp_color(e.hp, e.max_hp))
-                    draw_text_with_glow(surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"],
-                              C.INK, panel_x + 350 + panel_ox, bar_y)
+                    draw_bar(surface, bar_x, bar_y, bar_w, bar_h, e.hp, e.max_hp, hp_color(e.hp, e.max_hp))
+                    draw_text_with_glow(
+                        surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"], C.INK, panel_x + 350 + panel_ox, bar_y
+                    )
             # Horizontal scanline glitch on bar
             if random.random() < self._glitch_intensity * 0.4:
                 glitch_y = bar_y + random.randint(0, bar_h)
@@ -293,25 +342,26 @@ class CombatRendererMixin:
         elif self._victory_state:
             # After reality_break: empty bar
             draw_bar(surface, bar_x, bar_y, bar_w, bar_h, 0, e.max_hp, (30, 5, 50))
-            draw_text_with_glow(surface, f"0/{e.max_hp}", self.assets.fonts["tiny"],
-                      (30, 5, 50), panel_x + 350 + panel_ox, bar_y)
+            draw_text_with_glow(
+                surface, f"0/{e.max_hp}", self.assets.fonts["tiny"], (30, 5, 50), panel_x + 350 + panel_ox, bar_y
+            )
         else:
             # Normal combat
-            draw_bar(surface, bar_x, bar_y, bar_w, bar_h, e.hp, e.max_hp,
-                     hp_color(e.hp, e.max_hp))
-            draw_text_with_glow(surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"],
-                      C.INK, panel_x + 350 + panel_ox, bar_y)
+            draw_bar(surface, bar_x, bar_y, bar_w, bar_h, e.hp, e.max_hp, hp_color(e.hp, e.max_hp))
+            draw_text_with_glow(
+                surface, f"{e.hp}/{e.max_hp}", self.assets.fonts["tiny"], C.INK, panel_x + 350 + panel_ox, bar_y
+            )
 
         # Enemy status icons — below HP bar, left side (hide during victory)
         if not self._victory_state:
             enemy_statuses = list(e.statuses)
             if e.stunned:
                 from engine.models import StatusEffect
+
                 stun_se = StatusEffect("stunned", 1)
                 enemy_statuses = [stun_se] + enemy_statuses
             self._enemy_status_rects = draw_status_icons_row(
-                surface, panel_x + 12, panel_y + 65, enemy_statuses, {},
-                size=26, gap=5
+                surface, panel_x + 12, panel_y + 65, enemy_statuses, {}, size=26, gap=5
             )
 
         # ─────────────────────────────────────────────────────────────────────────────
@@ -418,10 +468,17 @@ class CombatRendererMixin:
                             patch_h = random.randint(4, 20)
                             patch_x = random.randint(0, src_w - patch_w)
                             patch_y = random.randint(0, src_h - patch_h)
-                            patch_color = random.choice([
-                                (140, 60, 180), (90, 30, 110), (50, 15, 80),
-                                (200, 80, 150), (30, 5, 50), C.CRIMSON, C.YELLOW,
-                            ])
+                            patch_color = random.choice(
+                                [
+                                    (140, 60, 180),
+                                    (90, 30, 110),
+                                    (50, 15, 80),
+                                    (200, 80, 150),
+                                    (30, 5, 50),
+                                    C.CRIMSON,
+                                    C.YELLOW,
+                                ]
+                            )
                             patch_alpha = int(random.uniform(30, 100) * progress)
                             patch_surf = pygame.Surface((patch_w, patch_h), pygame.SRCALPHA)
                             patch_surf.fill((*patch_color, patch_alpha))
@@ -449,9 +506,14 @@ class CombatRendererMixin:
                 noise_w = random.randint(4, 30)
                 noise_h = random.randint(2, 6)
                 noise_surf = pygame.Surface((noise_w, noise_h), pygame.SRCALPHA)
-                noise_color = random.choice([
-                    C.ELDRITCH_PURPLE, (30, 5, 50), C.CRIMSON, (50, 15, 80),
-                ])
+                noise_color = random.choice(
+                    [
+                        C.ELDRITCH_PURPLE,
+                        (30, 5, 50),
+                        C.CRIMSON,
+                        (50, 15, 80),
+                    ]
+                )
                 noise_alpha = int(random.uniform(40, 120) * self._vanish_progress)
                 noise_surf.fill((*noise_color, noise_alpha))
                 surface.blit(noise_surf, (noise_x + ox, noise_y + oy))
@@ -533,13 +595,26 @@ class CombatRendererMixin:
             alpha = min(255, int(self._victory_timer * 300)) if self._victory_state == "afterimage" else 255
             # The death message was already added to the combat log
             # Show it with typewriter-style reveal
-            draw_text_with_glow(surface, "— VICTORY —", self.assets.fonts["body"],
-                      C.ELDRITCH_PURPLE, log_x + log_w // 2, log_y + 40, align="center")
+            draw_text_with_glow(
+                surface,
+                "— VICTORY —",
+                self.assets.fonts["body"],
+                C.ELDRITCH_PURPLE,
+                log_x + log_w // 2,
+                log_y + 40,
+                align="center",
+            )
             # Show latest log entries (the death message was added)
             if c.log:
                 for i, (text, log_type) in enumerate(c.log[-3:]):
-                    colors = {"damage": C.CRIMSON, "crit": C.PARCHMENT_EDGE, "heal": C.MIST,
-                              "shield": C.FROST, "effect": C.ELDRITCH, "info": C.INK_LIGHT}
+                    colors = {
+                        "damage": C.CRIMSON,
+                        "crit": C.PARCHMENT_EDGE,
+                        "heal": C.MIST,
+                        "shield": C.FROST,
+                        "effect": C.ELDRITCH,
+                        "info": C.INK_LIGHT,
+                    }
                     color = colors.get(log_type, C.INK)
                     line_alpha = min(255, max(0, alpha - i * 40))
                     text = fit_text(self.assets.fonts["tiny"], text, log_w - 30)
@@ -548,16 +623,25 @@ class CombatRendererMixin:
                         text_surf.set_alpha(line_alpha)
                         surface.blit(text_surf, (log_x + 15, log_y + 70 + i * 24))
         else:
-            draw_text_with_glow(surface, "Combat Log", self.assets.fonts["tiny"], C.PARCHMENT_EDGE, log_x + 15, log_y + 8)
+            draw_text_with_glow(
+                surface, "Combat Log", self.assets.fonts["tiny"], C.PARCHMENT_EDGE, log_x + 15, log_y + 8
+            )
             draw_gold_divider(surface, log_x + 15, log_y + 26, log_w - 30)
             if c.log:
                 for i, (text, log_type) in enumerate(c.log[-5:]):
-                    colors = {"damage": C.CRIMSON, "crit": C.PARCHMENT_EDGE, "heal": C.MIST,
-                              "shield": C.FROST, "effect": C.ELDRITCH, "info": C.INK_LIGHT}
+                    colors = {
+                        "damage": C.CRIMSON,
+                        "crit": C.PARCHMENT_EDGE,
+                        "heal": C.MIST,
+                        "shield": C.FROST,
+                        "effect": C.ELDRITCH,
+                        "info": C.INK_LIGHT,
+                    }
                     color = colors.get(log_type, C.INK)
                     text = fit_text(self.assets.fonts["tiny"], text, log_w - 30)
-                    draw_text_with_glow(surface, text, self.assets.fonts["tiny"], color,
-                              log_x + 15, log_y + 32 + i * 26)
+                    draw_text_with_glow(
+                        surface, text, self.assets.fonts["tiny"], color, log_x + 15, log_y + 32 + i * 26
+                    )
 
         # --- Skills panel (hidden during victory animation) ---
         if not self._victory_state:
@@ -571,9 +655,15 @@ class CombatRendererMixin:
                 if sk.cost > 0:
                     label += f" ({sk.cost} MAD)"
                 label = fit_text(self.assets.fonts["small"], label, btn.w - 20)
-                draw_ornate_button(surface, btn, label, self.assets.fonts["small"],
-                                   hover=(i == self.hover_idx and not on_cd),
-                                   color=C.CRIMSON if on_cd else C.PARCHMENT_EDGE, disabled=on_cd)
+                draw_ornate_button(
+                    surface,
+                    btn,
+                    label,
+                    self.assets.fonts["small"],
+                    hover=(i == self.hover_idx and not on_cd),
+                    color=C.CRIMSON if on_cd else C.PARCHMENT_EDGE,
+                    disabled=on_cd,
+                )
 
             # Skill tooltip popup on hover (above the button, like class select)
             if 0 <= self.hover_idx < len(s.active_skills):
@@ -604,6 +694,7 @@ class CombatRendererMixin:
                 cx = icon_x + col * (icon_size + icon_gap)
                 cy = icon_y + row * (icon_size + icon_gap)
                 from shared.rendering import draw_status_icon
+
                 rect = draw_status_icon(surface, cx, cy, etype, dur, icon_size)
                 self._player_status_rects.append((rect, etype))
 
@@ -612,15 +703,21 @@ class CombatRendererMixin:
             cmd_names = list(self.cmd_buttons.keys())
             for ci, (name, btn) in enumerate(self.cmd_buttons.items()):
                 labels = {"run": "Run [R]", "inventory": "[I]", "save": "[S]"}
-                draw_ornate_button(surface, btn, labels[name], self.assets.fonts["tiny"],
-                                   hover=((len(s.active_skills) + ci) == self.hover_idx),
-                                   color=C.CRIMSON if name == "run" else C.PARCHMENT_EDGE,
-                                   disabled=(name == "run" and not can_run))
+                draw_ornate_button(
+                    surface,
+                    btn,
+                    labels[name],
+                    self.assets.fonts["tiny"],
+                    hover=((len(s.active_skills) + ci) == self.hover_idx),
+                    color=C.CRIMSON if name == "run" else C.PARCHMENT_EDGE,
+                    disabled=(name == "run" and not can_run),
+                )
 
         # Turn message popup
         if self.turn_msg_timer > 0 and self.turn_message:
-            draw_text_with_glow(surface, self.turn_message, self.assets.fonts["body"],
-                      C.CRIMSON, SCREEN_W // 2, 245, align="center")
+            draw_text_with_glow(
+                surface, self.turn_message, self.assets.fonts["body"], C.CRIMSON, SCREEN_W // 2, 245, align="center"
+            )
 
         # --- Victory vignette tightening (afterimage + fade phases) ---
         if self._victory_vignette_intensity > 0:
@@ -639,8 +736,7 @@ class CombatRendererMixin:
                 rx = SCREEN_W // 2 - margin
                 ry = SCREEN_H // 2 - margin
                 if rx > 0 and ry > 0:
-                    pygame.draw.ellipse(vignette, color,
-                                      (rx, ry, (SCREEN_W - 2*rx), (SCREEN_H - 2*ry)))
+                    pygame.draw.ellipse(vignette, color, (rx, ry, (SCREEN_W - 2 * rx), (SCREEN_H - 2 * ry)))
             surface.blit(vignette, (0, 0))
 
         # --- Victory fade-to-black overlay ---
@@ -656,16 +752,16 @@ class CombatRendererMixin:
         # ═══════════════════════════════════════════════════════════════════════════════
 
         # Palette: dark menacing Victorian colors - deep purples, blood crimsons, tarnished golds
-        _PURPLE = (90, 40, 110)           # Deep dark purple
-        _PURPLE_DEEP = (50, 15, 80)        # Even darker purple shadow
-        _PURPLE_VOID = (30, 5, 50)         # Near-black purple void
-        _CRIMSON = (120, 20, 35)           # Dark blood red
-        _CRIMSON_DARK = (70, 10, 20)       # Dried blood crimson
-        _GOLD = (160, 120, 20)             # Dark tarnished gold
-        _GOLD_BRIGHT = (190, 150, 30)      # Slightly brighter dark gold
+        _PURPLE = (90, 40, 110)  # Deep dark purple
+        _PURPLE_DEEP = (50, 15, 80)  # Even darker purple shadow
+        _PURPLE_VOID = (30, 5, 50)  # Near-black purple void
+        _CRIMSON = (120, 20, 35)  # Dark blood red
+        _CRIMSON_DARK = (70, 10, 20)  # Dried blood crimson
+        _GOLD = (160, 120, 20)  # Dark tarnished gold
+        _GOLD_BRIGHT = (190, 150, 30)  # Slightly brighter dark gold
 
         # Victorian decorative runes
-        _ELDRITCH_RUNES = ["\u2020", "\u2726", "\u263D", "\u2694", "\u2736", "\u2625", "\u271D"]
+        _ELDRITCH_RUNES = ["\u2020", "\u2726", "\u263d", "\u2694", "\u2736", "\u2625", "\u271d"]
 
         for dn in self.damage_numbers:
             text, x, y, color, timer, vy, scale, is_crit = dn[:8]
@@ -695,20 +791,29 @@ class CombatRendererMixin:
             shadow_offset = 2 if is_crit else 1
 
             # Draw shadow
-            surface.blit(shadow_surface, (base_draw_x - text_surface.get_width()//2 + shadow_offset,
-                                          base_draw_y - text_surface.get_height()//2 + shadow_offset))
+            surface.blit(
+                shadow_surface,
+                (
+                    base_draw_x - text_surface.get_width() // 2 + shadow_offset,
+                    base_draw_y - text_surface.get_height() // 2 + shadow_offset,
+                ),
+            )
 
             # Draw main text
-            surface.blit(text_surface, (base_draw_x - text_surface.get_width()//2,
-                                        base_draw_y - text_surface.get_height()//2))
+            surface.blit(
+                text_surface,
+                (base_draw_x - text_surface.get_width() // 2, base_draw_y - text_surface.get_height() // 2),
+            )
 
             # For crits only: add a subtle crimson glow pulse
             if is_crit:
                 glow_alpha = int(60 + 40 * math.sin(self._time * 6.0))
                 glow_surface = scaled_font.render(text, True, (120, 20, 35))  # Dark blood red
                 glow_surface.set_alpha(glow_alpha)
-                surface.blit(glow_surface, (base_draw_x - text_surface.get_width()//2,
-                                            base_draw_y - text_surface.get_height()//2))
+                surface.blit(
+                    glow_surface,
+                    (base_draw_x - text_surface.get_width() // 2, base_draw_y - text_surface.get_height() // 2),
+                )
 
         # Status effect tooltips on hover
         self._draw_status_tooltips(surface)

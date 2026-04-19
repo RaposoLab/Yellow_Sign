@@ -2,7 +2,7 @@
 
 import random
 import math
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TypedDict, Tuple, cast
 
 from data import (
     RARITY_DATA,
@@ -13,20 +13,52 @@ from data import (
     ACCESSORY_TEMPLATES,
     BOOTS_TEMPLATES,
     RING_TEMPLATES,
+    RARITY_LUCK_MULT,
+    RARITY_FLOOR_MULT,
+    RARITY_NIMBLE_FINGERS_BONUS,
+    RARITY_LOOTER_INST_BONUS,
+    ITEM_FLOOR_SCALING,
+    BONUS_STAT_BASE,
+    BONUS_STAT_RANGE,
+    CURSED_DEBUFF_BASE,
+    CURSED_DEBUFF_RANGE,
 )
 from engine.models import Item
 
 
-def determine_rarity(
-    floor: int, luck: int, buffs: Optional[Dict[str, int]] = None
-) -> int:
+class RarityData(TypedDict):
+    """TypedDict for RARITY_DATA entries."""
+
+    name: str
+    color: str
+    stat_range: Tuple[int, int]
+    stat_mul: float
+
+
+class CursedDebuff(TypedDict):
+    """TypedDict for CURSED_DEBUFFS entries."""
+
+    stat: str
+    name: str
+
+
+class ItemTemplate(TypedDict):
+    """TypedDict for equipment template entries."""
+
+    name: str
+    slot: str
+    base: Dict[str, int]
+    bonus_pool: list
+
+
+def determine_rarity(floor: int, luck: int, buffs: Optional[Dict[str, int]] = None) -> int:
     """Determine item rarity based on floor, luck, and active loot buffs."""
-    r = random.random() * 100 + (luck - 5) * 1.5 + floor * 0.8
+    r = random.random() * 100 + (luck - 5) * RARITY_LUCK_MULT + floor * RARITY_FLOOR_MULT
     if buffs:
         if buffs.get("nimbleFingers", 0) > 0:
-            r += 20
+            r += RARITY_NIMBLE_FINGERS_BONUS
         elif buffs.get("looterInst", 0) > 0:
-            r += 10
+            r += RARITY_LOOTER_INST_BONUS
     if r >= 96:
         return 4
     elif r >= 80:
@@ -44,8 +76,8 @@ def generate_item(
 ) -> Item:
     """Generate a random item."""
     rarity = determine_rarity(floor, luck, buffs)
-    rd = RARITY_DATA[rarity]
-    fs = 1 + (floor - 1) * 0.06
+    rd = cast(RarityData, RARITY_DATA[rarity])
+    fs = 1 + (floor - 1) * ITEM_FLOOR_SCALING
 
     prefix = random.choice(ITEM_PREFIXES[rarity])
 
@@ -65,19 +97,18 @@ def generate_item(
             pool.extend(templates)
 
     template = random.choice(pool)
-    slot = template["slot"]
+    t = cast(ItemTemplate, template)
+    slot: str = t["slot"]
     if slot == "ring":
         slot = random.choice(["ringL", "ringR"])
 
     stats: Dict[str, int] = {}
-    for k, v in template["base"].items():
+    for k, v in t["base"].items():
         stats[k] = math.ceil(v * rd["stat_mul"] * fs)
 
-    bonus_count = rd["stat_range"][0] + random.randint(
-        0, rd["stat_range"][1] - rd["stat_range"][0]
-    )
+    bonus_count = rd["stat_range"][0] + random.randint(0, rd["stat_range"][1] - rd["stat_range"][0])
     used = set(stats.keys())
-    pool_shuffled = list(template["bonus_pool"])
+    pool_shuffled = list(t["bonus_pool"])
     random.shuffle(pool_shuffled)
     all_stat_keys = ["int", "str", "agi", "wis", "luck", "atk", "def", "hp"]
 
@@ -89,7 +120,7 @@ def generate_item(
             sk = random.choice(available) if available else random.choice(all_stat_keys)
         used.add(sk)
         stats[sk] = stats.get(sk, 0) + math.ceil(
-            (2 + random.random() * 4) * rd["stat_mul"] * fs
+            (BONUS_STAT_BASE + random.random() * BONUS_STAT_RANGE) * rd["stat_mul"] * fs
         )
 
     debuffs: Optional[Dict[str, int]] = None
@@ -99,6 +130,7 @@ def generate_item(
         sd = list(CURSED_DEBUFFS)
         random.shuffle(sd)
         for i in range(dc):
-            debuffs[sd[i]["stat"]] = math.ceil((3 + random.random() * 5) * fs)
+            cd = cast(CursedDebuff, sd[i])
+            debuffs[cd["stat"]] = math.ceil((CURSED_DEBUFF_BASE + random.random() * CURSED_DEBUFF_RANGE) * fs)
 
-    return Item(f"{prefix} {template['name']}", slot, stats, rarity, debuffs)
+    return Item(f"{prefix} {t['name']}", slot, stats, rarity, debuffs)

@@ -10,18 +10,20 @@ from shared.constants import C, SCREEN_W, SCREEN_H, CLASS_COLORS
 from data import CLASS_ICONS
 from data.buff_debuff_data import get_effect_info
 
-
 # ═══════════════════════════════════════════
 # EASING FUNCTIONS FOR SMOOTH ANIMATIONS
 # ═══════════════════════════════════════════
+
 
 def ease_out_quad(t):
     """Quadratic easing out - starts fast, slows down smoothly."""
     return 1 - (1 - t) * (1 - t)
 
+
 def ease_in_quad(t):
     """Quadratic easing in - starts slow, accelerates."""
     return t * t
+
 
 def ease_in_out_quad(t):
     """Quadratic easing in and out - smooth acceleration and deceleration."""
@@ -29,19 +31,23 @@ def ease_in_out_quad(t):
         return 2 * t * t
     return 1 - pow(-2 * t + 2, 2) / 2
 
+
 def ease_out_cubic(t):
     """Cubic easing out - natural deceleration, good for UI settling."""
     return 1 - pow(1 - t, 3)
 
+
 def ease_in_cubic(t):
     """Cubic easing in - smooth acceleration."""
     return t * t * t
+
 
 def ease_in_out_cubic(t):
     """Cubic easing in and out - very smooth motion."""
     if t < 0.5:
         return 4 * t * t * t
     return 1 - pow(-2 * t + 2, 3) / 2
+
 
 def ease_out_bounce(t):
     """Bounce easing out - playful bounce effect."""
@@ -55,26 +61,28 @@ def ease_out_bounce(t):
         return n1 * (t - 2.25 / d1) * (t - 2.25 / d1) + 0.9375
     return n1 * (t - 2.625 / d1) * (t - 2.625 / d1) + 0.984375
 
+
 def lerp(start, end, t):
     """Linear interpolation between two values."""
     return start + (end - start) * t
 
+
 def animate_value(current, target, dt, speed=5.0):
     """Smoothly interpolate a value toward a target using cubic easing.
-    
+
     Args:
         current: Current value
         target: Target value
         dt: Delta time in seconds
         speed: Animation speed (higher = faster)
-    
+
     Returns:
         New interpolated value
     """
     diff = abs(target - current)
     if diff < 0.1:
         return target
-    
+
     # Calculate interpolation factor based on dt and speed
     t = min(1.0, speed * dt)
     # Use ease_out_cubic for natural deceleration as we approach target
@@ -85,6 +93,7 @@ def animate_value(current, target, dt, speed=5.0):
 # ═══════════════════════════════════════════
 # DRAWING HELPERS
 # ═══════════════════════════════════════════
+
 
 def draw_text(surface, text, font, color, x, y, align="left"):
     """Draw text with alignment options."""
@@ -101,11 +110,12 @@ def draw_text(surface, text, font, color, x, y, align="left"):
     surface.blit(rendered, rect)
     return rect
 
+
 def draw_text_wrapped(surface, text, font, color, x, y, max_width, line_height=None):
     """Draw text with word wrapping. Returns total height drawn."""
     if line_height is None:
         line_height = font.get_linesize()
-    words = text.split(' ')
+    words = text.split(" ")
     lines = []
     current_line = ""
     for word in words:
@@ -123,6 +133,7 @@ def draw_text_wrapped(surface, text, font, color, x, y, max_width, line_height=N
         draw_text(surface, line_text, font, color, x, y + i * line_height)
     return len(lines) * line_height
 
+
 def fit_text(font, text, max_pixel_width, suffix="…"):
     """Truncate text to fit within max_pixel_width pixels."""
     if font.size(text)[0] <= max_pixel_width:
@@ -131,15 +142,31 @@ def fit_text(font, text, max_pixel_width, suffix="…"):
         text = text[:-1]
     return text + suffix if text else suffix
 
+
 def draw_text_fitted(surface, text, font, color, x, y, max_width, align="left"):
     """Draw text, auto-truncating to fit max_width pixels."""
     fitted = fit_text(font, text, max_width)
     draw_text(surface, fitted, font, color, x, y, align)
 
-def draw_bar(surface, x, y, w, h, current, maximum, fg_color, bg_color=C.SHADOW, border_color=C.ASH,
-             animate=False, prev_value=None, dt=0.0, animation_speed=8.0):
+
+def draw_bar(
+    surface,
+    x,
+    y,
+    w,
+    h,
+    current,
+    maximum,
+    fg_color,
+    bg_color=C.SHADOW,
+    border_color=C.ASH,
+    animate=False,
+    prev_value=None,
+    dt=0.0,
+    animation_speed=8.0,
+):
     """Draw a horizontal bar (HP, XP, etc.).
-    
+
     Args:
         surface: Target pygame surface
         x, y: Position of the bar
@@ -153,13 +180,13 @@ def draw_bar(surface, x, y, w, h, current, maximum, fg_color, bg_color=C.SHADOW,
         prev_value: Previous value for animation (used when animate=True)
         dt: Delta time in seconds (used for animation)
         animation_speed: Speed of the bar animation (higher = faster)
-    
+
     Returns:
         If animate=True, returns tuple (display_value, new_prev_value) for next frame
     """
     pygame.draw.rect(surface, border_color, (x - 1, y - 1, w + 2, h + 2), border_radius=3)
     pygame.draw.rect(surface, bg_color, (x, y, w, h), border_radius=2)
-    
+
     if maximum > 0:
         if animate and prev_value is not None and dt > 0:
             # Smoothly interpolate toward target value using easing
@@ -173,8 +200,9 @@ def draw_bar(surface, x, y, w, h, current, maximum, fg_color, bg_color=C.SHADOW,
             fill_w = max(0, int(w * min(1, current / maximum)))
             if fill_w > 0:
                 pygame.draw.rect(surface, fg_color, (x, y, fill_w, h), border_radius=2)
-    
+
     return current, current  # Return unchanged for non-animated case
+
 
 def draw_panel(surface, x, y, w, h, bg_color=None, border_color=C.GOLD_DIM, border_width=2):
     """Draw an obsidian panel with border."""
@@ -183,14 +211,17 @@ def draw_panel(surface, x, y, w, h, bg_color=None, border_color=C.GOLD_DIM, bord
     surface.blit(texture, (x, y))
     pygame.draw.rect(surface, border_color, (x, y, w, h), border_width, border_radius=4)
 
+
 def draw_ornate_panel(surface, x, y, w, h, title=None, title_color=None, title_font=None):
     """Draw an obsidian-textured panel with ornate gold frame."""
     draw_parchment_panel(surface, x, y, w, h, title=title, title_font=title_font)
 
-def draw_ornate_button(surface, rect, text, font, hover=False, color=C.INK, disabled=False,
-                       pulse_speed=4.0, shimmer_speed=1.5):
+
+def draw_ornate_button(
+    surface, rect, text, font, hover=False, color=C.INK, disabled=False, pulse_speed=4.0, shimmer_speed=1.5
+):
     """Draw a button styled with obsidian and gold trim borders.
-    
+
     Args:
         surface: Target pygame surface
         rect: Button rectangle (pygame.Rect)
@@ -213,8 +244,9 @@ def draw_ornate_button(surface, rect, text, font, hover=False, color=C.INK, disa
     inner_rect = pygame.Rect(rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6)
     dim_border = tuple(max(0, c - 60) for c in border_color)
     pygame.draw.rect(surface, dim_border, inner_rect, 1, border_radius=3)
-    draw_text_with_glow(surface, text, font, text_color, rect.centerx,
-                         rect.centery - font.get_height() // 2, align="center")
+    draw_text_with_glow(
+        surface, text, font, text_color, rect.centerx, rect.centery - font.get_height() // 2, align="center"
+    )
     # Animated hover effect with eased transitions
     if hover:
         t = pygame.time.get_ticks() / 1000.0
@@ -223,17 +255,17 @@ def draw_ornate_button(surface, rect, text, font, hover=False, color=C.INK, disa
         # Apply easing for smoother alpha transitions
         eased_pulse = ease_in_out_quad(pulse_factor)
         pulse_alpha = int(20 + 50 * eased_pulse)
-        
+
         glow = pygame.Surface((rect.w + 12, rect.h + 12), pygame.SRCALPHA)
         glow.fill((120, 80, 200, pulse_alpha))
         surface.blit(glow, (rect.x - 6, rect.y - 6))
-        
+
         border_pulse = int(eased_pulse)
         if border_pulse:
             gold_glow = pygame.Surface((rect.w + 6, rect.h + 6), pygame.SRCALPHA)
             gold_glow.fill((212, 160, 23, 35))
             surface.blit(gold_glow, (rect.x - 3, rect.y - 3))
-        
+
         # Shimmer effect with smooth phase calculation
         shimmer_phase = (t * shimmer_speed) % 3.0
         if shimmer_phase < 1.0:
@@ -244,30 +276,37 @@ def draw_ornate_button(surface, rect, text, font, hover=False, color=C.INK, disa
             shimmer.fill((255, 220, 100, 25))
             surface.blit(shimmer, (shimmer_x, rect.y - 2))
 
+
 def draw_gold_divider(surface, x, y, width):
     """Draw a decorative gold divider line with end caps."""
     mid = width // 2
     pygame.draw.line(surface, C.GOLD_DIM, (x, y), (x + mid - 15, y), 1)
     pygame.draw.line(surface, C.GOLD_DIM, (x + mid + 15, y), (x + width, y), 1)
-    pygame.draw.polygon(surface, C.GOLD_TRIM, [
-        (x + mid, y - 4), (x + mid + 4, y),
-        (x + mid, y + 4), (x + mid - 4, y)
-    ])
+    pygame.draw.polygon(surface, C.GOLD_TRIM, [(x + mid, y - 4), (x + mid + 4, y), (x + mid, y + 4), (x + mid - 4, y)])
     for ex in [x, x + width]:
         pygame.draw.circle(surface, C.GOLD_DIM, (ex, y), 2)
+
 
 def hp_color(current, maximum):
     if maximum <= 0:
         return C.HP_RED
     pct = current / maximum
-    if pct > 0.6: return C.HP_GREEN
-    elif pct > 0.3: return C.HP_YELLOW
-    else: return C.HP_RED
+    if pct > 0.6:
+        return C.HP_GREEN
+    elif pct > 0.3:
+        return C.HP_YELLOW
+    else:
+        return C.HP_RED
+
 
 def mad_color(madness):
-    if madness < 30: return C.MIST
-    elif madness < 60: return C.HP_YELLOW
-    else: return C.HP_RED
+    if madness < 30:
+        return C.MIST
+    elif madness < 60:
+        return C.HP_YELLOW
+    else:
+        return C.HP_RED
+
 
 def rarity_color(rarity):
     return {1: C.ASH, 2: C.MIST, 3: C.FROST, 4: C.CRIMSON}.get(rarity, C.ASH)
@@ -332,7 +371,7 @@ def draw_status_icon(surface, x, y, effect_type, duration=0, size=22):
 
 def draw_status_icons_row(surface, x, y, statuses, buffs, barrier=0, size=22, gap=5):
     """Draw a row of status effect icons. Returns list of (Rect, effect_type) for hover detection.
-    
+
     Args:
         statuses: list of StatusEffect objects (debuffs on enemy/player)
         buffs: dict of {buff_type: duration} (player buffs)
@@ -372,7 +411,7 @@ def draw_status_icons_row(surface, x, y, statuses, buffs, barrier=0, size=22, ga
 
 def draw_status_tooltip(surface, effect_type, icon_rect, font=None):
     """Draw a tooltip above/below a status icon showing the effect description.
-    
+
     Args:
         surface: target surface
         effect_type: the buff/debuff type string
@@ -380,6 +419,7 @@ def draw_status_tooltip(surface, effect_type, icon_rect, font=None):
         font: font to use (defaults to tiny)
     """
     from shared.rendering import draw_text_with_glow, draw_parchment_panel
+
     info = get_effect_info(effect_type)
 
     if font is None:
@@ -440,12 +480,10 @@ def draw_status_tooltip(surface, effect_type, icon_rect, font=None):
     y_off = padding
     for kind, text in lines:
         if kind == "name":
-            draw_text_with_glow(surface, text, name_font, info["color"],
-                                tip_x + padding, tip_y + y_off)
+            draw_text_with_glow(surface, text, name_font, info["color"], tip_x + padding, tip_y + y_off)
             y_off += name_line_h
         else:
-            draw_text_with_glow(surface, text, font, C.INK,
-                                tip_x + padding, tip_y + y_off)
+            draw_text_with_glow(surface, text, font, C.INK, tip_x + padding, tip_y + y_off)
             y_off += line_h
 
 
@@ -474,6 +512,7 @@ def _draw_yellow_sign(surf, cx, cy, size, alpha=18):
     pygame.draw.line(s, color, (size, size - bar), (size, size + bar), 1)
     surf.blit(s, (cx - size, cy - size))
 
+
 def _draw_elder_sign(surf, cx, cy, size, alpha=15):
     s = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
     color = (140, 100, 200, alpha)
@@ -485,6 +524,7 @@ def _draw_elder_sign(surf, cx, cy, size, alpha=15):
         pts.append((size + int(r * math.cos(rad)), size + int(r * math.sin(rad))))
     pygame.draw.polygon(s, color, pts, 1)
     surf.blit(s, (cx - size, cy - size))
+
 
 def _draw_alchemical_circle(surf, cx, cy, size, alpha=12):
     s = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
@@ -502,6 +542,7 @@ def _draw_alchemical_circle(surf, cx, cy, size, alpha=12):
         dy = size + int((size - 2) * math.sin(rad))
         pygame.draw.circle(s, color, (dx, dy), 2)
     surf.blit(s, (cx - size, cy - size))
+
 
 def _draw_crack(surf, x, y, length, alpha=25):
     color = (60, 40, 90, alpha)
@@ -556,22 +597,24 @@ def _generate_obsidian_tile():
     for _ in range(max(5, size * size // 2000)):
         sx = random.randint(0, size - 1)
         sy = random.randint(0, size - 1)
-        sparkle = random.choice([
-            (200, 160, 50, random.randint(15, 35)),
-            (140, 100, 190, random.randint(10, 25)),
-            (180, 170, 160, random.randint(8, 18)),
-        ])
+        sparkle = random.choice(
+            [
+                (200, 160, 50, random.randint(15, 35)),
+                (140, 100, 190, random.randint(10, 25)),
+                (180, 170, 160, random.randint(8, 18)),
+            ]
+        )
         sz = random.randint(1, 3)
         pygame.draw.circle(surf, sparkle, (sx, sy), sz)
 
     # Cracks
     for _ in range(random.randint(2, 4)):
-        edge = random.choice(['top', 'bottom', 'left', 'right'])
-        if edge == 'top':
+        edge = random.choice(["top", "bottom", "left", "right"])
+        if edge == "top":
             _draw_crack(surf, random.randint(0, size), 0, random.randint(30, 80))
-        elif edge == 'bottom':
+        elif edge == "bottom":
             _draw_crack(surf, random.randint(0, size), size - 1, random.randint(30, 80))
-        elif edge == 'left':
+        elif edge == "left":
             _draw_crack(surf, 0, random.randint(0, size), random.randint(30, 80))
         else:
             _draw_crack(surf, size - 1, random.randint(0, size), random.randint(30, 80))
@@ -598,16 +641,20 @@ def generate_parchment_texture(width, height):
 
     # Per-panel eldritch symbols
     if width > 200 and height > 150:
-        _draw_yellow_sign(surf, random.randint(width // 4, 3 * width // 4),
-                         random.randint(height // 4, 3 * height // 4),
-                         random.randint(25, 45), alpha=20)
-        _draw_elder_sign(surf, random.randint(30, width - 30),
-                        random.randint(30, height - 30),
-                        random.randint(18, 30), alpha=16)
+        _draw_yellow_sign(
+            surf,
+            random.randint(width // 4, 3 * width // 4),
+            random.randint(height // 4, 3 * height // 4),
+            random.randint(25, 45),
+            alpha=20,
+        )
+        _draw_elder_sign(
+            surf, random.randint(30, width - 30), random.randint(30, height - 30), random.randint(18, 30), alpha=16
+        )
         if width > 400:
-            _draw_alchemical_circle(surf, random.randint(50, width - 50),
-                                   random.randint(50, height - 50),
-                                   random.randint(20, 35), alpha=14)
+            _draw_alchemical_circle(
+                surf, random.randint(50, width - 50), random.randint(50, height - 50), random.randint(20, 35), alpha=14
+            )
         for _ in range(random.randint(2, 4)):
             sx = random.randint(15, width - 15)
             sy = random.randint(15, height - 15)
@@ -641,10 +688,9 @@ def generate_parchment_texture(width, height):
     return surf
 
 
-def draw_parchment_panel(surface, x, y, w, h, title=None, title_font=None,
-                         animated_border=False, pulse_speed=1.0):
+def draw_parchment_panel(surface, x, y, w, h, title=None, title_font=None, animated_border=False, pulse_speed=1.0):
     """Draw an obsidian-textured panel with ornate gold frame borders.
-    
+
     Args:
         surface: Target pygame surface
         x, y: Position of the panel
@@ -663,26 +709,22 @@ def draw_parchment_panel(surface, x, y, w, h, title=None, title_font=None,
         pulse = 0.5 + 0.5 * math.sin(t * pulse_speed)
         eased_pulse = ease_in_out_quad(pulse)
         glow_alpha = int(40 + 30 * eased_pulse)
-        
+
         # Subtle outer glow
         glow_surf = pygame.Surface((w + 10, h + 10), pygame.SRCALPHA)
         for i in range(5):
             alpha = int((5 - i) * glow_alpha * 0.3)
-            pygame.draw.rect(glow_surf, (*C.GOLD_TRIM[:3], alpha),
-                           (5 - i, 5 - i, w + i * 2, h + i * 2), 1)
+            pygame.draw.rect(glow_surf, (*C.GOLD_TRIM[:3], alpha), (5 - i, 5 - i, w + i * 2, h + i * 2), 1)
         surface.blit(glow_surf, (x - 5, y - 5))
-    
+
     pygame.draw.rect(surface, C.OBSIDIAN_EDGE, (x, y, w, h), 3, border_radius=4)
     pygame.draw.rect(surface, C.GOLD_TRIM, (x + 4, y + 4, w - 8, h - 8), 2, border_radius=3)
     pygame.draw.rect(surface, C.GOLD_DIM, (x + 7, y + 7, w - 14, h - 14), 1, border_radius=2)
 
     # Corner ornaments
-    corners = [(x + 11, y + 11), (x + w - 11, y + 11),
-               (x + 11, y + h - 11), (x + w - 11, y + h - 11)]
+    corners = [(x + 11, y + 11), (x + w - 11, y + 11), (x + 11, y + h - 11), (x + w - 11, y + h - 11)]
     for cx, cy in corners:
-        pygame.draw.polygon(surface, C.GOLD_TRIM, [
-            (cx, cy - 3), (cx + 3, cy), (cx, cy + 3), (cx - 3, cy)
-        ])
+        pygame.draw.polygon(surface, C.GOLD_TRIM, [(cx, cy - 3), (cx + 3, cy), (cx, cy + 3), (cx - 3, cy)])
 
     # Title bar
     if title and title_font:
@@ -692,8 +734,7 @@ def draw_parchment_panel(surface, x, y, w, h, title=None, title_font=None,
         strip.set_alpha(200)
         surface.blit(strip, (tx, y - 2))
         pygame.draw.rect(surface, C.GOLD_DIM, (tx, y - 2, title_w, 24), 1, border_radius=2)
-        draw_text_with_glow(surface, title, title_font, C.INK,
-                            x + w // 2, y + 3, align="center")
+        draw_text_with_glow(surface, title, title_font, C.INK, x + w // 2, y + 3, align="center")
 
 
 # ═══════════════════════════════════════════
@@ -728,8 +769,7 @@ def _render_glow_surface(text, font, glow_color, glow_radius):
     return glow_combined, pad
 
 
-def draw_text_with_glow(surface, text, font, color, x, y, align="left",
-                         glow_color=None, glow_radius=2):
+def draw_text_with_glow(surface, text, font, color, x, y, align="left", glow_color=None, glow_radius=2):
     """Draw text with an ethereal purple glow/shadow for readability on obsidian.
     Uses a cache to pre-compute the glow surface once per unique combination."""
     if glow_color is None:
@@ -744,7 +784,7 @@ def draw_text_with_glow(surface, text, font, color, x, y, align="left",
         tw, th = main_surf.get_size()
         cached = (glow_surf, main_surf, tw, th, pad)
         if len(_glow_text_cache) >= _GLOW_CACHE_MAX:
-            keys_to_remove = list(_glow_text_cache.keys())[:_GLOW_CACHE_MAX // 4]
+            keys_to_remove = list(_glow_text_cache.keys())[: _GLOW_CACHE_MAX // 4]
             for k in keys_to_remove:
                 del _glow_text_cache[k]
         _glow_text_cache[cache_key] = cached
@@ -772,12 +812,11 @@ def draw_text_with_glow(surface, text, font, color, x, y, align="left",
     return pygame.Rect(main_x, main_y, tw, th)
 
 
-def draw_text_wrapped_glow(surface, text, font, color, x, y, max_width,
-                            line_height=None, glow_color=None):
+def draw_text_wrapped_glow(surface, text, font, color, x, y, max_width, line_height=None, glow_color=None):
     """Word-wrapped text with glow effect."""
     if line_height is None:
         line_height = font.get_linesize()
-    words = text.split(' ')
+    words = text.split(" ")
     lines = []
     current_line = ""
     for word in words:
@@ -791,13 +830,11 @@ def draw_text_wrapped_glow(surface, text, font, color, x, y, max_width,
     if current_line:
         lines.append(current_line)
     for i, line_text in enumerate(lines):
-        draw_text_with_glow(surface, line_text, font, color, x, y + i * line_height,
-                             glow_color=glow_color)
+        draw_text_with_glow(surface, line_text, font, color, x, y + i * line_height, glow_color=glow_color)
     return len(lines) * line_height
 
 
-def draw_text_fitted_glow(surface, text, font, color, x, y, max_width,
-                           align="left", glow_color=None):
+def draw_text_fitted_glow(surface, text, font, color, x, y, max_width, align="left", glow_color=None):
     """Fitted (truncated) text with glow effect."""
     fitted = fit_text(font, text, max_width)
     draw_text_with_glow(surface, fitted, font, color, x, y, align, glow_color=glow_color)
@@ -807,9 +844,10 @@ def draw_text_fitted_glow(surface, text, font, color, x, y, max_width,
 # TYPEWRITER TEXT EFFECT SYSTEM
 # ═══════════════════════════════════════════
 
+
 class TypewriterText:
     """Manages typewriter-style text reveal effect."""
-    
+
     def __init__(self, full_text, reveal_speed=36.0):
         """
         Args:
@@ -822,33 +860,33 @@ class TypewriterText:
         self.timer = 0.0
         self.complete = False
         self.skip_requested = False
-    
+
     def update(self, dt):
         """Update the typewriter effect. Call every frame with delta time."""
         if self.complete or self.skip_requested:
             self.current_index = len(self.full_text)
             self.complete = True
             return
-        
+
         self.timer += dt
         # Calculate how many characters should be revealed
         chars_to_reveal = int(self.timer * self.reveal_speed)
         if chars_to_reveal > 0:
             self.current_index = min(len(self.full_text), self.current_index + chars_to_reveal)
             self.timer = 0.0  # Reset timer after revealing
-        
+
         if self.current_index >= len(self.full_text):
             self.complete = True
-    
+
     def skip(self):
         """Instantly complete the typewriter effect."""
         self.skip_requested = True
         self.update(0)
-    
+
     def get_visible_text(self):
         """Get the currently visible portion of text."""
-        return self.full_text[:self.current_index]
-    
+        return self.full_text[: self.current_index]
+
     def reset(self):
         """Reset the typewriter effect to start."""
         self.current_index = 0
@@ -864,16 +902,18 @@ class TypewriterText:
 _madness_vignette_cache = {}
 _VIGNETTE_CACHE_MAX = 8
 
+
 def _make_vignette_cache_key(intensity, pulse_phase):
     """Create a cache key for vignette surfaces."""
     return f"{intensity}_{pulse_phase:.2f}"
 
+
 def draw_madness_vignette(surface, madness_level, dt, time_seconds):
     """Draw a darkness vignette around screen edges based on madness level.
-    
+
     As madness increases beyond 50%, the screen edges darken with a subtle
     pulsing effect to create visual tension without obscuring UI elements.
-    
+
     Args:
         surface: Target pygame surface
         madness_level: Current madness value (0-100)
@@ -883,48 +923,47 @@ def draw_madness_vignette(surface, madness_level, dt, time_seconds):
     # Only activate when madness is above 50%
     if madness_level <= 50:
         return
-    
+
     # Calculate intensity: 0 at 50% madness, up to 0.7 at 100% madness
     intensity = ((madness_level - 50) / 50) * 0.7
-    
+
     # Add subtle pulsing using sine wave
     pulse_speed = 0.8  # Slow, eerie pulse
     pulse = 0.5 + 0.5 * math.sin(time_seconds * pulse_speed)
     pulsed_intensity = intensity * (0.85 + 0.15 * pulse)
-    
+
     cache_key = _make_vignette_cache_key(int(pulsed_intensity * 100), pulse)
-    
+
     if cache_key not in _madness_vignette_cache:
         # Create vignette surface with radial gradient
         vignette = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        
+
         # Draw multiple concentric ellipses for smooth gradient
         max_radius = max(SCREEN_W, SCREEN_H) // 2
         num_rings = 50
-        
+
         for i in range(num_rings):
             ratio = i / num_rings
             # Alpha increases toward edges
             alpha = int(255 * pulsed_intensity * ratio * ratio)
             if alpha < 5:
                 continue
-            
+
             # Ellipse that fills the screen, growing outward
             rx = int(SCREEN_W // 2 + (max_radius * ratio))
             ry = int(SCREEN_H // 2 + (max_radius * 0.6 * ratio))
-            
+
             # Dark purple-black color for eldritch feel
             color = (20, 10, 30, alpha)
-            pygame.draw.ellipse(vignette, color, 
-                              (SCREEN_W // 2 - rx, SCREEN_H // 2 - ry, rx * 2, ry * 2))
-        
+            pygame.draw.ellipse(vignette, color, (SCREEN_W // 2 - rx, SCREEN_H // 2 - ry, rx * 2, ry * 2))
+
         if len(_madness_vignette_cache) >= _VIGNETTE_CACHE_MAX:
-            keys_to_remove = list(_madness_vignette_cache.keys())[:_VIGNETTE_CACHE_MAX // 4]
+            keys_to_remove = list(_madness_vignette_cache.keys())[: _VIGNETTE_CACHE_MAX // 4]
             for k in keys_to_remove:
                 del _madness_vignette_cache[k]
-        
+
         _madness_vignette_cache[cache_key] = vignette
-    
+
     vignette = _madness_vignette_cache[cache_key]
     surface.blit(vignette, (0, 0))
 
@@ -933,12 +972,13 @@ def draw_madness_vignette(surface, madness_level, dt, time_seconds):
 # ELDRITCH PULSING AURA
 # ═══════════════════════════════════════════
 
+
 def draw_eldritch_aura(surface, rect, time_seconds, intensity=1.0, color=None):
     """Draw a pulsing eldritch aura around an enemy or area.
-    
+
     Creates a threatening purple/pink glowing effect that pulses,
     used for bosses or dangerous enemies to highlight threat level.
-    
+
     Args:
         surface: Target pygame surface
         rect: pygame.Rect defining the area to surround
@@ -953,42 +993,35 @@ def draw_eldritch_aura(surface, rect, time_seconds, intensity=1.0, color=None):
     else:
         base_color = color
         accent_color = tuple(min(255, c + 40) for c in color)
-    
+
     # Pulsing animation using sine wave
     pulse_speed = 2.0  # Moderate pulse speed
     pulse = 0.5 + 0.5 * math.sin(time_seconds * pulse_speed)
     eased_pulse = ease_in_out_quad(pulse)  # Smooth easing
-    
+
     # Expand rect for aura layers
     max_expand = int(20 * intensity)
-    
+
     # Draw multiple expanding layers for gradient effect
     for i in range(5, 0, -1):
         layer_ratio = i / 5.0
         expand = int(max_expand * layer_ratio * eased_pulse)
         alpha = int(40 * intensity * layer_ratio * (1.0 - layer_ratio * 0.3))
-        
+
         if alpha < 5:
             continue
-        
-        aura_rect = pygame.Rect(
-            rect.x - expand,
-            rect.y - expand,
-            rect.w + expand * 2,
-            rect.h + expand * 2
-        )
-        
+
+        aura_rect = pygame.Rect(rect.x - expand, rect.y - expand, rect.w + expand * 2, rect.h + expand * 2)
+
         # Interpolate between base and accent color
         r = int(base_color[0] * layer_ratio + accent_color[0] * (1 - layer_ratio))
         g = int(base_color[1] * layer_ratio + accent_color[1] * (1 - layer_ratio))
         b = int(base_color[2] * layer_ratio + accent_color[2] * (1 - layer_ratio))
-        
+
         aura_surf = pygame.Surface((aura_rect.w, aura_rect.h), pygame.SRCALPHA)
-        pygame.draw.rect(aura_surf, (r, g, b, alpha), 
-                        (0, 0, aura_rect.w, aura_rect.h), 
-                        border_radius=8)
+        pygame.draw.rect(aura_surf, (r, g, b, alpha), (0, 0, aura_rect.w, aura_rect.h), border_radius=8)
         surface.blit(aura_surf, (aura_rect.x, aura_rect.y))
-    
+
     # Occasional spark particles for extra eldritch feel
     if random.random() < 0.02 * intensity:
         spark_x = rect.x + random.randint(-max_expand, rect.w + max_expand)
@@ -1003,6 +1036,7 @@ def draw_eldritch_aura(surface, rect, time_seconds, intensity=1.0, color=None):
 # ═══════════════════════════════════════════
 # HUD DRAWING
 # ═══════════════════════════════════════════
+
 
 def draw_hud(surface, s, assets):
     """Draw the persistent HUD bar at the top with ornate styling."""
@@ -1023,8 +1057,7 @@ def draw_hud(surface, s, assets):
 
     draw_text(surface, "HP", assets.fonts["small"], C.BONE, 15, 42)
     draw_bar(surface, 55, 42, 250, 20, s.hp, s.max_hp, hp_color(s.hp, s.max_hp))
-    draw_text(surface, f"{s.hp}/{s.max_hp}", assets.fonts["tiny"],
-              hp_color(s.hp, s.max_hp), 315, 44)
+    draw_text(surface, f"{s.hp}/{s.max_hp}", assets.fonts["tiny"], hp_color(s.hp, s.max_hp), 315, 44)
     if s.shield > 0:
         draw_text(surface, f"Shield:{int(s.shield)}", assets.fonts["tiny"], C.SHIELD_BLUE, 410, 44)
 
@@ -1046,10 +1079,7 @@ def draw_hud(surface, s, assets):
     draw_text(surface, f"ATK:{s.atk} DEF:{s.defense}", assets.fonts["tiny"], C.ASH, x, 42)
 
     draw_text(surface, f"Gold: {s.gold}g", assets.fonts["small"], C.GOLD, 480, 68)
-    draw_text(surface, f"Madness: {int(s.madness)}%", assets.fonts["small"],
-              mad_color(s.madness), 620, 68)
+    draw_text(surface, f"Madness: {int(s.madness)}%", assets.fonts["small"], mad_color(s.madness), 620, 68)
 
     # Buff/debuff icons row (replaces raw text statuses)
-    draw_status_icons_row(
-        surface, 480, 90, s.statuses, s.buffs, barrier=s.barrier, size=20, gap=4
-    )
+    draw_status_icons_row(surface, 480, 90, s.statuses, s.buffs, barrier=s.barrier, size=20, gap=4)

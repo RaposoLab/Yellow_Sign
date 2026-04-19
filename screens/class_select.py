@@ -1,8 +1,33 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, CLASS_COLORS, CLASS_PRIMARY_STAT
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+    CLASS_COLORS,
+    CLASS_PRIMARY_STAT,
+)
 from screens.base import Screen
 from data import CLASSES
 from engine import GameState
+
 
 class ClassSelectScreen(Screen):
     def __init__(self, game):
@@ -64,7 +89,9 @@ class ClassSelectScreen(Screen):
             tip_y = btn_rect.bottom + 4
         tip_rect = pygame.Rect(tip_x, tip_y, tip_w, tip_h)
         draw_panel(surface, tip_x, tip_y, tip_w, tip_h, None, C.PARCHMENT_EDGE, 1)
-        draw_text_with_glow(surface, formula, font, C.PARCHMENT_EDGE, tip_x + padding, tip_y + (tip_h - font.get_height()) // 2)
+        draw_text_with_glow(
+            surface, formula, font, C.PARCHMENT_EDGE, tip_x + padding, tip_y + (tip_h - font.get_height()) // 2
+        )
 
     def draw(self, surface):
         cid = self.class_ids[self.selected]
@@ -72,11 +99,11 @@ class ClassSelectScreen(Screen):
         color = CLASS_COLORS.get(cid, C.PARCHMENT_EDGE)
 
         # --- Header with page navigation ---
-        draw_text(surface, "CHOOSE YOUR FATE", self.assets.fonts["heading"],
-                  C.YELLOW, SCREEN_W // 2, 18, align="center")
+        draw_text(
+            surface, "CHOOSE YOUR FATE", self.assets.fonts["heading"], C.YELLOW, SCREEN_W // 2, 18, align="center"
+        )
         page_text = f"<  {self.selected + 1} / {len(self.class_ids)}  >"
-        draw_text(surface, page_text, self.assets.fonts["tiny"],
-                  C.ASH, SCREEN_W // 2, 52, align="center")
+        draw_text(surface, page_text, self.assets.fonts["tiny"], C.ASH, SCREEN_W // 2, 52, align="center")
 
         # --- Main panel ---
         panel_x, panel_y = 20, 72
@@ -108,8 +135,7 @@ class ClassSelectScreen(Screen):
         ry += 48
 
         # Description (word-wrapped to 3 lines max)
-        draw_text_wrapped_glow(surface, cls["desc"], self.assets.fonts["small"],
-                          C.INK, rx, ry, 600, line_height=20)
+        draw_text_wrapped_glow(surface, cls["desc"], self.assets.fonts["small"], C.INK, rx, ry, 600, line_height=20)
         ry += 68
 
         # Stats line
@@ -133,12 +159,17 @@ class ClassSelectScreen(Screen):
         for sk in starting:
             btn = pygame.Rect(rx, ry, 280, 44)
             self.ability_btns.append(btn)
-            hovered = (len(self.ability_btns) - 1 == self.hovered_ability)
+            hovered = len(self.ability_btns) - 1 == self.hovered_ability
             label = fit_text(self.assets.fonts["small"], sk["name"], 268)
-            draw_ornate_button(surface, btn, label, self.assets.fonts["small"],
-                               hover=hovered, color=color)
-            draw_text_with_glow(surface, sk["desc"], self.assets.fonts["tiny"], C.INK,
-                      rx + 290, ry + (44 - self.assets.fonts["tiny"].get_height()) // 2)
+            draw_ornate_button(surface, btn, label, self.assets.fonts["small"], hover=hovered, color=color)
+            draw_text_with_glow(
+                surface,
+                sk["desc"],
+                self.assets.fonts["tiny"],
+                C.INK,
+                rx + 290,
+                ry + (44 - self.assets.fonts["tiny"].get_height()) // 2,
+            )
             if hovered:
                 self._draw_ability_tooltip(surface, sk["formula"], btn)
             ry += 52
@@ -150,41 +181,59 @@ class ClassSelectScreen(Screen):
 
         future = sorted(
             [sk for sk in cls["skills"] if sk.get("tier", 1) == 3 and not sk.get("starting", False)],
-            key=lambda s: s.get("unlock_lv", 1)
+            key=lambda s: s.get("unlock_lv", 1),
         )[:3]
         self.future_btns = []
         for sk in future:
             btn = pygame.Rect(rx, ry, 280, 36)
             self.future_btns.append(btn)
-            hovered = (len(self.future_btns) - 1 == self.hovered_future)
+            hovered = len(self.future_btns) - 1 == self.hovered_future
             label = f"Lv{sk['unlock_lv']} — {fit_text(self.assets.fonts['tiny'], sk['name'], 220)}"
-            draw_ornate_button(surface, btn, label, self.assets.fonts["tiny"],
-                               hover=hovered, color=C.PARCHMENT_EDGE)
-            draw_text_with_glow(surface, sk["desc"], self.assets.fonts["tiny"], C.INK_LIGHT,
-                      rx + 290, ry + (36 - self.assets.fonts["tiny"].get_height()) // 2)
+            draw_ornate_button(surface, btn, label, self.assets.fonts["tiny"], hover=hovered, color=C.PARCHMENT_EDGE)
+            draw_text_with_glow(
+                surface,
+                sk["desc"],
+                self.assets.fonts["tiny"],
+                C.INK_LIGHT,
+                rx + 290,
+                ry + (36 - self.assets.fonts["tiny"].get_height()) // 2,
+            )
             if hovered:
                 self._draw_ability_tooltip(surface, sk["formula"], btn)
             ry += 42
 
         # Start button
         self.start_btn = pygame.Rect(rx, 576, 220, 40)
-        draw_ornate_button(surface, self.start_btn, "Choose", self.assets.fonts["body"],
-                           hover=self.start_btn.collidepoint(pygame.mouse.get_pos()),
-                           color=color)
+        draw_ornate_button(
+            surface,
+            self.start_btn,
+            "Choose",
+            self.assets.fonts["body"],
+            hover=self.start_btn.collidepoint(pygame.mouse.get_pos()),
+            color=color,
+        )
 
     def _draw_intro(self, surface):
         """Draw the initial overview screen (not used in one-per-page mode, kept for reference)."""
-        draw_text(surface, "CHOOSE YOUR FATE", self.assets.fonts["heading"],
-                  C.YELLOW, SCREEN_W // 2, 25, align="center")
-        draw_text(surface, "Each path leads deeper into madness.", self.assets.fonts["tiny"],
-                  C.BONE, SCREEN_W // 2, 60, align="center")
+        draw_text(
+            surface, "CHOOSE YOUR FATE", self.assets.fonts["heading"], C.YELLOW, SCREEN_W // 2, 25, align="center"
+        )
+        draw_text(
+            surface,
+            "Each path leads deeper into madness.",
+            self.assets.fonts["tiny"],
+            C.BONE,
+            SCREEN_W // 2,
+            60,
+            align="center",
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 200, 78, 400)
         for i, cid in enumerate(self.class_ids):
             cls = CLASSES[cid]
             color = CLASS_COLORS.get(cid, C.ASH)
             card_y = 90 + i * 125
             card_w = SCREEN_W - 80
-            is_selected = (i == self.selected)
+            is_selected = i == self.selected
             if is_selected:
                 draw_ornate_panel(surface, 40, card_y, card_w, 115)
             else:

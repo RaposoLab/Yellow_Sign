@@ -61,5 +61,3 @@ RING_TEMPLATES = [
     {"name": "Signet", "slot": "ring", "base": {"atk": 2}, "bonus_pool": ["str", "agi", "luck"]},
     {"name": "Loop", "slot": "ring", "base": {"hp": 5}, "bonus_pool": ["luck", "wis", "hp"]},
 ]
-
-

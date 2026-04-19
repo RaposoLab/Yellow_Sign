@@ -26,6 +26,15 @@ from data import (
     CRIT_UP_BONUS,
     ATK_CRIT_UP_BONUS,
     WEAKENED_DEF_MULT,
+    SECONDARY_STAT_CONTRIBUTION,
+    CRIT_LUCK_MULT,
+    COUNTER_ATTACK_MULT,
+    BLADE_AURA_PROC_CHANCE,
+    FLICKER_DODGE_CHANCE,
+    COIN_FLIP_HEADS_CHANCE,
+    LOW_HP_SCALING_MAX,
+    MADNESS_SCALING_MAX,
+    LUCK_BONUS_DAMAGE_MULT,
 )
 from engine.models import Skill, GameState, has_status
 
@@ -51,7 +60,7 @@ def _base_damage(state: GameState, skill: Skill) -> float:
     s2v = state.stats.get(skill.stat2, 10) if skill.stat2 else 0
 
     if skill.type in ("physical", "physical_debuff", "mixed_phys"):
-        bd = state.atk * (skill.power or 1) + sv * 0.8
+        bd = state.atk * (skill.power or 1) + sv * SECONDARY_STAT_CONTRIBUTION
         if skill.stat2_mult:
             bd += s2v * skill.stat2_mult
         if skill.def_scaling:
@@ -78,10 +87,10 @@ def _base_damage(state: GameState, skill: Skill) -> float:
 
     if skill.scaling_low_hp:
         hr = state.hp / state.max_hp if state.max_hp > 0 else 1.0
-        bd *= 1 + (1 - hr) * 2.0
+        bd *= 1 + (1 - hr) * LOW_HP_SCALING_MAX
 
     if skill.madness_scaling:
-        bd *= 1 + state.madness / 100
+        bd *= 1 + state.madness / MADNESS_SCALING_MAX
 
     # Apply damage buff multipliers from registry
     for buff_key, mult in DAMAGE_BUFF_MULTIPLIERS.items():
@@ -97,7 +106,7 @@ def _base_damage(state: GameState, skill: Skill) -> float:
             bd *= EXECUTE_DAMAGE_MULT
 
     if skill.luck_bonus:
-        bd *= 1 + state.luck * 0.02
+        bd *= 1 + state.luck * LUCK_BONUS_DAMAGE_MULT
 
     return bd
 
@@ -171,9 +180,7 @@ def calc_preview_damage(state: GameState, skill: Skill) -> Tuple[int, int]:
 # ═══════════════════════════════════════════
 
 
-def apply_damage_to_enemy(
-    state: GameState, raw: float, skill: Optional[Skill]
-) -> Tuple[int, bool]:
+def apply_damage_to_enemy(state: GameState, raw: float, skill: Optional[Skill]) -> Tuple[int, bool]:
     """Apply damage to enemy, accounting for defense and crits.
 
     Args:
@@ -214,7 +221,7 @@ def apply_damage_to_enemy(
         is_crit = True
 
     if is_crit:
-        dmg = int(dmg * (CRIT_BASE_MULT + state.luck * 0.01))
+        dmg = int(dmg * (CRIT_BASE_MULT + state.luck * CRIT_LUCK_MULT))
 
     dmg = max(1, dmg)
     e.hp = max(0, e.hp - dmg)
@@ -256,9 +263,7 @@ def _get_buff_evasion_bonus(state: GameState) -> int:
     return bonus
 
 
-def apply_damage_to_player(
-    state: GameState, raw: float, is_phys: bool
-) -> Tuple[int, str]:
+def apply_damage_to_player(state: GameState, raw: float, is_phys: bool) -> Tuple[int, str]:
     """Apply damage to player with shield/barrier/evasion/buffs.
 
     Args:
@@ -290,7 +295,7 @@ def apply_damage_to_player(
         return 0, "evade"
 
     if state.buffs.get("flicker", 0) > 0:
-        if random.random() < 0.5:
+        if random.random() < FLICKER_DODGE_CHANCE:
             state.buffs["flicker"] -= 1
             return 0, "evade"
 
@@ -339,8 +344,8 @@ def apply_damage_to_player(
         state.combat.enemy.hp = max(0, state.combat.enemy.hp - reflected)
 
     if state.buffs.get("bladeAura", 0) > 0 and state.combat and dmg > 0:
-        if random.random() < 0.15:
-            counter = int(state.atk * 0.30)
+        if random.random() < BLADE_AURA_PROC_CHANCE:
+            counter = int(state.atk * COUNTER_ATTACK_MULT)
             state.combat.enemy.hp = max(0, state.combat.enemy.hp - counter)
             state.combat.add_log(f"Aura of Blades counters for {counter}!", "damage")
 

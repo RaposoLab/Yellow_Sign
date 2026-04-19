@@ -1,9 +1,32 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 import random
 from screens.base import Screen
 from data import RARITY_DATA
 from engine import generate_item
+
 
 class LootScreen(Screen):
     def __init__(self, game):
@@ -58,33 +81,38 @@ class LootScreen(Screen):
         panel_x = SCREEN_W // 2 - panel_w // 2
         draw_parchment_panel(surface, panel_x, 10, panel_w, panel_h)
 
-        draw_text_with_glow(surface, "SALVAGE FOUND", self.assets.fonts["heading"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 25, align="center")
+        draw_text_with_glow(
+            surface, "SALVAGE FOUND", self.assets.fonts["heading"], C.PARCHMENT_EDGE, SCREEN_W // 2, 25, align="center"
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 120, 58, 240)
-        draw_text_with_glow(surface, f"+{self.gold_found} Gold", self.assets.fonts["body"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 70, align="center")
+        draw_text_with_glow(
+            surface,
+            f"+{self.gold_found} Gold",
+            self.assets.fonts["body"],
+            C.PARCHMENT_EDGE,
+            SCREEN_W // 2,
+            70,
+            align="center",
+        )
 
         for i, (item, btn) in enumerate(zip(self.items, self.pick_buttons)):
             color = rarity_color(item.rarity)
             rd = RARITY_DATA[item.rarity]
             # Button background with hover
-            draw_ornate_button(surface, btn, "", self.assets.fonts["tiny"],
-                               hover=(i == self.hover_idx), color=color)
+            draw_ornate_button(surface, btn, "", self.assets.fonts["tiny"], hover=(i == self.hover_idx), color=color)
             # Item name + slot + rarity on line 1
             label = f"{item.name}  ({item.slot.upper()}, {rd['name']})"
             label = fit_text(self.assets.fonts["small"], label, btn.w - 30)
-            draw_text_with_glow(surface, label, self.assets.fonts["small"], color,
-                                btn.x + 15, btn.y + 8)
+            draw_text_with_glow(surface, label, self.assets.fonts["small"], color, btn.x + 15, btn.y + 8)
             # Stats on line 2 (full, not truncated)
             stat_line = item.stat_text()
-            draw_text_with_glow(surface, stat_line, self.assets.fonts["tiny"],
-                                C.INK, btn.x + 15, btn.y + 32)
+            draw_text_with_glow(surface, stat_line, self.assets.fonts["tiny"], C.INK, btn.x + 15, btn.y + 32)
             # Debuffs on line 3 (if cursed)
             if item.debuffs:
                 debuff_line = item.debuff_text()
-                draw_text_with_glow(surface, debuff_line, self.assets.fonts["tiny"],
-                                    C.CRIMSON, btn.x + 15, btn.y + 52)
+                draw_text_with_glow(surface, debuff_line, self.assets.fonts["tiny"], C.CRIMSON, btn.x + 15, btn.y + 52)
 
-        leave_hover = (len(self.pick_buttons) == self.hover_idx)
-        draw_ornate_button(surface, self.leave_btn, "Leave it", self.assets.fonts["body"],
-                           hover=leave_hover, color=C.PARCHMENT_EDGE)
+        leave_hover = len(self.pick_buttons) == self.hover_idx
+        draw_ornate_button(
+            surface, self.leave_btn, "Leave it", self.assets.fonts["body"], hover=leave_hover, color=C.PARCHMENT_EDGE
+        )

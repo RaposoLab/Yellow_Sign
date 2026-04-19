@@ -26,7 +26,6 @@ from shared import (
     draw_text_fitted_glow,
     draw_status_icons_row,
     draw_status_tooltip,
-    create_combat_lighting,
 )
 from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from screens.base import Screen
@@ -169,20 +168,6 @@ class CombatScreen(CombatRendererMixin, Screen):
             s.combat.add_log(intent_msg, "info")
             # Spawn intent particles to draw attention
             self._spawn_intent_particles()
-
-        # Set up combat-specific dynamic lighting
-        self.game.lighting.clear_lights()
-        player_statuses = [st.type for st in s.statuses] if hasattr(s, "statuses") and s.statuses else []
-        combat_lights = create_combat_lighting(
-            player_x=120, player_y=300,
-            enemy_x=SCREEN_W - 160, enemy_y=280,
-            player_statuses=player_statuses,
-        )
-        for light in combat_lights:
-            self.game.lighting.add_light(
-                light.x, light.y, light.radius, light.color,
-                light.base_intensity, light.flicker, light.pulse_speed
-            )
 
     def _spawn_intent_particles(self):
         """Spawn atmospheric particles around the enemy intent indicator."""
@@ -547,11 +532,6 @@ class CombatScreen(CombatRendererMixin, Screen):
                 )
             )
             ambient_count += 1
-
-        # Update lighting system with current status effects
-        s = self.game.state
-        current_statuses = [st.type for st in s.statuses] if hasattr(s, "statuses") and s.statuses else []
-        self.game.lighting.set_status_effects(current_statuses)
 
     def _update_particles(self, dt):
         """Update all particles with physics including gravity."""

@@ -1,7 +1,30 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 from screens.base import Screen
 from data import MAX_ACTIVE_SKILLS
+
 
 class LevelUpScreen(Screen):
     def __init__(self, game):
@@ -85,8 +108,9 @@ class LevelUpScreen(Screen):
             s.pending_levelup_skills = [chosen]
             bw, bh = 500, 40
             cx = SCREEN_W // 2
-            self.replace_buttons = [pygame.Rect(cx - bw // 2, 230 + i * 45, bw, bh)
-                                    for i in range(len(s.active_skills) + 1)]
+            self.replace_buttons = [
+                pygame.Rect(cx - bw // 2, 230 + i * 45, bw, bh) for i in range(len(s.active_skills) + 1)
+            ]
         else:
             s.active_skills.append(chosen)
             s.pending_levelup_skills = []
@@ -132,43 +156,100 @@ class LevelUpScreen(Screen):
         panel_x = SCREEN_W // 2 - panel_w // 2
         draw_parchment_panel(surface, panel_x, 15, panel_w, panel_h)
 
-        draw_text_with_glow(surface, "LEVEL UP!", self.assets.fonts["heading"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 28, align="center")
-        draw_text_with_glow(surface, f"{s.class_name} is now Level {s.level}!",
-                  self.assets.fonts["body"], C.INK, SCREEN_W // 2, 65, align="center")
-        draw_text_with_glow(surface, f"HP: {s.max_hp}  ATK: {s.atk}  DEF: {s.defense}/{s.m_def}",
-                  self.assets.fonts["tiny"], C.INK_LIGHT, SCREEN_W // 2, 90, align="center")
+        draw_text_with_glow(
+            surface, "LEVEL UP!", self.assets.fonts["heading"], C.PARCHMENT_EDGE, SCREEN_W // 2, 28, align="center"
+        )
+        draw_text_with_glow(
+            surface,
+            f"{s.class_name} is now Level {s.level}!",
+            self.assets.fonts["body"],
+            C.INK,
+            SCREEN_W // 2,
+            65,
+            align="center",
+        )
+        draw_text_with_glow(
+            surface,
+            f"HP: {s.max_hp}  ATK: {s.atk}  DEF: {s.defense}/{s.m_def}",
+            self.assets.fonts["tiny"],
+            C.INK_LIGHT,
+            SCREEN_W // 2,
+            90,
+            align="center",
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 180, 108, 360)
 
         if self.replace_mode:
-            draw_text_with_glow(surface, "CHOOSE ABILITY TO REPLACE", self.assets.fonts["body"],
-                      C.CRIMSON, SCREEN_W // 2, 130, align="center")
+            draw_text_with_glow(
+                surface,
+                "CHOOSE ABILITY TO REPLACE",
+                self.assets.fonts["body"],
+                C.CRIMSON,
+                SCREEN_W // 2,
+                130,
+                align="center",
+            )
             for i, (sk, btn) in enumerate(zip(s.active_skills, self.replace_buttons)):
-                hovered = (i == self.hover_idx)
-                draw_ornate_button(surface, btn, f"{i+1}. {sk.name}",
-                                   self.assets.fonts["small"], hover=hovered, color=C.PARCHMENT_EDGE)
+                hovered = i == self.hover_idx
+                draw_ornate_button(
+                    surface, btn, f"{i+1}. {sk.name}", self.assets.fonts["small"], hover=hovered, color=C.PARCHMENT_EDGE
+                )
                 if hovered:
                     self._draw_skill_tooltip(surface, sk, btn)
             cancel_btn = self.replace_buttons[-1] if self.replace_buttons else None
             if cancel_btn:
-                draw_ornate_button(surface, cancel_btn, f"{len(s.active_skills)+1}. Cancel",
-                                   self.assets.fonts["small"], hover=(len(s.active_skills) == self.hover_idx), color=C.PARCHMENT_EDGE)
+                draw_ornate_button(
+                    surface,
+                    cancel_btn,
+                    f"{len(s.active_skills)+1}. Cancel",
+                    self.assets.fonts["small"],
+                    hover=(len(s.active_skills) == self.hover_idx),
+                    color=C.PARCHMENT_EDGE,
+                )
         elif s.pending_levelup_skills:
-            draw_text_with_glow(surface, "CHOOSE A NEW ABILITY", self.assets.fonts["body"],
-                      C.PARCHMENT_EDGE, SCREEN_W // 2, 125, align="center")
+            draw_text_with_glow(
+                surface,
+                "CHOOSE A NEW ABILITY",
+                self.assets.fonts["body"],
+                C.PARCHMENT_EDGE,
+                SCREEN_W // 2,
+                125,
+                align="center",
+            )
             if len(s.active_skills) >= MAX_ACTIVE_SKILLS:
-                draw_text_with_glow(surface, "(Skill slots full — will replace an existing ability)",
-                          self.assets.fonts["tiny"], C.CRIMSON, SCREEN_W // 2, 152, align="center")
+                draw_text_with_glow(
+                    surface,
+                    "(Skill slots full — will replace an existing ability)",
+                    self.assets.fonts["tiny"],
+                    C.CRIMSON,
+                    SCREEN_W // 2,
+                    152,
+                    align="center",
+                )
 
             for i, (sk, btn) in enumerate(zip(s.pending_levelup_skills, self.skill_buttons)):
-                hovered = (i == self.hover_idx)
-                draw_ornate_button(surface, btn, f"[{i+1}] {sk.name}", self.assets.fonts["body"],
-                                   hover=hovered, color=C.PARCHMENT_EDGE)
+                hovered = i == self.hover_idx
+                draw_ornate_button(
+                    surface, btn, f"[{i+1}] {sk.name}", self.assets.fonts["body"], hover=hovered, color=C.PARCHMENT_EDGE
+                )
                 if hovered:
                     self._draw_skill_tooltip(surface, sk, btn)
 
-            draw_ornate_button(surface, self.skip_btn, "Skip", self.assets.fonts["small"],
-                               hover=(len(s.pending_levelup_skills) == self.hover_idx), color=C.PARCHMENT_EDGE)
+            draw_ornate_button(
+                surface,
+                self.skip_btn,
+                "Skip",
+                self.assets.fonts["small"],
+                hover=(len(s.pending_levelup_skills) == self.hover_idx),
+                color=C.PARCHMENT_EDGE,
+            )
         else:
-            draw_text_with_glow(surface, "Press any key to continue...", self.assets.fonts["small"],
-                      C.INK_LIGHT, SCREEN_W // 2, 200, align="center")
+            draw_text_with_glow(
+                surface,
+                "Press any key to continue...",
+                self.assets.fonts["small"],
+                C.INK_LIGHT,
+                SCREEN_W // 2,
+                200,
+                align="center",
+            )

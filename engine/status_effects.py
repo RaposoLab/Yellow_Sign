@@ -20,9 +20,7 @@ from engine.models import StatusEffect, GameState
 # ═══════════════════════════════════════════
 
 
-def apply_status_effect_on_player(
-    state: GameState, effect_type: str, duration: int
-) -> None:
+def apply_status_effect_on_player(state: GameState, effect_type: str, duration: int) -> None:
     """Apply a status effect to the player."""
     if effect_type:
         apply_status_player(state, effect_type, duration)
@@ -51,19 +49,13 @@ def apply_status_player(state: GameState, effect_type: str, duration: int) -> No
 # ═══════════════════════════════════════════
 
 
-def process_status_effects(
-    target, is_player: bool, state: GameState
-) -> List[Tuple[str, str]]:
+def process_status_effects(target, is_player: bool, state: GameState) -> List[Tuple[str, str]]:
     """Process burning, poison, bleeding, etc. on any target. Returns list of log messages."""
     logs: List[Tuple[str, str]] = []
     to_remove: List[StatusEffect] = []
     for st in target.statuses:
         if st.type == "burning":
-            d = (
-                int(target.max_hp * BURNING_HP_PCT)
-                if hasattr(target, "max_hp")
-                else int(state.max_hp * BURNING_HP_PCT)
-            )
+            d = int(target.max_hp * BURNING_HP_PCT) if hasattr(target, "max_hp") else int(state.max_hp * BURNING_HP_PCT)
             target.hp = max(0, target.hp - d)
             who = "You burn" if is_player else f"{target.name} burns"
             logs.append((f"{who} for {d}!", "damage"))
@@ -99,9 +91,7 @@ def process_status_effects(
                 target.hp = 0
                 logs.append((f"━━ THE YELLOW SIGN CLAIMS {target.name}! ━━", "crit"))
             else:
-                logs.append(
-                    (f"The Pallid Mask fades... {target.name} endures.", "info")
-                )
+                logs.append((f"The Pallid Mask fades... {target.name} endures.", "info"))
         elif not is_player:
             logs.append((f"{st.type} wears off from {target.name}.", "info"))
         else:

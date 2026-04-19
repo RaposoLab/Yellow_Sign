@@ -1,6 +1,29 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 from screens.base import Screen
+
 
 class InventoryScreen(Screen):
     def __init__(self, game):
@@ -11,7 +34,7 @@ class InventoryScreen(Screen):
 
     def enter(self):
         # Read where we came from (set by switch_screen before enter() is called)
-        self.prev_screen = getattr(self.game, '_prev_screen_name', "explore")
+        self.prev_screen = getattr(self.game, "_prev_screen_name", "explore")
         # If we were just in combat, go back to combat
         if self.game.state and self.game.state.combat:
             self.prev_screen = "combat"
@@ -38,14 +61,21 @@ class InventoryScreen(Screen):
         s = self.game.state
 
         draw_parchment_panel(surface, 15, 10, SCREEN_W - 30, SCREEN_H - 80)
-        draw_text_with_glow(surface, "INVENTORY", self.assets.fonts["heading"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 20, align="center")
+        draw_text_with_glow(
+            surface, "INVENTORY", self.assets.fonts["heading"], C.PARCHMENT_EDGE, SCREEN_W // 2, 20, align="center"
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 150, 55, 300)
 
         # Equipped items
         slots = ["weapon", "accessory", "armor", "boots", "ringL", "ringR"]
-        slot_names = {"weapon": "WEAPON", "accessory": "ACCESSORY", "armor": "ARMOR",
-                      "boots": "BOOTS", "ringL": "LEFT RING", "ringR": "RIGHT RING"}
+        slot_names = {
+            "weapon": "WEAPON",
+            "accessory": "ACCESSORY",
+            "armor": "ARMOR",
+            "boots": "BOOTS",
+            "ringL": "LEFT RING",
+            "ringR": "RIGHT RING",
+        }
 
         draw_text_with_glow(surface, "Equipped", self.assets.fonts["body"], C.INK, 55, 68)
         y = 98
@@ -56,21 +86,24 @@ class InventoryScreen(Screen):
                 color = rarity_color(item.rarity)
                 # Line 1: slot + item name (pixel-width truncated)
                 label = f"{slot_names[slot]}: {item.name}"
-                draw_text_fitted_glow(surface, label, self.assets.fonts["small"],
-                                 color, 70, y, label_max_w)
+                draw_text_fitted_glow(surface, label, self.assets.fonts["small"], color, 70, y, label_max_w)
                 # Line 2: stats (indented)
                 stat_line = item.stat_text()
-                draw_text_fitted_glow(surface, stat_line, self.assets.fonts["tiny"],
-                                 C.INK, 90, y + 18, label_max_w - 20)
+                draw_text_fitted_glow(
+                    surface, stat_line, self.assets.fonts["tiny"], C.INK, 90, y + 18, label_max_w - 20
+                )
                 # Line 3: debuffs (if any, separate line)
                 if item.debuffs:
-                    draw_text_fitted_glow(surface, item.debuff_text(), self.assets.fonts["tiny"],
-                                     C.CRIMSON, 90, y + 34, label_max_w - 20)
+                    draw_text_fitted_glow(
+                        surface, item.debuff_text(), self.assets.fonts["tiny"], C.CRIMSON, 90, y + 34, label_max_w - 20
+                    )
                     y += 52
                 else:
                     y += 42
             else:
-                draw_text_with_glow(surface, f"{slot_names[slot]}: — empty —", self.assets.fonts["small"], C.INK_LIGHT, 70, y)
+                draw_text_with_glow(
+                    surface, f"{slot_names[slot]}: — empty —", self.assets.fonts["small"], C.INK_LIGHT, 70, y
+                )
                 y += 30
 
         # Backpack
@@ -96,19 +129,17 @@ class InventoryScreen(Screen):
                     pygame.draw.rect(surface, C.GOLD_TRIM, btn, 1, border_radius=3)
                 # Line 1: item name + slot (pixel-width truncated)
                 label = f"{i+1}. {item.name} ({item.slot.upper()})"
-                draw_text_fitted_glow(surface, label, self.assets.fonts["small"],
-                                 color, 70, y, 500)
+                draw_text_fitted_glow(surface, label, self.assets.fonts["small"], color, 70, y, 500)
                 # Line 2: stats + debuffs
                 stat_line = item.stat_text()
                 if item.debuffs:
                     stat_line += "  " + item.debuff_text()
-                draw_text_fitted_glow(surface, stat_line, self.assets.fonts["tiny"],
-                                 C.INK, 90, y + 20, 480)
+                draw_text_fitted_glow(surface, stat_line, self.assets.fonts["tiny"], C.INK, 90, y + 20, 480)
                 y += item_h + 4
 
         # Back button
         self.back_btn = pygame.Rect(SCREEN_W // 2 - 60, SCREEN_H - 65, 120, 40)
-        back_hover = (len(self.item_buttons) == self.hover_idx)
-        draw_ornate_button(surface, self.back_btn, "Back [Q]", self.assets.fonts["body"],
-                           hover=back_hover, color=C.PARCHMENT_EDGE)
-
+        back_hover = len(self.item_buttons) == self.hover_idx
+        draw_ornate_button(
+            surface, self.back_btn, "Back [Q]", self.assets.fonts["body"], hover=back_hover, color=C.PARCHMENT_EDGE
+        )

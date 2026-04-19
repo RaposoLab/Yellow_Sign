@@ -1,7 +1,7 @@
 """Combat system: orchestrates damage, status effects, and enemy AI."""
 
 import random
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, TypedDict
 
 from data import (
     ENEMIES,
@@ -31,6 +31,32 @@ from data import (
     MADNESS_NORMAL_KILL,
 )
 from engine.models import Enemy, CombatState, GameState, has_status
+
+
+class EnemySkill(TypedDict, total=False):
+    """TypedDict for enemy skill entries."""
+
+    name: str
+    type: str
+    power: float
+    effect: str
+    duration: int
+    lifesteal: float
+
+
+class EnemyData(TypedDict, total=False):
+    """TypedDict for ENEMIES/BOSS entries."""
+
+    name: str
+    type: str
+    desc: str
+    hp_mult: float
+    atk_mult: float
+    def_mult: float
+    skills: List[EnemySkill]
+    level_range: List[int]
+
+
 from engine.damage import (
     calc_player_damage,
     calc_preview_damage,
@@ -70,11 +96,7 @@ def start_combat(state: GameState, is_boss: bool = False) -> None:
     if is_boss or state.floor >= state.max_floor:
         ed = dict(BOSS)
     else:
-        pool = [
-            e
-            for e in ENEMIES
-            if e["level_range"][0] <= state.floor <= e["level_range"][1]
-        ]
+        pool = [e for e in ENEMIES if e["level_range"][0] <= state.floor <= e["level_range"][1]]  # type: ignore[index]
         ed = dict(random.choice(pool)) if pool else dict(ENEMIES[0])
 
     enemy = Enemy(ed, state.floor)
@@ -155,9 +177,7 @@ def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
         is_phys = stype == "physical"
         actual, result = apply_damage_to_player(state, dmg, is_phys)
         if actual > 0:
-            logs.append(
-                (f"{e.name} uses {skill['name']} for {actual} damage!", "damage")
-            )
+            logs.append((f"{e.name} uses {skill['name']} for {actual} damage!", "damage"))
         elif result == "evade":
             logs.append((f"You evade {e.name}'s attack!", "info"))
         elif result == "barrier":
@@ -177,15 +197,11 @@ def enemy_turn(state: GameState) -> List[Tuple[str, str]]:
         actual, result = apply_damage_to_player(state, dmg, is_phys)
 
         if skill.get("effect"):
-            apply_status_effect_on_player(
-                state, skill["effect"], skill.get("duration", 2)
-            )
+            apply_status_effect_on_player(state, skill["effect"], skill.get("duration", 2))
 
         if actual > 0:
             eff = skill.get("effect", "")
-            logs.append(
-                (f"{e.name} uses {skill['name']} for {actual} + {eff}!", "damage")
-            )
+            logs.append((f"{e.name} uses {skill['name']} for {actual} + {eff}!", "damage"))
         elif result == "evade":
             logs.append((f"You evade {e.name}'s attack!", "info"))
         else:

@@ -24,7 +24,6 @@ shared/                 Rendering & constants
   constants.py          Colors (C class), screen dims, paths, icon/sprite mappings
   assets.py             Image/font/cursor loading (Assets class)
   rendering.py          All draw functions, obsidian texture, glow text cache, HUD
-  lighting.py           Dynamic lighting system (vignette, torch flicker, status glow, depth darkness)
 
 engine/                 Game logic
   models.py             Item, Skill (@dataclass), StatusEffect, Enemy, CombatState, GameState (composed: PlayerIdentity + PlayerProgression + CombatBuffs)
@@ -139,7 +138,6 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 - Screen shake on hits, enemy intent indicator, damage preview on hover
 - Typewriter text effect, madness vignette overlay, eldritch aura on sprites
 - Floating combat damage numbers with Victorian styling
-- **Dynamic lighting system** — HP-based vignette, torch flicker, status glow, depth darkness, boss eldritch pulse
 
 ---
 
@@ -223,9 +221,10 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 - [ ] Dynamic music layers that intensify during combat or at low HP
 
 #### Visual Enhancements
-- [x] ~~Dynamic lighting — HP bars/status icons emit subtle light, flickering torches~~ — Done! Created `shared/lighting.py` with `LightingSystem`, `LightSource`, `TorchFlicker` classes. Features: HP-based vignette (red pulse at low HP), torch flicker (5-frequency organic oscillation), status glow (burning=orange, poisoned=green, bleeding=crimson, freezing=blue, doom=magenta), depth darkness (5 zones from well-lit Asylum to near-pitch-black Spiral), ambient breathing cycle, boss eldritch pulsation. Integrated into game loop, combat screen (per-turn status tracking), and explore screen. Radial gradient light textures cached for performance.
-- [x] ~~Vignette effect — darken screen edges at low HP or high madness (expand existing)~~ — Done! HP vignette with pulsing red intensity that accelerates as HP drops. Depth-based ambient darkness with 5 zones. Complements existing madness vignette (which handles the 50-100% madness range). Both systems now layer together for maximum horror atmosphere.
-- [x] ~~Enemy presence effects — boss intimidation aura distorting screen edges~~ — Done! Boss fights trigger an eldritch ambient pulse (dual-frequency purple-magenta oscillation) that intensifies as the boss loses HP, creating an oppressive cosmic horror presence effect.
+- [ ] Dynamic lighting — HP bars/status icons emit subtle light, flickering torches
+- [ ] Vignette effect — darken screen edges at low HP or high madness (expand existing)
+- [ ] Screen transitions — context-aware (red for danger, purple for eldritch, slide for explore→combat)
+- [ ] Enemy presence effects — boss intimidation aura distorting screen edges
 - [ ] Character expression variants — attack, hurt, idle breathing animation
 - [ ] Progressive blur — background blurs when modal panels open
 
@@ -284,4 +283,4 @@ Each class has ~40 skills spread across self-heal, self-shield, self-buff, physi
 
 ---
 
-*Last updated: 2026-04-19 (Dynamic lighting system: HP vignette, torch flicker, status glow, depth darkness)*
+*Last updated: 2026-04-19 (Technical debt cleanup: TypedDict, magic numbers, pre-commit hooks)*

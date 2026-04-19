@@ -9,7 +9,6 @@ from data import MADNESS_MAX, MAX_BARRIER_STACKS
 from engine.models import Skill, GameState
 from engine.skills._types import LogEntry, ShieldCalcFn
 
-
 # ═══════════════════════════════════════════
 # SHIELD CALCULATION FUNCTIONS
 # ═══════════════════════════════════════════
@@ -133,10 +132,8 @@ SHIELD_HANDLERS: Dict[str, Tuple[ShieldCalcFn, str]] = {
 
 def _handle_self_shield(state: GameState, skill: Skill) -> List[LogEntry]:
     """Handle self_shield skill type. Returns list of log messages."""
-    handler, msg_template = SHIELD_HANDLERS.get(
-        skill.shield_calc or "", (None, None)
-    )
-    if handler is None:
+    handler, msg_template = SHIELD_HANDLERS.get(skill.shield_calc or "", (None, None))
+    if handler is None or msg_template is None:
         return [(f"{skill.name} activated!", "shield")]
 
     result = handler(state, skill)

@@ -16,8 +16,26 @@ CRIT_BASE_MULT = 1.8
 DMG_VARIANCE_LOW = 0.85
 DMG_VARIANCE_RANGE = 0.3
 
-# Luck damage variance: base * (1 + random() * luck * LUCK_DMG_VARIANCE)
+# Luck damage variance: multiplied by 1 + luck * LUCK_DMG_VARIANCE
 LUCK_DMG_VARIANCE = 0.005
+
+# Luck bonus damage: multiplied by 1 + luck * LUCK_BONUS_DAMAGE_MULT
+LUCK_BONUS_DAMAGE_MULT = 0.02
+
+# Coin flip heads chance
+COIN_FLIP_HEADS_CHANCE = 0.5
+
+# Flicker dodge chance
+FLICKER_DODGE_CHANCE = 0.5
+
+# Blade Aura proc chance
+BLADE_AURA_PROC_CHANCE = 0.15
+
+# Low HP scaling max multiplier: 1 + (1 - hp_ratio) * LOW_HP_SCALING_MAX
+LOW_HP_SCALING_MAX = 2.0
+
+# Madness scaling max: 1 + madness / MADNESS_SCALING_MAX
+MADNESS_SCALING_MAX = 100
 
 # Enemy damage variance: atk * power * (ENEMY_VAR_LOW + random() * ENEMY_VAR_RANGE)
 ENEMY_VAR_LOW = 0.85
@@ -85,14 +103,14 @@ ADVANCE_FLOOR_HEAL_PCT = 0.10
 
 # Registry: buff_type → damage multiplier applied in _base_damage()
 DAMAGE_BUFF_MULTIPLIERS = {
-    "rage":        1.6,
-    "atkCritUp":   1.4,
-    "warpTime":    1.2,
-    "madPower":    1.25,
-    "darkPact":    1.3,
-    "shadowMeld":  2.0,
-    "eclipse":     1.3,
-    "ethereal":    2.5,
+    "rage": 1.6,
+    "atkCritUp": 1.4,
+    "warpTime": 1.2,
+    "madPower": 1.25,
+    "darkPact": 1.3,
+    "shadowMeld": 2.0,
+    "eclipse": 1.3,
+    "ethereal": 2.5,
     "undyingPact": 1.5,
 }
 
@@ -102,32 +120,32 @@ DAMAGE_BUFF_MULTIPLIERS = {
 
 # (buff_type, phys_pct, magic_pct) — applied in _get_buff_defense_bonus()
 DEFENSE_BUFF_TABLE = [
-    ("thoughtform",  30, 30),
-    ("ironSkin",     60, 30),
-    ("chant",        20, 20),
-    ("innerFire",    15, 15),
-    ("hallowed",     40, 40),
-    ("fortress",     80, 80),
-    ("bulwark",      60, 60),
-    ("umbralAegis",  40,  0),
-    ("mDefUp",        0, 50),
-    ("wardAura",      0, 30),
-    ("dreamShell",    0, 80),
-    ("astral",        0, 60),
+    ("thoughtform", 30, 30),
+    ("ironSkin", 60, 30),
+    ("chant", 20, 20),
+    ("innerFire", 15, 15),
+    ("hallowed", 40, 40),
+    ("fortress", 80, 80),
+    ("bulwark", 60, 60),
+    ("umbralAegis", 40, 0),
+    ("mDefUp", 0, 50),
+    ("wardAura", 0, 30),
+    ("dreamShell", 0, 80),
+    ("astral", 0, 60),
 ]
 
 # (buff_type, evasion_bonus)
 EVASION_BUFF_TABLE = [
-    ("smokeScreen",  25),
-    ("dreamVeil",    35),
-    ("evasionUp",    40),
-    ("dreamShell",   50),
-    ("umbralAegis",  60),
-    ("astral",       40),
+    ("smokeScreen", 25),
+    ("dreamVeil", 35),
+    ("evasionUp", 40),
+    ("dreamShell", 50),
+    ("umbralAegis", 60),
+    ("astral", 40),
     ("darkRegenBuff", 20),
-    ("fadeBlack",    20),
-    ("critUp",       15),
-    ("luckyDodge",   35),
+    ("fadeBlack", 20),
+    ("critUp", 15),
+    ("luckyDodge", 35),
 ]
 
 # ═══════════════════════════════════════════
@@ -184,6 +202,148 @@ MAX_BARRIER_STACKS = 3
 STAT_KEYS = ("int", "str", "agi", "wis", "luck")
 
 # ═══════════════════════════════════════════
+# ITEM GENERATION CONSTANTS
+# ═══════════════════════════════════════════
+
+# Luck bonus per point for rarity roll
+RARITY_LUCK_MULT = 1.5
+
+# Floor bonus for rarity roll
+RARITY_FLOOR_MULT = 0.8
+
+# Loot buff bonuses for rarity roll
+RARITY_NIMBLE_FINGERS_BONUS = 20
+RARITY_LOOTER_INST_BONUS = 10
+
+# Floor scaling factor for item stats: fs = 1 + (floor-1) * ITEM_FLOOR_SCALING
+ITEM_FLOOR_SCALING = 0.06
+
+# Bonus stat random range: (BONUS_STAT_BASE + random() * BONUS_STAT_RANGE) * mul * fs
+BONUS_STAT_BASE = 2
+BONUS_STAT_RANGE = 4
+
+# Cursed debuff range: ceil((CURSED_DEBUFF_BASE + random() * CURSED_DEBUFF_RANGE) * fs)
+CURSED_DEBUFF_BASE = 3
+CURSED_DEBUFF_RANGE = 5
+
+# ═══════════════════════════════════════════
+# STAT DERIVATION FORMULAS
+# ═══════════════════════════════════════════
+
+# Enemy scaling: ls = 1 + (floor - 1) * ENEMY_FLOOR_SCALING
+ENEMY_FLOOR_SCALING = 0.08
+
+# Enemy m_def = defense * ENEMY_MDEF_RATIO
+ENEMY_MDEF_RATIO = 0.8
+
+# Player ATK = ATK_BASE + str * ATK_STR_MULT + bonus_atk
+ATK_BASE = 5
+ATK_STR_MULT = 0.8
+
+# Player DEF = DEF_BASE + wis * DEF_WIS_MULT + str * DEF_STR_MULT + bonus_def
+DEF_BASE = 2
+DEF_WIS_MULT = 0.3
+DEF_STR_MULT = 0.3
+
+# Player MDEF = MDEF_BASE + wis * MDEF_WIS_MULT + int * MDEF_INT_MULT
+MDEF_BASE = 3
+MDEF_WIS_MULT = 0.6
+MDEF_INT_MULT = 0.3
+
+# Player CRIT = CRIT_BASE + agi * CRIT_AGI_MULT
+CRIT_BASE = 5
+CRIT_AGI_MULT = 1.5
+
+# Player EVA = EVA_BASE + agi * EVA_AGI_MULT
+EVA_BASE = 3
+EVA_AGI_MULT = 1.2
+
+# Accuracy formula: min(ACC_MAX, max(ACC_MIN, ACC_BASE + agi * ACC_AGI_MULT))
+ACC_BASE = 90
+ACC_MIN = 50
+ACC_MAX = 98
+ACC_AGI_MULT = 0.5
+
+# Max HP formula: HP_BASE + hp_per_level * (level-1) + str * HP_STR_MULT + bonus_hp
+HP_STR_MULT = 2.5
+
+# ═══════════════════════════════════════════
+# DAMAGE FORMULA CONSTANTS
+# ═══════════════════════════════════════════
+
+# Secondary stat contribution: sv * SECONDARY_STAT_CONTRIBUTION
+SECONDARY_STAT_CONTRIBUTION = 0.8
+
+# Luck damage variance: multiplied by 1 + luck * LUCK_DMG_VARIANCE
+# (already defined above as 0.005)
+
+# Crit multiplier formula: CRIT_BASE_MULT + luck * CRIT_LUCK_MULT
+CRIT_LUCK_MULT = 0.01
+
+# Retribution counter-attack: atk * COUNTER_ATTACK_MULT
+COUNTER_ATTACK_MULT = 0.30
+
+# ═══════════════════════════════════════════
+# SHOP CONSTANTS
+# ═══════════════════════════════════════════
+
+SHOP_ITEM_COUNT = 4
+SHOP_BASE_PRICE = 10
+SHOP_RARITY_PRICE_MULT = 8
+SHOP_RANDOM_PRICE_MAX = 10
+
+# ═══════════════════════════════════════════
+# HEAL SKILL CONSTANTS
+# ═══════════════════════════════════════════
+
+# Missing HP heal fraction (Leng's Comfort)
+HEAL_MISSING_HP_FRAC = 0.6
+
+# Various heal fractions by skill name
+HEAL_WIS15_FRAC = 0.15
+HEAL_WIS30_FRAC = 0.30
+HEAL_WIS20_FRAC = 0.20
+HEAL_WIS25_FRAC = 0.25
+
+# ═══════════════════════════════════════════
+# BUFF SKILL CONSTANTS
+# ═══════════════════════════════════════════
+
+# Blood Ritual HP cost
+BUFF_BLOOD_RITUAL_HP_PCT = 0.12
+
+# Dark Pact HP cost
+BUFF_DARK_PACT_HP_PCT = 0.15
+
+# Pallid Mask HP cost
+BUFF_PALLID_MASK_HP_PCT = 0.15
+
+# Stat swap conversion factor
+BUFF_STAT_SWAP_FACTOR = 0.5
+
+# Copy attack power multiplier
+BUFF_COPY_ATTACK_MULT = 0.5
+
+# Eldritch Bargain heal fraction
+BUFF_ELDRITCH_BARGAIN_HEAL_FRAC = 0.5
+
+# ═══════════════════════════════════════════
+# EVENT/TRAP EFFECT CONSTANTS
+# ═══════════════════════════════════════════
+
+EVENT_GOLD_REWARD = 15
+EVENT_ROB_GOLD = 20
+EVENT_OFFER_GOLD_COST = 20
+EVENT_SHOP_ITEMS_MIN_FLOOR = 3
+EVENT_TRAP_MIN_FLOOR = 2
+
+# Deface event heal / trap attack damage fraction
+EVENT_DEFACE_HEAL_PCT = 0.2
+EVENT_DRINK_HEAL_PCT = 0.3
+EVENT_DRINK_POISON_PCT = 0.2
+EVENT_RATS_DAMAGE_PCT = 0.1
+
+# ═══════════════════════════════════════════
 # VISUAL DATA — Sprite & Icon mappings
 # ═══════════════════════════════════════════
 
@@ -223,4 +383,3 @@ STAT_ICONS = {
     "wis": "Wisdom_Icon",
     "luck": "Luck_Icon",
 }
-

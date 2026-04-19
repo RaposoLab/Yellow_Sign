@@ -1,8 +1,31 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 from screens.base import Screen
 from shared import CLASS_COLORS, CLASS_ICONS
 from data import MAX_ACTIVE_SKILLS
+
 
 class StatsScreen(Screen):
     def __init__(self, game):
@@ -25,10 +48,24 @@ class StatsScreen(Screen):
         color = CLASS_COLORS.get(s.class_id, C.PARCHMENT_EDGE)
 
         draw_parchment_panel(surface, 30, 10, SCREEN_W - 60, SCREEN_H - 80)
-        draw_text_with_glow(surface, "CHARACTER STATS", self.assets.fonts["heading"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 22, align="center")
-        draw_text_with_glow(surface, f"{CLASS_ICONS.get(s.class_id, '?')} {s.class_name}  —  Level {s.level}",
-                  self.assets.fonts["body"], color, SCREEN_W // 2, 58, align="center")
+        draw_text_with_glow(
+            surface,
+            "CHARACTER STATS",
+            self.assets.fonts["heading"],
+            C.PARCHMENT_EDGE,
+            SCREEN_W // 2,
+            22,
+            align="center",
+        )
+        draw_text_with_glow(
+            surface,
+            f"{CLASS_ICONS.get(s.class_id, '?')} {s.class_name}  —  Level {s.level}",
+            self.assets.fonts["body"],
+            color,
+            SCREEN_W // 2,
+            58,
+            align="center",
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 150, 84, 300)
 
         # Class sprite
@@ -99,7 +136,9 @@ class StatsScreen(Screen):
         draw_text_with_glow(surface, "Madness", self.assets.fonts["body"], C.INK, rx, ry)
         ry += 28
         draw_bar(surface, rx, ry, 200, 14, s.madness, 100, mad_color(s.madness))
-        draw_text_with_glow(surface, f"{int(s.madness)}%", self.assets.fonts["tiny"], mad_color(s.madness), rx + 210, ry)
+        draw_text_with_glow(
+            surface, f"{int(s.madness)}%", self.assets.fonts["tiny"], mad_color(s.madness), rx + 210, ry
+        )
         ry += 28
 
         # Shield & Barrier
@@ -107,7 +146,9 @@ class StatsScreen(Screen):
             draw_text_with_glow(surface, "Defense", self.assets.fonts["body"], C.INK, rx, ry)
             ry += 28
             if s.shield > 0:
-                draw_text_with_glow(surface, f"Shield: {int(s.shield)}", self.assets.fonts["small"], C.SHIELD_BLUE, rx, ry)
+                draw_text_with_glow(
+                    surface, f"Shield: {int(s.shield)}", self.assets.fonts["small"], C.SHIELD_BLUE, rx, ry
+                )
                 ry += 24
             if s.barrier > 0:
                 draw_text_with_glow(surface, f"Barrier: x{s.barrier}", self.assets.fonts["small"], C.FROST, rx, ry)
@@ -117,8 +158,14 @@ class StatsScreen(Screen):
         skills_y = max(y, ry) + 8
         draw_gold_divider(surface, 50, skills_y, SCREEN_W - 110)
         skills_y += 10
-        draw_text_with_glow(surface, f"Active Skills ({len(s.active_skills)}/{MAX_ACTIVE_SKILLS})",
-                  self.assets.fonts["small"], C.INK, 55, skills_y)
+        draw_text_with_glow(
+            surface,
+            f"Active Skills ({len(s.active_skills)}/{MAX_ACTIVE_SKILLS})",
+            self.assets.fonts["small"],
+            C.INK,
+            55,
+            skills_y,
+        )
         skills_y += 28
 
         self.skill_buttons = []
@@ -128,14 +175,12 @@ class StatsScreen(Screen):
                 break
             btn = pygame.Rect(55, skills_y, 350, 28)
             self.skill_buttons.append(btn)
-            hovered = (i == self.hover_idx)
+            hovered = i == self.hover_idx
             label = fit_text(self.assets.fonts["tiny"], f"{sk.name}", 338)
-            draw_ornate_button(surface, btn, label, self.assets.fonts["tiny"],
-                               hover=hovered, color=C.PARCHMENT_EDGE)
+            draw_ornate_button(surface, btn, label, self.assets.fonts["tiny"], hover=hovered, color=C.PARCHMENT_EDGE)
             # Show desc on same line to the right of the button
             desc_text = fit_text(self.assets.fonts["tiny"], sk.desc, SCREEN_W - 440)
-            draw_text_with_glow(surface, desc_text, self.assets.fonts["tiny"],
-                                C.INK_LIGHT, 415, skills_y + 5)
+            draw_text_with_glow(surface, desc_text, self.assets.fonts["tiny"], C.INK_LIGHT, 415, skills_y + 5)
             # Tooltip on hover
             if hovered:
                 self._draw_skill_tooltip(surface, sk, btn)
@@ -176,5 +221,11 @@ class StatsScreen(Screen):
 
         # Back button
         self.back_btn = pygame.Rect(SCREEN_W // 2 - 60, SCREEN_H - 65, 120, 40)
-        draw_ornate_button(surface, self.back_btn, "Back [Q]", self.assets.fonts["body"],
-                           hover=(self.hover_idx == 0), color=C.PARCHMENT_EDGE)
+        draw_ornate_button(
+            surface,
+            self.back_btn,
+            "Back [Q]",
+            self.assets.fonts["body"],
+            hover=(self.hover_idx == 0),
+            color=C.PARCHMENT_EDGE,
+        )

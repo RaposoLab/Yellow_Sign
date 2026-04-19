@@ -6,8 +6,13 @@ Loads images, fonts, cursor. Handles fallbacks gracefully.
 import os
 import pygame
 from shared.constants import (
-    SCREEN_W, SCREEN_H, ASSETS_DIR, FONTS_DIR, C,
-    CLASS_SPRITE_FILES, PATH_ICON_FILES,
+    SCREEN_W,
+    SCREEN_H,
+    ASSETS_DIR,
+    FONTS_DIR,
+    C,
+    CLASS_SPRITE_FILES,
+    PATH_ICON_FILES,
 )
 from data import ENEMY_SPRITES, STAT_ICONS
 
@@ -23,6 +28,7 @@ class Assets:
         except Exception as e:
             print(f"FATAL: Asset loading failed: {e}")
             import traceback
+
             traceback.print_exc()
             raise
 
@@ -151,8 +157,15 @@ class Assets:
         decor_bold_path = os.path.join(FONTS_DIR, "CinzelDecorative-Bold.ttf")
         cinzel_path = os.path.join(FONTS_DIR, "Cinzel.ttf")
 
-        fallback_sizes = {"title": 60, "title_sm": 40, "heading": 30,
-                          "subheading": 28, "body": 24, "small": 20, "tiny": 17}
+        fallback_sizes = {
+            "title": 60,
+            "title_sm": 40,
+            "heading": 30,
+            "subheading": 28,
+            "body": 24,
+            "small": 20,
+            "tiny": 17,
+        }
 
         def _test_font(font_obj):
             try:
@@ -256,9 +269,13 @@ class Assets:
                 eld_path = decor_bold_path if os.path.exists(decor_bold_path) else None
                 if eld_path:
                     self._font_paths["eldritch"] = eld_path
-                    self.fonts["eldritch_crit"] = _try_load_font(eld_path, 28, "eldritch_crit") or self.fonts.get("heading")
+                    self.fonts["eldritch_crit"] = _try_load_font(eld_path, 28, "eldritch_crit") or self.fonts.get(
+                        "heading"
+                    )
                     self.fonts["eldritch"] = _try_load_font(eld_path, 22, "eldritch") or self.fonts.get("heading")
-                    self.fonts["eldritch_rune"] = _try_load_font(eld_path, 12, "eldritch_rune") or self.fonts.get("small")
+                    self.fonts["eldritch_rune"] = _try_load_font(eld_path, 12, "eldritch_rune") or self.fonts.get(
+                        "small"
+                    )
                     print(f"  ✓ Combat fonts loaded from {eld_path}")
                 else:
                     self._font_paths["eldritch"] = None

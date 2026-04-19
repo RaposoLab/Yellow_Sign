@@ -49,11 +49,6 @@ class ExploreScreen(Screen):
         self.typewriter = TypewriterText(self.narrative, reveal_speed=48.0)
         self.narrative_complete = False
 
-        # Clear combat lights and update status effects for explore lighting
-        self.game.lighting.clear_lights()
-        current_statuses = [st.type for st in s.statuses] if hasattr(s, "statuses") and s.statuses else []
-        self.game.lighting.set_status_effects(current_statuses)
-
         is_boss = s.floor >= s.max_floor
         if is_boss:
             self.paths = []

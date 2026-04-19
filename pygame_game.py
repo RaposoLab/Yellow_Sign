@@ -39,7 +39,6 @@ from shared import (
     draw_text_fitted_glow,
     CLASS_COLORS,
     CLASS_ICONS,
-    LightingSystem,
 )
 from screens import (
     Screen,
@@ -94,9 +93,6 @@ class Game:
                 pass  # Cursor format might not be supported on all platforms
 
         self.state = None
-
-        # Dynamic lighting system
-        self.lighting = LightingSystem()
 
         # Shared state between screens
         self.gameover_msg = ""
@@ -227,25 +223,6 @@ class Game:
             else:
                 self.screen.fill(C.DARK_BG)
             self.current_screen.draw(self.screen)
-
-            # Update and draw dynamic lighting overlay
-            if self.state and getattr(self, "_current_screen_name", None) not in ("title", "class_select"):
-                hp_ratio = self.state.hp / max(1, self.state.max_hp)
-                s = self.state
-                self.lighting.update_state(
-                    hp_ratio=hp_ratio,
-                    madness=s.madness,
-                    floor=s.floor,
-                    max_floor=s.max_floor,
-                    in_combat=(getattr(self, "_current_screen_name", None) == "combat"),
-                    enemy_hp_ratio=(
-                        (s.enemy_hp / max(1, s.enemy_max_hp))
-                        if hasattr(s, "enemy_hp") and s.enemy_max_hp > 0
-                        else 1.0
-                    ),
-                    is_boss=getattr(s, "enemy_is_boss", False),
-                )
-                self.lighting.draw(self.screen, self.time_seconds)
 
             # Draw transition overlay
             if self.transition:

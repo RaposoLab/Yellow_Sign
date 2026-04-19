@@ -9,7 +9,6 @@ from typing import List, Dict, Any, Optional
 
 from engine import GameState, Skill, Item, StatusEffect
 
-
 SAVE_DIR = os.path.join(os.path.dirname(__file__), "saves")
 SAVE_VERSION = 2
 
@@ -47,10 +46,7 @@ def save_game(state: GameState, slot: int = 0) -> str:
         "xp_next": state.xp_next,
         "kills": state.kills,
         "rooms_explored": state.rooms_explored,
-        "equipment": {
-            k: (v.to_dict() if v else None)
-            for k, v in state.equipment.items()
-        },
+        "equipment": {k: (v.to_dict() if v else None) for k, v in state.equipment.items()},
         "inventory": [item.to_dict() for item in state.inventory],
         "active_skills": [sk.to_dict() for sk in state.active_skills],
         "all_skills": [sk.to_dict() for sk in state.all_skills],
@@ -106,10 +102,7 @@ def load_game(slot: int = 0) -> Optional[GameState]:
     state.xp_next = data["xp_next"]
     state.kills = data["kills"]
     state.rooms_explored = data["rooms_explored"]
-    state.equipment = {
-        k: (Item.from_dict(v) if v else None)
-        for k, v in data["equipment"].items()
-    }
+    state.equipment = {k: (Item.from_dict(v) if v else None) for k, v in data["equipment"].items()}
     state.inventory = [Item.from_dict(d) for d in data["inventory"]]
     state.active_skills = [Skill.from_dict(d) for d in data["active_skills"]]
     state.all_skills = [Skill.from_dict(d) for d in data["all_skills"]]
@@ -130,13 +123,15 @@ def list_saves() -> List[Dict[str, Any]]:
             try:
                 with open(filepath, "r") as f:
                     data = json.load(f)
-                saves.append({
-                    "slot": i,
-                    "class_name": data.get("class_name", "Unknown"),
-                    "level": data.get("level", 1),
-                    "floor": data.get("floor", 1),
-                    "kills": data.get("kills", 0),
-                })
+                saves.append(
+                    {
+                        "slot": i,
+                        "class_name": data.get("class_name", "Unknown"),
+                        "level": data.get("level", 1),
+                        "floor": data.get("floor", 1),
+                        "kills": data.get("kills", 0),
+                    }
+                )
             except (json.JSONDecodeError, IOError, KeyError):
                 saves.append({"slot": i, "error": True})
         else:

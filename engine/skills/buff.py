@@ -11,7 +11,6 @@ from data import MADNESS_MAX, MAX_BARRIER_STACKS
 from engine.models import Skill, GameState
 from engine.skills._types import LogEntry, BuffApplyFn
 
-
 # ═══════════════════════════════════════════
 # BUFF HANDLER FUNCTIONS
 # ═══════════════════════════════════════════
@@ -191,9 +190,7 @@ def _buff_pallidMask(state: GameState, skill: Skill) -> None:
     bonuses and grants complete debuff immunity.
     """
     for stat in ("int", "str", "agi", "wis", "luck"):
-        state.temp_stats[stat] = state.temp_stats.get(stat, 0) + int(
-            state.base_stats.get(stat, 5) * 0.5
-        )
+        state.temp_stats[stat] = state.temp_stats.get(stat, 0) + int(state.base_stats.get(stat, 5) * 0.5)
     state.buffs["pallidMask"] = skill.buff_duration
     state.buffs["immunity"] = skill.buff_duration
     state.recalc_stats()
@@ -444,10 +441,7 @@ def _handle_self_buff(state: GameState, skill: Skill) -> List[LogEntry]:
     fmt["v"] = state.barrier
     fmt["d"] = skill.buff_duration
     if "stats" in fmt and isinstance(fmt["stats"], list):
-        fmt["stats"] = ", ".join(
-            s.upper() + ("+3" if buff_type == "randStat2" else "-3")
-            for s in fmt["stats"]
-        )
+        fmt["stats"] = ", ".join(s.upper() + ("+3" if buff_type == "randStat2" else "-3") for s in fmt["stats"])
     try:
         msg = msg_template.format(**fmt)
     except (KeyError, IndexError):

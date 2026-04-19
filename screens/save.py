@@ -1,7 +1,30 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+)
 from screens.base import Screen
 from save_system import save_game, load_game, list_saves
+
 
 class SaveScreen(Screen):
     def __init__(self, game):
@@ -14,7 +37,7 @@ class SaveScreen(Screen):
     def enter(self):
         self.mode = "save" if self.game.state else "load"
         # Track where we came from (set by switch_screen before enter() is called)
-        self.prev_screen = getattr(self.game, '_prev_screen_name', "explore")
+        self.prev_screen = getattr(self.game, "_prev_screen_name", "explore")
         if self.game.state and self.game.state.combat:
             self.prev_screen = "combat"
         elif not self.game.state:
@@ -62,8 +85,9 @@ class SaveScreen(Screen):
         panel_w, panel_h = 500, 430
         panel_x = SCREEN_W // 2 - panel_w // 2
         draw_parchment_panel(surface, panel_x, 20, panel_w, panel_h)
-        draw_text_with_glow(surface, title, self.assets.fonts["heading"],
-                  C.PARCHMENT_EDGE, SCREEN_W // 2, 35, align="center")
+        draw_text_with_glow(
+            surface, title, self.assets.fonts["heading"], C.PARCHMENT_EDGE, SCREEN_W // 2, 35, align="center"
+        )
         draw_gold_divider(surface, SCREEN_W // 2 - 120, 68, 240)
 
         for i, (sv, btn) in enumerate(zip(saves, self.slot_buttons)):
@@ -76,11 +100,16 @@ class SaveScreen(Screen):
             else:
                 label = f"Slot {sv['slot']}: {sv['class_name']} Lv.{sv['level']} Floor {sv['floor']}"
                 color = C.INK
-            draw_ornate_button(surface, btn, label, self.assets.fonts["body"],
-                               hover=(i == self.hover_idx), color=color)
+            draw_ornate_button(surface, btn, label, self.assets.fonts["body"], hover=(i == self.hover_idx), color=color)
 
-        draw_ornate_button(surface, self.back_btn, "Back", self.assets.fonts["body"],
-                           hover=(len(self.slot_buttons) == self.hover_idx), color=C.PARCHMENT_EDGE)
+        draw_ornate_button(
+            surface,
+            self.back_btn,
+            "Back",
+            self.assets.fonts["body"],
+            hover=(len(self.slot_buttons) == self.hover_idx),
+            color=C.PARCHMENT_EDGE,
+        )
 
 
 class LoadScreen(SaveScreen):
@@ -104,4 +133,3 @@ class LoadScreen(SaveScreen):
             for i, btn in enumerate(self.slot_buttons):
                 if btn.collidepoint(event.pos):
                     self._do_slot(i)
-

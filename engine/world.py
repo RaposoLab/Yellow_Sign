@@ -1,12 +1,73 @@
 """World systems: floor progression, events, traps, shop."""
 
 import random
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, TypedDict, cast
 
 from data import PATH_TEMPLATES, FLOOR_NARRATIVES, EVENTS, TRAPS
-from data import ADVANCE_FLOOR_HEAL_PCT
+from data import (
+    ADVANCE_FLOOR_HEAL_PCT,
+    EVENT_SHOP_ITEMS_MIN_FLOOR,
+    EVENT_TRAP_MIN_FLOOR,
+    EVENT_GOLD_REWARD,
+    EVENT_ROB_GOLD,
+    EVENT_OFFER_GOLD_COST,
+    EVENT_DEFACE_HEAL_PCT,
+    EVENT_DRINK_HEAL_PCT,
+    EVENT_DRINK_POISON_PCT,
+    EVENT_RATS_DAMAGE_PCT,
+    SHOP_ITEM_COUNT,
+    SHOP_BASE_PRICE,
+    SHOP_RARITY_PRICE_MULT,
+    SHOP_RANDOM_PRICE_MAX,
+)
 from engine.models import Item, GameState
 from engine.items import generate_item
+
+
+class PathTemplate(TypedDict):
+    """TypedDict for PATH_TEMPLATES entries."""
+
+    type: str
+    icon: str
+    name: str
+    desc: str
+    desc2: str
+    hint: str
+    weight: int
+
+
+class EventOutcome(TypedDict):
+    """TypedDict for event outcome entries."""
+
+    text: str
+    effect: str
+
+
+class Event(TypedDict):
+    """TypedDict for EVENTS entries."""
+
+    title: str
+    icon: str
+    text: str
+    outcomes: List[EventOutcome]
+
+
+class TrapOutcome(TypedDict):
+    """TypedDict for trap outcome entries."""
+
+    chance: float
+    text: str
+    dmg_pct: float
+    madness: int
+
+
+class Trap(TypedDict):
+    """TypedDict for TRAPS entries."""
+
+    name: str
+    desc: str
+    outcomes: List[TrapOutcome]
+
 
 # ═══════════════════════════════════════════
 # FLOOR PROGRESSION
@@ -17,10 +78,10 @@ def generate_paths(floor: int) -> List[Dict[str, Any]]:
     """Generate two path choices for the player."""
     weighted_pool: List[Dict[str, Any]] = []
     for pt in PATH_TEMPLATES:
-        w = pt["weight"]
-        if pt["type"] == "shop" and floor < 3:
+        w: int = int(cast(int, pt["weight"]))  # ensure int type for range()
+        if pt["type"] == "shop" and floor < EVENT_SHOP_ITEMS_MIN_FLOOR:
             w = 0
-        if pt["type"] == "trap" and floor < 2:
+        if pt["type"] == "trap" and floor < EVENT_TRAP_MIN_FLOOR:
             w = 0
         for _ in range(w):
             weighted_pool.append(pt)
@@ -49,15 +110,13 @@ def get_floor_narrative(floor: int) -> str:
 # ═══════════════════════════════════════════
 
 
-def resolve_event(
-    state: GameState, event_idx: int, outcome_idx: int
-) -> Tuple[str, Optional[Item]]:
+def resolve_event(state: GameState, event_idx: int, outcome_idx: int) -> Tuple[str, Optional[Item]]:
     """Resolve an event outcome. Returns (message, loot_item_or_None)."""
     ev = EVENTS[event_idx]
-    outcome = ev["outcomes"][outcome_idx]
-    effect = outcome["effect"]
+    outcome = ev["outcomes"][outcome_idx]  # type: ignore[index]
+    effect: str = cast(str, outcome["effect"])  # type: ignore[index]
     loot: Optional[Item] = None
-    msg = outcome["text"]
+    msg: str = cast(str, outcome["text"])  # type: ignore[index]
 
     if effect == "gain_int_2_mad_10":
         state.base_stats["int"] += 2
@@ -81,26 +140,26 @@ def resolve_event(
         state.add_madness(-5)
     elif effect == "deface_50":
         if random.random() < 0.5:
-            state.hp = min(state.max_hp, state.hp + int(state.max_hp * 0.2))
+            state.hp = min(state.max_hp, state.hp + int(state.max_hp * EVENT_DEFACE_HEAL_PCT))
             msg = "Defaced safely! Healed 20%"
         else:
             state.add_madness(12)
             msg = "The Sign retaliates! +12 MAD"
     elif effect == "drink_60":
         if random.random() < 0.6:
-            state.hp = min(state.max_hp, state.hp + int(state.max_hp * 0.3))
+            state.hp = min(state.max_hp, state.hp + int(state.max_hp * EVENT_DRINK_HEAL_PCT))
             msg = "Strange elixir heals 30%!"
         else:
-            state.hp = max(1, state.hp - int(state.max_hp * 0.2))
+            state.hp = max(1, state.hp - int(state.max_hp * EVENT_DRINK_POISON_PCT))
             msg = "Poison! Lost 20% HP"
     elif effect == "gold_15":
-        state.gold += 15
+        state.gold += int(EVENT_GOLD_REWARD)
     elif effect == "help_survivor":
         state.add_madness(10)
         loot = generate_item(state.floor, luck=state.luck, buffs=state.buffs)
         msg = f"Survivor gives you: {loot.name}"
     elif effect == "rob_survivor":
-        state.gold += 20
+        state.gold += EVENT_ROB_GOLD
         state.add_madness(5)
     elif effect == "pray_full_heal":
         state.hp = state.max_hp
@@ -110,8 +169,8 @@ def resolve_event(
         state.recalc_stats()
         state.add_madness(10)
     elif effect == "offer_gold":
-        if state.gold >= 20:
-            state.gold -= 20
+        if state.gold >= EVENT_OFFER_GOLD_COST:
+            state.gold -= EVENT_OFFER_GOLD_COST
             state.base_stats["wis"] += 3
             state.recalc_stats()
             msg = "Offering accepted! WIS+3"
@@ -126,7 +185,7 @@ def resolve_event(
     elif effect == "mad_5":
         state.add_madness(5)
     elif effect == "attack_rats":
-        state.hp = max(1, state.hp - int(state.max_hp * 0.1))
+        state.hp = max(1, state.hp - int(state.max_hp * EVENT_RATS_DAMAGE_PCT))
         state.base_stats["str"] += 1
         state.recalc_stats()
         msg = "Scattered the rats! STR+1, -10% HP"
@@ -143,18 +202,18 @@ def resolve_trap(state: GameState, trap_idx: int) -> Tuple[str, bool]:
     """Resolve a trap. Returns (message, game_over)."""
     trap = TRAPS[trap_idx]
     roll = random.random()
-    outcome = trap["outcomes"][-1]  # default to worst
-    for o in trap["outcomes"]:
-        if roll < o["chance"]:
+    outcome = trap["outcomes"][-1]  # type: ignore[index]
+    for o in trap["outcomes"]:  # type: ignore[index]
+        if roll < o["chance"]:  # type: ignore[index]
             outcome = o
             break
 
-    if outcome["dmg_pct"] > 0:
-        state.hp = max(1, state.hp - int(state.max_hp * outcome["dmg_pct"]))
-    if outcome["madness"] > 0:
-        if state.add_madness(outcome["madness"]):
-            return outcome["text"], True
-    return outcome["text"], False
+    if outcome["dmg_pct"] > 0:  # type: ignore[index]
+        state.hp = max(1, state.hp - int(state.max_hp * outcome["dmg_pct"]))  # type: ignore[index]
+    if outcome["madness"] > 0:  # type: ignore[index]
+        if state.add_madness(outcome["madness"]):  # type: ignore[index]
+            return outcome["text"], True  # type: ignore[index]
+    return outcome["text"], False  # type: ignore[index]
 
 
 # ═══════════════════════════════════════════
@@ -164,10 +223,11 @@ def resolve_trap(state: GameState, trap_idx: int) -> Tuple[str, bool]:
 
 def generate_shop(state: GameState) -> Tuple[List[Item], List[int]]:
     """Generate shop items and prices."""
-    items = [
-        generate_item(state.floor, luck=state.luck, buffs=state.buffs) for _ in range(4)
+    items = [generate_item(state.floor, luck=state.luck, buffs=state.buffs) for _ in range(SHOP_ITEM_COUNT)]
+    prices = [
+        SHOP_BASE_PRICE + (item.rarity or 1) * SHOP_RARITY_PRICE_MULT + random.randint(0, SHOP_RANDOM_PRICE_MAX)
+        for item in items
     ]
-    prices = [10 + (item.rarity or 1) * 8 + random.randint(0, 10) for item in items]
     return items, prices
 
 

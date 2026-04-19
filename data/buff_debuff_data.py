@@ -81,11 +81,9 @@ EFFECT_REGISTRY = {
         "category": "debuff",
         "color": (180, 140, 40),
     },
-
     # ═══════════════════════════════════════
     # BUFFS — positive colors
     # ═══════════════════════════════════════
-
     # Regen / healing over time
     "regen": {
         "letter": "RG",
@@ -108,7 +106,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (100, 240, 160),
     },
-
     # Defensive buffs
     "thoughtform": {
         "letter": "TF",
@@ -194,7 +191,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (200, 180, 255),
     },
-
     # Evasion buffs
     "smokeScreen": {
         "letter": "SS",
@@ -217,7 +213,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (120, 220, 140),
     },
-
     # Special defensive
     "divineInterv": {
         "letter": "DI",
@@ -303,7 +298,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (220, 100, 100),
     },
-
     # Damage buffs
     "rage": {
         "letter": "RA",
@@ -354,7 +348,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (140, 120, 200),
     },
-
     # Utility
     "madImmune": {
         "letter": "MI",
@@ -377,7 +370,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (120, 200, 220),
     },
-
     # Stat buffs (temporary)
     "permIntWis": {
         "letter": "IW",
@@ -456,7 +448,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (220, 220, 180),
     },
-
     # Barrier
     "barrier": {
         "letter": "BR",
@@ -465,7 +456,6 @@ EFFECT_REGISTRY = {
         "category": "buff",
         "color": (120, 200, 255),
     },
-
     # Misc buffs
     "abyssFort": {
         "letter": "AF",

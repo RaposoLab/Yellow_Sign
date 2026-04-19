@@ -15,6 +15,25 @@ from data import (
     ACCESSORY_TEMPLATES,
     BOOTS_TEMPLATES,
     RING_TEMPLATES,
+    ENEMY_FLOOR_SCALING,
+    ENEMY_MDEF_RATIO,
+    ATK_BASE,
+    ATK_STR_MULT,
+    DEF_BASE,
+    DEF_WIS_MULT,
+    DEF_STR_MULT,
+    MDEF_BASE,
+    MDEF_WIS_MULT,
+    MDEF_INT_MULT,
+    CRIT_BASE,
+    CRIT_AGI_MULT,
+    EVA_BASE,
+    EVA_AGI_MULT,
+    ACC_BASE,
+    ACC_MIN,
+    ACC_MAX,
+    ACC_AGI_MULT,
+    HP_STR_MULT,
 )
 
 
@@ -230,13 +249,13 @@ class Enemy:
         self.type = data.get("type", "Unknown")
         self.desc = data.get("desc", "")
         self.level_range = data.get("level_range", [1, 20])
-        ls = 1 + (floor - 1) * 0.08
+        ls = 1 + (floor - 1) * ENEMY_FLOOR_SCALING
         self.max_hp = int((60 + floor * 12) * data["hp_mult"] * ls)
         self.hp = self.max_hp
         self.atk = int((6 + floor * 2) * data["atk_mult"] * ls)
         self.base_atk = self.atk
         self.defense = int((2 + floor * 1.0) * data["def_mult"] * ls)
-        self.m_def = int(self.defense * 0.8)
+        self.m_def = int(self.defense * ENEMY_MDEF_RATIO)
         self.skills = list(data.get("skills", []))
         self.statuses = []
         self.stunned = False
@@ -443,9 +462,7 @@ class GameState:
         self.max_hp = cls["hp_base"]
         self.hp = self.max_hp
         self.all_skills = [Skill(**s) for s in cls["skills"]]
-        self.active_skills = [
-            Skill(**s) for s in cls["skills"] if s.get("starting", False)
-        ]
+        self.active_skills = [Skill(**s) for s in cls["skills"] if s.get("starting", False)]
         self.recalc_stats()
         self.hp = self.max_hp
 
@@ -489,18 +506,15 @@ class GameState:
         self.stats = s
         self.max_hp = max(
             1,
-            cls["hp_base"]
-            + cls["hp_per_level"] * (self.level - 1)
-            + int(s["str"] * 2.5)
-            + bonus_hp,
+            cls["hp_base"] + cls["hp_per_level"] * (self.level - 1) + int(s["str"] * HP_STR_MULT) + bonus_hp,
         )
-        self.atk = max(1, 5 + int(s["str"] * 0.8) + bonus_atk)
-        self.defense = max(0, 2 + int(s["wis"] * 0.3) + int(s["str"] * 0.3) + bonus_def)
-        self.m_def = max(0, 3 + int(s["wis"] * 0.6) + int(s["int"] * 0.3))
-        self.crit = max(0, 5 + s["agi"] * 1.5)
-        self.evasion = max(0, 3 + s["agi"] * 1.2)
+        self.atk = max(1, ATK_BASE + int(s["str"] * ATK_STR_MULT) + bonus_atk)
+        self.defense = max(0, DEF_BASE + int(s["wis"] * DEF_WIS_MULT) + int(s["str"] * DEF_STR_MULT) + bonus_def)
+        self.m_def = max(0, MDEF_BASE + int(s["wis"] * MDEF_WIS_MULT) + int(s["int"] * MDEF_INT_MULT))
+        self.crit = max(0, CRIT_BASE + s["agi"] * CRIT_AGI_MULT)
+        self.evasion = max(0, EVA_BASE + s["agi"] * EVA_AGI_MULT)
         self.luck = max(1, s.get("luck", 5))
-        self.accuracy = min(98, max(50, 90 + s["agi"] * 0.5))
+        self.accuracy = min(ACC_MAX, max(ACC_MIN, ACC_BASE + s["agi"] * ACC_AGI_MULT))
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
@@ -533,29 +547,18 @@ class GameState:
 
             # Filter: correct tier, not already learned
             available = [
-                s
-                for s in self.all_skills
-                if s.tier == tier
-                and not any(a.name == s.name for a in self.active_skills)
+                s for s in self.all_skills if s.tier == tier and not any(a.name == s.name for a in self.active_skills)
             ]
 
             if not available:
                 # Fallback: any tier not already learned
-                available = [
-                    s
-                    for s in self.all_skills
-                    if not any(a.name == s.name for a in self.active_skills)
-                ]
+                available = [s for s in self.all_skills if not any(a.name == s.name for a in self.active_skills)]
 
             if available:
                 # Weighted selection based on class stat priorities
                 cls_data = CLASSES[self.class_id]
-                primary_stat = max(
-                    cls_data["base_stats"], key=cls_data["base_stats"].get
-                )
-                second_stat = sorted(
-                    cls_data["base_stats"].items(), key=lambda x: x[1], reverse=True
-                )[1][0]
+                primary_stat = max(cls_data["base_stats"], key=cls_data["base_stats"].get)
+                second_stat = sorted(cls_data["base_stats"].items(), key=lambda x: x[1], reverse=True)[1][0]
 
                 weighted_pool = []
                 for s in available:
@@ -578,11 +581,7 @@ class GameState:
 
                 # Ensure we have 2 if possible
                 if len(chosen) < 2 and len(available) >= 2:
-                    remaining = [
-                        s
-                        for s in available
-                        if not any(c.name == s.name for c in chosen)
-                    ]
+                    remaining = [s for s in available if not any(c.name == s.name for c in chosen)]
                     if remaining:
                         chosen.append(random.choice(remaining))
 
