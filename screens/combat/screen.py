@@ -1,19 +1,61 @@
 import pygame
 import math
 import random
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, draw_status_icons_row, draw_status_tooltip
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_hud,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+    draw_status_icons_row,
+    draw_status_tooltip,
+    create_combat_lighting,
+)
 from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from screens.base import Screen
 from screens.combat.particles import ParticleType, PARTICLE_TYPES, create_particle, create_burst
 from screens.combat.renderer import CombatRendererMixin
-from engine import (player_use_skill, enemy_turn, check_boss_phase,
-                    tick_player_buffs, process_status_effects,
-                    process_player_status_effects, generate_item, advance_floor,
-                    combat_run_attempt, _get_enemy_intent_message,
-                    calc_preview_damage)
-from data import (XP_BASE, XP_PER_FLOOR, XP_BOSS_BONUS,
-                  GOLD_BASE, GOLD_PER_FLOOR, GOLD_BOSS_BONUS, GOLD_BASE_RANDOM_MAX,
-                  MADNESS_BOSS_KILL, MADNESS_NORMAL_KILL)
+from engine import (
+    player_use_skill,
+    enemy_turn,
+    check_boss_phase,
+    tick_player_buffs,
+    process_status_effects,
+    process_player_status_effects,
+    generate_item,
+    advance_floor,
+    combat_run_attempt,
+    _get_enemy_intent_message,
+    calc_preview_damage,
+)
+from data import (
+    XP_BASE,
+    XP_PER_FLOOR,
+    XP_BOSS_BONUS,
+    GOLD_BASE,
+    GOLD_PER_FLOOR,
+    GOLD_BOSS_BONUS,
+    GOLD_BASE_RANDOM_MAX,
+    MADNESS_BOSS_KILL,
+    MADNESS_NORMAL_KILL,
+)
 
 
 class CombatScreen(CombatRendererMixin, Screen):
@@ -59,27 +101,29 @@ class CombatScreen(CombatRendererMixin, Screen):
         self._victory_is_boss = False
 
         # Glitch phase data
-        self._glitch_intensity = 0.0       # 0-1+, ramps up over glitch phases
-        self._glitch_name_corrupted = ""   # Corrupted enemy name string
-        self._glitch_name_timer = 0.0      # Timer for name scramble refresh
-        self._glitch_bar_snap = False      # True when HP bar snaps to 0
-        self._glitch_bar_flicker = 0.0     # HP bar flicker offset (random per frame)
+        self._glitch_intensity = 0.0  # 0-1+, ramps up over glitch phases
+        self._glitch_name_corrupted = ""  # Corrupted enemy name string
+        self._glitch_name_timer = 0.0  # Timer for name scramble refresh
+        self._glitch_bar_snap = False  # True when HP bar snaps to 0
+        self._glitch_bar_flicker = 0.0  # HP bar flicker offset (random per frame)
 
         # Glitch vanish phase data
-        self._vanish_progress = 0.0        # 0-1, how far into vanish we are
-        self._vanish_opacity = 255.0       # Sprite opacity, drops to 0 during vanish
-        self._vanish_distortion = []       # Per-column distortion offsets
+        self._vanish_progress = 0.0  # 0-1, how far into vanish we are
+        self._vanish_opacity = 255.0  # Sprite opacity, drops to 0 during vanish
+        self._vanish_distortion = []  # Per-column distortion offsets
 
         # Afterimage data
-        self._afterimage_alpha = 0         # Fading silhouette alpha
-        self._afterimage_surface = None    # Cached silhouette surface
+        self._afterimage_alpha = 0  # Fading silhouette alpha
+        self._afterimage_surface = None  # Cached silhouette surface
 
         # Shared victory state
-        self._victory_fade_alpha = 0       # Final fade-to-black
+        self._victory_fade_alpha = 0  # Final fade-to-black
         self._victory_vignette_intensity = 0.0  # Tightening vignette
 
         # Eldritch symbols for name corruption
-        self._eldritch_symbols = list("\u2726\u263D\u2694\u2736\u2625\u271D\u2020\u2720\u263C\u2735\u2606\u2605\u263E\u2628\u2629\u262A")
+        self._eldritch_symbols = list(
+            "\u2726\u263d\u2694\u2736\u2625\u271d\u2020\u2720\u263c\u2735\u2606\u2605\u263e\u2628\u2629\u262a"
+        )
 
     def enter(self):
         self.damage_numbers = []
@@ -112,10 +156,11 @@ class CombatScreen(CombatRendererMixin, Screen):
         self._victory_vignette_intensity = 0.0
         # Ambient eldritch particles using new particle system
         for _ in range(25):
-            self.particles.extend(create_particle("eldritch",
-                random.uniform(0, SCREEN_W),
-                random.uniform(120, SCREEN_H),
-                count=1, spread=5))
+            self.particles.extend(
+                create_particle(
+                    "eldritch", random.uniform(0, SCREEN_W), random.uniform(120, SCREEN_H), count=1, spread=5
+                )
+            )
         # Pre-select enemy's first action and show intent
         s = self.game.state
         if s.combat:
@@ -124,6 +169,20 @@ class CombatScreen(CombatRendererMixin, Screen):
             s.combat.add_log(intent_msg, "info")
             # Spawn intent particles to draw attention
             self._spawn_intent_particles()
+
+        # Set up combat-specific dynamic lighting
+        self.game.lighting.clear_lights()
+        player_statuses = [st.type for st in s.statuses] if hasattr(s, "statuses") and s.statuses else []
+        combat_lights = create_combat_lighting(
+            player_x=120, player_y=300,
+            enemy_x=SCREEN_W - 160, enemy_y=280,
+            player_statuses=player_statuses,
+        )
+        for light in combat_lights:
+            self.game.lighting.add_light(
+                light.x, light.y, light.radius, light.color,
+                light.base_intensity, light.flicker, light.pulse_speed
+            )
 
     def _spawn_intent_particles(self):
         """Spawn atmospheric particles around the enemy intent indicator."""
@@ -134,11 +193,11 @@ class CombatScreen(CombatRendererMixin, Screen):
         sprite_y = 202
         # Spawn particles near the enemy sprite to hint at their intent
         for _ in range(8):
-            self.particles.extend(create_particle(
-                self._get_intent_particle_type(),
-                sprite_x + sprite_w // 2,
-                sprite_y - 20,
-                count=1, spread=30))
+            self.particles.extend(
+                create_particle(
+                    self._get_intent_particle_type(), sprite_x + sprite_w // 2, sprite_y - 20, count=1, spread=30
+                )
+            )
 
     def _get_intent_particle_type(self):
         """Get the appropriate particle type based on enemy intent."""
@@ -271,9 +330,12 @@ class CombatScreen(CombatRendererMixin, Screen):
                     self._corrupt_enemy_name()
                 # Occasional flicker-damage numbers
                 if random.random() < 0.08:
-                    self.add_damage_number(str(random.randint(1, 9)),
-                        random.uniform(880, 1050), random.uniform(180, 280),
-                        C.ELDRITCH_PURPLE)
+                    self.add_damage_number(
+                        str(random.randint(1, 9)),
+                        random.uniform(880, 1050),
+                        random.uniform(180, 280),
+                        C.ELDRITCH_PURPLE,
+                    )
                 # Screen micro-shake at random intervals
                 if random.random() < 0.05:
                     self.trigger_shake(intensity=2, duration=0.05)
@@ -297,14 +359,18 @@ class CombatScreen(CombatRendererMixin, Screen):
                     self.trigger_shake(intensity=4, duration=0.05)
                 # Spawn glitch particles (digital noise fragments)
                 if random.random() < 0.15:
-                    self.particles.append({
-                        "x": random.uniform(820, 1100), "y": random.uniform(120, 240),
-                        "vx": random.uniform(-2, 2), "vy": random.uniform(-1, 1),
-                        "size": random.randint(1, 4),
-                        "color": random.choice([C.ELDRITCH_PURPLE, C.CRIMSON, C.YELLOW]),
-                        "alpha": random.randint(100, 200),
-                        "life": random.uniform(0.2, 0.6),
-                    })
+                    self.particles.append(
+                        {
+                            "x": random.uniform(820, 1100),
+                            "y": random.uniform(120, 240),
+                            "vx": random.uniform(-2, 2),
+                            "vy": random.uniform(-1, 1),
+                            "size": random.randint(1, 4),
+                            "color": random.choice([C.ELDRITCH_PURPLE, C.CRIMSON, C.YELLOW]),
+                            "alpha": random.randint(100, 200),
+                            "life": random.uniform(0.2, 0.6),
+                        }
+                    )
                 # At end: snap HP bar to 0
                 if self._victory_timer >= 0.5:
                     self._glitch_bar_snap = True
@@ -314,9 +380,7 @@ class CombatScreen(CombatRendererMixin, Screen):
                     self._victory_timer = 0.0
                     # Build distortion table for per-column offsets
                     sprite_w = 240
-                    self._vanish_distortion = [
-                        random.uniform(-3, 3) for _ in range(sprite_w // 4)
-                    ]
+                    self._vanish_distortion = [random.uniform(-3, 3) for _ in range(sprite_w // 4)]
                     self._vanish_opacity = 255.0
 
             elif self._victory_state == "glitch_vanish":
@@ -343,17 +407,27 @@ class CombatScreen(CombatRendererMixin, Screen):
                     self.trigger_shake(intensity=int(4 + 10 * self._vanish_progress), duration=0.05)
                 # Glitch particles — more and more as vanish progresses
                 if random.random() < 0.2 + self._vanish_progress * 0.3:
-                    self.particles.append({
-                        "x": random.uniform(820, 1100), "y": random.uniform(160, 320),
-                        "vx": random.uniform(-3, 3), "vy": random.uniform(-2, 2),
-                        "size": random.randint(1, 5),
-                        "color": random.choice([
-                            C.ELDRITCH_PURPLE, C.CRIMSON, C.YELLOW,
-                            (90, 30, 110), (50, 15, 80), (30, 5, 50),
-                        ]),
-                        "alpha": random.randint(100, 220),
-                        "life": random.uniform(0.2, 0.8),
-                    })
+                    self.particles.append(
+                        {
+                            "x": random.uniform(820, 1100),
+                            "y": random.uniform(160, 320),
+                            "vx": random.uniform(-3, 3),
+                            "vy": random.uniform(-2, 2),
+                            "size": random.randint(1, 5),
+                            "color": random.choice(
+                                [
+                                    C.ELDRITCH_PURPLE,
+                                    C.CRIMSON,
+                                    C.YELLOW,
+                                    (90, 30, 110),
+                                    (50, 15, 80),
+                                    (30, 5, 50),
+                                ]
+                            ),
+                            "alpha": random.randint(100, 220),
+                            "life": random.uniform(0.2, 0.8),
+                        }
+                    )
 
                 if self._victory_timer >= vanish_dur:
                     # Cache the afterimage silhouette before sprite is gone
@@ -377,21 +451,28 @@ class CombatScreen(CombatRendererMixin, Screen):
                     sprite_w = 240
                     cx = SCREEN_W - sprite_w - 40 + sprite_w // 2
                     cy = 202 + 120  # Approximate center of sprite area
-                    self.particles.append({
-                        "x": cx + random.uniform(-40, 40),
-                        "y": cy + random.uniform(-20, 20),
-                        "vx": random.uniform(-0.3, 0.3),
-                        "vy": random.uniform(-1.2, -0.4),
-                        "size": random.randint(2, 5),
-                        "color": random.choice([
-                            (140, 100, 200), (80, 50, 130), (50, 15, 80),
-                            (200, 160, 40), (30, 5, 50),
-                        ]),
-                        "alpha": random.randint(40, 120),
-                        "life": random.uniform(0.8, 2.0),
-                    })
+                    self.particles.append(
+                        {
+                            "x": cx + random.uniform(-40, 40),
+                            "y": cy + random.uniform(-20, 20),
+                            "vx": random.uniform(-0.3, 0.3),
+                            "vy": random.uniform(-1.2, -0.4),
+                            "size": random.randint(2, 5),
+                            "color": random.choice(
+                                [
+                                    (140, 100, 200),
+                                    (80, 50, 130),
+                                    (50, 15, 80),
+                                    (200, 160, 40),
+                                    (30, 5, 50),
+                                ]
+                            ),
+                            "alpha": random.randint(40, 120),
+                            "life": random.uniform(0.8, 2.0),
+                        }
+                    )
                 # Add combat log horror message
-                if self._victory_timer > 0.3 and not hasattr(self, '_afterimage_logged'):
+                if self._victory_timer > 0.3 and not hasattr(self, "_afterimage_logged"):
                     self._afterimage_logged = True
                     s = self.game.state
                     c = s.combat
@@ -460,11 +541,17 @@ class CombatScreen(CombatRendererMixin, Screen):
         # Respawn ambient particles to maintain count
         ambient_count = sum(1 for p in self.particles if p.get("size", 0) <= 3 and p.get("life", 0) > 0)
         while ambient_count < 25:
-            self.particles.extend(create_particle("eldritch",
-                random.uniform(0, SCREEN_W),
-                random.uniform(120, SCREEN_H),
-                count=1, spread=5))
+            self.particles.extend(
+                create_particle(
+                    "eldritch", random.uniform(0, SCREEN_W), random.uniform(120, SCREEN_H), count=1, spread=5
+                )
+            )
             ambient_count += 1
+
+        # Update lighting system with current status effects
+        s = self.game.state
+        current_statuses = [st.type for st in s.statuses] if hasattr(s, "statuses") and s.statuses else []
+        self.game.lighting.set_status_effects(current_statuses)
 
     def _update_particles(self, dt):
         """Update all particles with physics including gravity."""
@@ -653,7 +740,9 @@ class CombatScreen(CombatRendererMixin, Screen):
             self._start_victory_animation()
         else:
             s.combat = None
-            self.game.gameover_msg = "Your body crumples. The last thing you see is the Yellow Sign, burning brighter than ever."
+            self.game.gameover_msg = (
+                "Your body crumples. The last thing you see is the Yellow Sign, burning brighter than ever."
+            )
             self.game.switch_screen("gameover")
 
     def _start_victory_animation(self):
@@ -675,7 +764,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         self._afterimage_alpha = 0
         self._afterimage_surface = None
         # Clear any stale logged flag
-        if hasattr(self, '_afterimage_logged'):
+        if hasattr(self, "_afterimage_logged"):
             del self._afterimage_logged
         self._victory_state = "glitch_onset"
         # Initial screen crack
@@ -694,9 +783,9 @@ class CombatScreen(CombatRendererMixin, Screen):
         indices = list(range(len(name_chars)))
         random.shuffle(indices)
         for i in indices[:num_to_corrupt]:
-            if name_chars[i] != ' ':
+            if name_chars[i] != " ":
                 name_chars[i] = random.choice(self._eldritch_symbols)
-        self._glitch_name_corrupted = ''.join(name_chars)
+        self._glitch_name_corrupted = "".join(name_chars)
 
     def _build_afterimage(self):
         """Create a dark silhouette surface from the enemy sprite for the afterimage phase."""
@@ -767,7 +856,12 @@ class CombatScreen(CombatRendererMixin, Screen):
 
         s.kills += 1
         xp_g = XP_BASE + s.floor * XP_PER_FLOOR + (XP_BOSS_BONUS if c.is_boss else 0)
-        gold_g = GOLD_BASE + random.randint(0, GOLD_BASE_RANDOM_MAX) + s.floor * GOLD_PER_FLOOR + (GOLD_BOSS_BONUS if c.is_boss else 0)
+        gold_g = (
+            GOLD_BASE
+            + random.randint(0, GOLD_BASE_RANDOM_MAX)
+            + s.floor * GOLD_PER_FLOOR
+            + (GOLD_BOSS_BONUS if c.is_boss else 0)
+        )
         s.xp += xp_g
         s.gold += gold_g
         s.add_madness(MADNESS_BOSS_KILL if c.is_boss else MADNESS_NORMAL_KILL)
@@ -775,8 +869,12 @@ class CombatScreen(CombatRendererMixin, Screen):
         leveled = s.check_level_up()
 
         self.game.combat_result = {
-            "victory": True, "xp": xp_g, "gold": gold_g,
-            "loot": loot, "is_boss": c.is_boss, "leveled": leveled,
+            "victory": True,
+            "xp": xp_g,
+            "gold": gold_g,
+            "loot": loot,
+            "is_boss": c.is_boss,
+            "leveled": leveled,
         }
         # Clear combat FIRST (so draw() early-returns), then victory state
         s.combat = None

@@ -8,30 +8,64 @@ import os
 import sys
 import random
 
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 import pygame
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from shared import (
-    C, SCREEN_W, SCREEN_H, FPS, Assets, draw_hud,
-    draw_text, draw_text_wrapped, fit_text, draw_text_fitted,
-    draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button,
-    draw_gold_divider, hp_color, mad_color, rarity_color,
-    generate_parchment_texture, draw_parchment_panel,
-    draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow,
-    CLASS_COLORS, CLASS_ICONS,
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    FPS,
+    Assets,
+    draw_hud,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+    CLASS_COLORS,
+    CLASS_ICONS,
+    LightingSystem,
 )
 from screens import (
-    Screen, TitleScreen, ClassSelectScreen, ExploreScreen, CombatScreen,
-    InventoryScreen, ShopScreen, RestScreen, LootScreen, EventScreen,
-    TrapResultScreen, CombatResultScreen, LevelUpScreen, GameOverScreen,
-    VictoryScreen, StatsScreen, SaveScreen, LoadScreen,
+    Screen,
+    TitleScreen,
+    ClassSelectScreen,
+    ExploreScreen,
+    CombatScreen,
+    InventoryScreen,
+    ShopScreen,
+    RestScreen,
+    LootScreen,
+    EventScreen,
+    TrapResultScreen,
+    CombatResultScreen,
+    LevelUpScreen,
+    GameOverScreen,
+    VictoryScreen,
+    StatsScreen,
+    SaveScreen,
+    LoadScreen,
 )
 
 # ═══════════════════════════════════════════
 # MAIN GAME CLASS
 # ═══════════════════════════════════════════
+
 
 class Game:
     def __init__(self):
@@ -60,6 +94,9 @@ class Game:
                 pass  # Cursor format might not be supported on all platforms
 
         self.state = None
+
+        # Dynamic lighting system
+        self.lighting = LightingSystem()
 
         # Shared state between screens
         self.gameover_msg = ""
@@ -117,7 +154,7 @@ class Game:
     def get_bg(self, screen_name=None):
         """Get context-appropriate background, scaled to current window size."""
         if screen_name is None:
-            screen_name = getattr(self, '_current_screen_name', "title")
+            screen_name = getattr(self, "_current_screen_name", "title")
         floor = self.state.floor if self.state else 1
         max_floor = self.state.max_floor if self.state else 20
         bg = self.assets.get_background(floor, max_floor, screen_name)
@@ -143,7 +180,7 @@ class Game:
         """Immediately complete a pending or forced transition."""
         target = name or self._pending_screen
         if target and target in self.screens:
-            self._prev_screen_name = getattr(self, '_current_screen_name', "title")
+            self._prev_screen_name = getattr(self, "_current_screen_name", "title")
             self._current_screen_name = target
             self.current_screen = self.screens[target]
             self.current_screen.enter()
@@ -179,7 +216,7 @@ class Game:
 
             if not self.transition or self.transition == "fadeIn":
                 self.current_screen.update(dt)
-                
+
             # Update total game time for animations
             self.time_seconds += dt
 
@@ -190,6 +227,25 @@ class Game:
             else:
                 self.screen.fill(C.DARK_BG)
             self.current_screen.draw(self.screen)
+
+            # Update and draw dynamic lighting overlay
+            if self.state and getattr(self, "_current_screen_name", None) not in ("title", "class_select"):
+                hp_ratio = self.state.hp / max(1, self.state.max_hp)
+                s = self.state
+                self.lighting.update_state(
+                    hp_ratio=hp_ratio,
+                    madness=s.madness,
+                    floor=s.floor,
+                    max_floor=s.max_floor,
+                    in_combat=(getattr(self, "_current_screen_name", None) == "combat"),
+                    enemy_hp_ratio=(
+                        (s.enemy_hp / max(1, s.enemy_max_hp))
+                        if hasattr(s, "enemy_hp") and s.enemy_max_hp > 0
+                        else 1.0
+                    ),
+                    is_boss=getattr(s, "enemy_is_boss", False),
+                )
+                self.lighting.draw(self.screen, self.time_seconds)
 
             # Draw transition overlay
             if self.transition:
@@ -216,6 +272,7 @@ if __name__ == "__main__":
         game.run()
     except Exception as e:
         import traceback
+
         print("\n" + "=" * 50)
         print("CRASH REPORT — The King in Yellow")
         print("=" * 50)

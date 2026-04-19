@@ -1,9 +1,35 @@
 import pygame
-from shared import C, SCREEN_W, SCREEN_H, Assets, draw_hud, draw_text, draw_text_wrapped, fit_text, draw_text_fitted, draw_bar, draw_panel, draw_ornate_panel, draw_ornate_button, draw_gold_divider, hp_color, mad_color, rarity_color, generate_parchment_texture, draw_parchment_panel, draw_text_with_glow, draw_text_wrapped_glow, draw_text_fitted_glow, TypewriterText, draw_madness_vignette
+from shared import (
+    C,
+    SCREEN_W,
+    SCREEN_H,
+    Assets,
+    draw_hud,
+    draw_text,
+    draw_text_wrapped,
+    fit_text,
+    draw_text_fitted,
+    draw_bar,
+    draw_panel,
+    draw_ornate_panel,
+    draw_ornate_button,
+    draw_gold_divider,
+    hp_color,
+    mad_color,
+    rarity_color,
+    generate_parchment_texture,
+    draw_parchment_panel,
+    draw_text_with_glow,
+    draw_text_wrapped_glow,
+    draw_text_fitted_glow,
+    TypewriterText,
+    draw_madness_vignette,
+)
 import random
 from screens.base import Screen
 from data import EVENTS, TRAPS, FLOOR_NARRATIVES
 from engine import start_combat, generate_paths, resolve_trap, generate_shop, advance_floor
+
 
 class ExploreScreen(Screen):
     def __init__(self, game):
@@ -22,7 +48,12 @@ class ExploreScreen(Screen):
         # Initialize typewriter effect for floor narrative
         self.typewriter = TypewriterText(self.narrative, reveal_speed=48.0)
         self.narrative_complete = False
-        
+
+        # Clear combat lights and update status effects for explore lighting
+        self.game.lighting.clear_lights()
+        current_statuses = [st.type for st in s.statuses] if hasattr(s, "statuses") and s.statuses else []
+        self.game.lighting.set_status_effects(current_statuses)
+
         is_boss = s.floor >= s.max_floor
         if is_boss:
             self.paths = []
@@ -83,7 +114,7 @@ class ExploreScreen(Screen):
             if p["life"] <= 0 or p["y"] < 120:
                 new_p = self._new_dust_particle()
                 p.update(new_p)
-        
+
         # Update typewriter animation
         if self.typewriter and not self.typewriter.complete:
             self.typewriter.update(dt)
@@ -97,7 +128,7 @@ class ExploreScreen(Screen):
             if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1):
                 self.typewriter.skip()
                 return  # Consume the event
-        
+
         # Track hover for all buttons
         all_btns = self.path_buttons + list(self.cmd_buttons.values())
         self.update_hover(event, all_btns)
@@ -199,22 +230,32 @@ class ExploreScreen(Screen):
         # Draw narrative text with typewriter effect
         if self.typewriter:
             visible_text = self.typewriter.get_visible_text()
-            draw_text_wrapped_glow(surface, visible_text, self.assets.fonts["small"],
-                              C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22)
-            
+            draw_text_wrapped_glow(
+                surface, visible_text, self.assets.fonts["small"], C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22
+            )
+
             # Show "click to skip" hint if still typing
             if not self.typewriter.complete:
                 skip_hint = "Click to skip..."
-                draw_text_with_glow(surface, skip_hint, self.assets.fonts["tiny"],
-                          C.ASH, SCREEN_W // 2, 310, align="center")
+                draw_text_with_glow(
+                    surface, skip_hint, self.assets.fonts["tiny"], C.ASH, SCREEN_W // 2, 310, align="center"
+                )
         else:
-            draw_text_wrapped_glow(surface, self.narrative, self.assets.fonts["small"],
-                              C.INK, SCREEN_W // 2 - 270, 155, 540, line_height=22)
+            draw_text_wrapped_glow(
+                surface,
+                self.narrative,
+                self.assets.fonts["small"],
+                C.INK,
+                SCREEN_W // 2 - 270,
+                155,
+                540,
+                line_height=22,
+            )
 
         # Path choices — side by side cards
         if self.paths:
             for i, (path, btn) in enumerate(zip(self.paths, self.path_buttons)):
-                hovered = (i == self.hover_idx)
+                hovered = i == self.hover_idx
                 ptype = path["type"]
 
                 # Draw parchment card background with hover effect
@@ -244,22 +285,28 @@ class ExploreScreen(Screen):
                 name_text = path["name"]
                 name_font = self.assets.fonts["body"]
                 name_text = fit_text(name_font, name_text, text_max_w)
-                draw_text_with_glow(surface, name_text, name_font,
-                                    C.INK, text_center_x, text_top, align="center")
+                draw_text_with_glow(surface, name_text, name_font, C.INK, text_center_x, text_top, align="center")
 
                 # Line 2: elaborated description (wrapped if needed)
                 desc_text = path.get("desc2", path["desc"])
                 desc_font = self.assets.fonts["small"]
                 desc_y = text_top + 24
-                draw_text_wrapped_glow(surface, desc_text, desc_font,
-                                       C.INK_LIGHT, btn.x + 20, desc_y, text_max_w, line_height=18)
+                draw_text_wrapped_glow(
+                    surface, desc_text, desc_font, C.INK_LIGHT, btn.x + 20, desc_y, text_max_w, line_height=18
+                )
 
         # Bottom commands
         cmd_names = list(self.cmd_buttons.keys())
         for ci, (name, btn) in enumerate(self.cmd_buttons.items()):
             labels = {"inventory": "Inventory [I]", "stats": "Stats [T]", "save": "Save [S]", "menu": "Menu"}
-            draw_ornate_button(surface, btn, labels[name], self.assets.fonts["small"],
-                               hover=((len(self.path_buttons) + ci) == self.hover_idx), color=C.PARCHMENT_EDGE)
-        
+            draw_ornate_button(
+                surface,
+                btn,
+                labels[name],
+                self.assets.fonts["small"],
+                hover=((len(self.path_buttons) + ci) == self.hover_idx),
+                color=C.PARCHMENT_EDGE,
+            )
+
         # Draw madness vignette effect (darkness at screen edges based on madness level)
         draw_madness_vignette(surface, s.madness, 0.016, self.game.time_seconds)

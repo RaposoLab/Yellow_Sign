@@ -7,6 +7,7 @@ Submodules:
   constants  — Screen dimensions, colors, class mappings
   assets     — Asset loader (images, fonts, cursor)
   rendering  — Drawing helpers, textures, glow text, HUD
+  lighting   — Dynamic lighting system (vignette, torch flicker, status glow)
 """
 
 # Constants
@@ -35,6 +36,14 @@ from shared.rendering import (
     TypewriterText,
     # Madness vignette and eldritch aura effects
     draw_madness_vignette, draw_eldritch_aura,
+)
+
+# Dynamic lighting system
+from shared.lighting import (
+    LightingSystem,
+    LightSource,
+    TorchFlicker,
+    create_combat_lighting,
 )
 
 # Also re-export data imports that were previously in shared.py's namespace
