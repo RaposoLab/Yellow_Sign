@@ -8,6 +8,7 @@ Submodules:
   assets     — Asset loader (images, fonts, cursor)
   rendering  — Drawing helpers, textures, glow text, HUD
   lighting   — Dynamic lighting system (vignette, torch flicker, status glow)
+  logger     — Centralized logging system (replaces print() calls)
 """
 
 # Constants
@@ -74,6 +75,9 @@ from shared.lighting import (
     TorchFlicker,
     create_combat_lighting,
 )
+
+# Logging system — available for all modules
+from shared.logger import get_logger, configure_logging, set_level, shutdown as shutdown_logging
 
 # Also re-export data imports that were previously in shared.py's namespace
 # (screens import these from shared, not from data directly)

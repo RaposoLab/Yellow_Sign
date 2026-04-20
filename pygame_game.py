@@ -13,6 +13,27 @@ import pygame
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from shared.logger import configure_logging, get_logger, shutdown as shutdown_logging
+from config import get_settings
+
+# ═══════════════════════════════════════════
+# EARLY INITIALIZATION
+# ═══════════════════════════════════════════
+
+# Load settings and configure logging BEFORE importing heavy modules
+settings = get_settings()
+
+configure_logging(
+    level=settings.get("logging.level", "INFO"),
+    log_to_file=settings.get("logging.log_to_file", False),
+    log_file=settings.get("logging.log_file", "logs/game.log"),
+    console_format=settings.get("logging.console_format"),
+    file_format=settings.get("logging.file_format"),
+)
+
+logger = get_logger("main")
+
+# Now import game modules (they will use the configured logger)
 from shared import (
     C,
     SCREEN_W,
@@ -68,19 +89,40 @@ from screens import (
 
 class Game:
     def __init__(self):
+        logger.info("The King in Yellow — Initializing...")
+
         pygame.init()
-        self.fullscreen = False
+
+        # Read display settings from config
+        self.fullscreen = settings.get("display.fullscreen", False)
+
         try:
-            self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+            if self.fullscreen:
+                info = pygame.display.Info()
+                self.screen = pygame.display.set_mode(
+                    (info.current_w, info.current_h), pygame.FULLSCREEN
+                )
+                logger.info("Display: fullscreen mode (%dx%d)", info.current_w, info.current_h)
+            else:
+                screen_w = settings.get("display.screen_width", SCREEN_W)
+                screen_h = settings.get("display.screen_height", SCREEN_H)
+                self.screen = pygame.display.set_mode((screen_w, screen_h))
+                logger.info("Display: windowed mode (%dx%d)", screen_w, screen_h)
         except pygame.error as e:
-            print(f"Display error: {e}")
-            print("Try: export SDL_VIDEODRIVER=x11 (or wayland, windows, cocoa)")
+            logger.error("Display initialization failed: %s", e)
+            logger.error("Try: export SDL_VIDEODRIVER=x11 (or wayland, windows, cocoa)")
             sys.exit(1)
+
         pygame.display.set_caption("The King in Yellow — A Lovecraftian Dungeon Crawler")
+
+        fps = settings.get("display.fps", FPS)
         self.clock = pygame.time.Clock()
         self.running = True
 
+        # Load assets
+        logger.info("Loading assets...")
         self.assets = Assets()
+        logger.info("Assets loaded successfully")
 
         # Track total game time for animations
         self.time_seconds = 0.0
@@ -89,8 +131,9 @@ class Game:
         if self.assets.cursor:
             try:
                 pygame.mouse.set_cursor(self.assets.cursor)
+                logger.debug("Custom cursor applied")
             except Exception:
-                pass  # Cursor format might not be supported on all platforms
+                logger.debug("Custom cursor not supported on this platform")
 
         self.state = None
 
@@ -136,7 +179,11 @@ class Game:
         self.transition_timer = 0
         self.transition_duration = 0.3  # seconds per phase
         self._pending_screen = None
-        self._transition_surface = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+
+        sw, sh = self.screen.get_size()
+        self._transition_surface = pygame.Surface((sw, sh), pygame.SRCALPHA)
+
+        logger.info("Game initialized — entering title screen")
 
     def toggle_fullscreen(self):
         """Toggle between fullscreen and windowed mode."""
@@ -144,8 +191,16 @@ class Game:
         if self.fullscreen:
             info = pygame.display.Info()
             self.screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
+            logger.info("Switched to fullscreen (%dx%d)", info.current_w, info.current_h)
         else:
-            self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+            screen_w = settings.get("display.screen_width", SCREEN_W)
+            screen_h = settings.get("display.screen_height", SCREEN_H)
+            self.screen = pygame.display.set_mode((screen_w, screen_h))
+            logger.info("Switched to windowed (%dx%d)", screen_w, screen_h)
+
+        # Recreate transition surface for new size
+        sw, sh = self.screen.get_size()
+        self._transition_surface = pygame.Surface((sw, sh), pygame.SRCALPHA)
 
     def get_bg(self, screen_name=None):
         """Get context-appropriate background, scaled to current window size."""
@@ -163,6 +218,7 @@ class Game:
 
     def switch_screen(self, name):
         if name not in self.screens:
+            logger.warning("Attempted to switch to unknown screen: %s", name)
             return
         if self.transition is not None:
             # Already transitioning — force complete immediately
@@ -171,6 +227,7 @@ class Game:
         self.transition = "fadeOut"
         self.transition_timer = 0
         self._pending_screen = name
+        logger.debug("Screen transition: fadeOut → %s", name)
 
     def _finish_transition(self, name=None):
         """Immediately complete a pending or forced transition."""
@@ -180,13 +237,15 @@ class Game:
             self._current_screen_name = target
             self.current_screen = self.screens[target]
             self.current_screen.enter()
+            logger.debug("Screen transition complete: %s → %s", self._prev_screen_name, target)
         self.transition = None
         self.transition_timer = 0
         self._pending_screen = None
 
     def run(self):
+        fps = settings.get("display.fps", FPS)
         while self.running:
-            dt = self.clock.tick(FPS) / 1000.0
+            dt = self.clock.tick(fps) / 1000.0
 
             # Handle transition timing
             if self.transition:
@@ -236,7 +295,9 @@ class Game:
 
             pygame.display.flip()
 
+        logger.info("Game loop ended — shutting down")
         pygame.quit()
+        shutdown_logging()
 
 
 # ═══════════════════════════════════════════
@@ -250,15 +311,14 @@ if __name__ == "__main__":
     except Exception as e:
         import traceback
 
-        print("\n" + "=" * 50)
-        print("CRASH REPORT — The King in Yellow")
-        print("=" * 50)
-        traceback.print_exc()
-        print("=" * 50)
+        logger.critical("CRASH REPORT — The King in Yellow")
+        logger.critical("Fatal exception: %s", e, exc_info=True)
         try:
             input("\nPress Enter to exit...")
         except EOFError:
             pass
+        shutdown_logging()
     except KeyboardInterrupt:
-        print("\n\nThe Yellow Sign fades. For now.")
+        logger.info("The Yellow Sign fades. For now.")
+        shutdown_logging()
         sys.exit(0)

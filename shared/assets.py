@@ -1,6 +1,7 @@
 """
 THE KING IN YELLOW — Asset Loader
 Loads images, fonts, cursor. Handles fallbacks gracefully.
+Uses the logging system instead of print() for all diagnostics.
 """
 
 import os
@@ -15,6 +16,9 @@ from shared.constants import (
     PATH_ICON_FILES,
 )
 from data import ENEMY_SPRITES, STAT_ICONS
+from shared.logger import get_logger
+
+logger = get_logger("assets")
 
 
 class Assets:
@@ -26,10 +30,7 @@ class Assets:
         try:
             self.load()
         except Exception as e:
-            print(f"FATAL: Asset loading failed: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.critical("FATAL: Asset loading failed: %s", e, exc_info=True)
             raise
 
     def load(self):
@@ -42,11 +43,11 @@ class Assets:
                     self.images[f"class_{class_id}"] = img
                     self.images[f"class_{class_id}_combat"] = pygame.transform.scale(img, (220, 220))
                     self.images[f"class_{class_id}_thumb"] = pygame.transform.scale(img, (90, 90))
-                    print(f"  ✓ Class sprite loaded: {class_id} ({img.get_width()}x{img.get_height()})")
+                    logger.debug("Class sprite loaded: %s (%dx%d)", class_id, img.get_width(), img.get_height())
                 except Exception as e:
-                    print(f"  ✗ Warning: failed to load {path}: {e}")
+                    logger.warning("Failed to load class sprite: %s — %s", path, e)
             else:
-                print(f"Warning: {path} not found")
+                logger.warning("Class sprite not found: %s", path)
 
         # --- Enemy sprites ---
         sprite_map = {
@@ -67,9 +68,9 @@ class Assets:
                     self.images[f"{key}_combat"] = pygame.transform.scale(img, (240, 240))
                     self.images[f"{key}_small"] = pygame.transform.scale(img, (80, 80))
                 except Exception as e:
-                    print(f"Warning: failed to load {path}: {e}")
+                    logger.warning("Failed to load enemy sprite: %s — %s", path, e)
             else:
-                print(f"Warning: {path} not found")
+                logger.warning("Enemy sprite not found: %s", path)
 
         # --- Backgrounds ---
         path = os.path.join(ASSETS_DIR, "Dungeon_background.jfif")
@@ -78,9 +79,9 @@ class Assets:
                 img = pygame.image.load(path).convert()
                 self.images["bg_dungeon"] = pygame.transform.scale(img, (SCREEN_W, SCREEN_H))
             except Exception as e:
-                print(f"Warning: failed to load dungeon bg: {e}")
+                logger.warning("Failed to load dungeon background: %s", e)
         else:
-            print(f"Warning: {path} not found")
+            logger.warning("Dungeon background not found: %s", path)
 
         path = os.path.join(ASSETS_DIR, "Game_Over_Screen.jfif")
         if os.path.exists(path):
@@ -88,9 +89,9 @@ class Assets:
                 img = pygame.image.load(path).convert()
                 self.images["bg_gameover"] = pygame.transform.scale(img, (SCREEN_W, SCREEN_H))
             except Exception as e:
-                print(f"Warning: failed to load gameover bg: {e}")
+                logger.warning("Failed to load gameover background: %s", e)
         else:
-            print(f"Warning: {path} not found")
+            logger.warning("Gameover background not found: %s", path)
 
         path = os.path.join(ASSETS_DIR, "bg_boss.jpg")
         if os.path.exists(path):
@@ -113,8 +114,9 @@ class Assets:
                 img = pygame.image.load(path).convert_alpha()
                 cursor_scaled = pygame.transform.scale(img, (32, 32))
                 self.cursor = pygame.cursors.Cursor((0, 0), cursor_scaled)
+                logger.debug("Custom cursor loaded")
             except Exception as e:
-                print(f"Warning: failed to load cursor: {e}")
+                logger.warning("Failed to load cursor: %s", e)
 
         # --- Text box sample ---
         path = os.path.join(ASSETS_DIR, "transparent-Text-box-Sample.png")
@@ -123,7 +125,7 @@ class Assets:
                 img = pygame.image.load(path).convert_alpha()
                 self.images["text_box_sample"] = img
             except Exception as e:
-                print(f"Warning: failed to load text box sample: {e}")
+                logger.warning("Failed to load text box sample: %s", e)
 
         # --- Stat icons ---
         for stat_key, filename in STAT_ICONS.items():
@@ -134,7 +136,7 @@ class Assets:
                         img = pygame.image.load(path).convert_alpha()
                         self.images[f"stat_{stat_key}_{size_suffix}"] = img
                     except Exception as e:
-                        print(f"Warning: failed to load {path}: {e}")
+                        logger.warning("Failed to load stat icon: %s — %s", path, e)
 
         # --- Path choice icons ---
         for ptype, filename in PATH_ICON_FILES.items():
@@ -143,11 +145,11 @@ class Assets:
                 try:
                     img = pygame.image.load(path).convert_alpha()
                     self.images[f"path_{ptype}"] = pygame.transform.scale(img, (150, 150))
-                    print(f"  ✓ Path icon loaded: {ptype} ({filename})")
+                    logger.debug("Path icon loaded: %s (%s)", ptype, filename)
                 except Exception as e:
-                    print(f"Warning: failed to load path icon {path}: {e}")
+                    logger.warning("Failed to load path icon: %s — %s", path, e)
             else:
-                print(f"Warning: path icon not found: {path}")
+                logger.warning("Path icon not found: %s", path)
 
         # --- Fonts ---
         self._load_fonts()
@@ -180,10 +182,10 @@ class Assets:
                 if _test_font(f):
                     return f
                 else:
-                    print(f"  ✗ Font loaded but cannot render: {path} (size {size})")
+                    logger.warning("Font loaded but cannot render: %s (size %d)", path, size)
                     return None
             except Exception as e:
-                print(f"  ✗ Font load error: {path} — {e}")
+                logger.warning("Font load error: %s — %s", path, e)
                 return None
 
         try:
@@ -197,7 +199,7 @@ class Assets:
                     self.fonts["title_sm"] = f_title_sm
                     self.fonts["heading"] = f_heading
                     decor_loaded = True
-                    print(f"  ✓ Decorative font loaded: {decor_path}")
+                    logger.info("Decorative font loaded: %s", decor_path)
 
             if not decor_loaded:
                 if os.path.exists(decor_bold_path):
@@ -207,15 +209,15 @@ class Assets:
                         self.fonts["title_sm"] = _try_load_font(decor_bold_path, 36, "title_sm") or f_title
                         self.fonts["heading"] = _try_load_font(decor_bold_path, 28, "heading") or f_title
                         decor_loaded = True
-                        print(f"  ✓ Decorative bold font loaded: {decor_bold_path}")
+                        logger.info("Decorative bold font loaded: %s", decor_bold_path)
 
             if not decor_loaded:
-                print(f"  ✗ No decorative font available, using system fallback")
+                logger.warning("No decorative font available, using system fallback")
                 self.fonts["title"] = pygame.font.SysFont("serif", 62, bold=True)
                 self.fonts["title_sm"] = pygame.font.SysFont("serif", 38, bold=True)
                 self.fonts["heading"] = pygame.font.SysFont("serif", 32, bold=True)
         except Exception as e:
-            print(f"  ✗ Decorative font section error: {e}")
+            logger.error("Decorative font section error: %s", e)
 
         try:
             cinzel_loaded = False
@@ -227,16 +229,16 @@ class Assets:
                     self.fonts["small"] = _try_load_font(cinzel_path, 18, "small") or f_body
                     self.fonts["tiny"] = _try_load_font(cinzel_path, 15, "tiny") or f_body
                     cinzel_loaded = True
-                    print(f"  ✓ Body font loaded: {cinzel_path}")
+                    logger.info("Body font loaded: %s", cinzel_path)
 
             if not cinzel_loaded:
-                print(f"  ✗ No body font available, using system fallback")
+                logger.warning("No body font available, using system fallback")
                 self.fonts["subheading"] = pygame.font.SysFont("georgia", 28, bold=True)
                 self.fonts["body"] = pygame.font.SysFont("georgia", 22)
                 self.fonts["small"] = pygame.font.SysFont("georgia", 18)
                 self.fonts["tiny"] = pygame.font.SysFont("georgia", 15)
         except Exception as e:
-            print(f"  ✗ Body font section error: {e}")
+            logger.error("Body font section error: %s", e)
 
         # Final fallback
         for key, size in fallback_sizes.items():
@@ -245,13 +247,13 @@ class Assets:
                     fallback = pygame.font.Font(None, size)
                     if _test_font(fallback):
                         self.fonts[key] = fallback
-                        print(f"  ✗ Font '{key}' using emergency default")
+                        logger.debug("Font '%s' using emergency default", key)
                     else:
                         self.fonts[key] = pygame.font.SysFont("arial", size)
-                        print(f"  ✗ Font '{key}' using arial fallback")
+                        logger.debug("Font '%s' using arial fallback", key)
                 except Exception:
                     self.fonts[key] = pygame.font.SysFont("arial", size)
-                    print(f"  ✗ Font '{key}' using arial fallback (last resort)")
+                    logger.debug("Font '%s' using arial fallback (last resort)", key)
 
         # ── Eldritch Combat Fonts ──
         # Slender Victorian serif for menacing, elegant damage numbers
@@ -263,7 +265,7 @@ class Assets:
                 self.fonts["eldritch_crit"] = _try_load_font(eld_path, 28, "eldritch_crit") or self.fonts.get("heading")
                 self.fonts["eldritch"] = _try_load_font(eld_path, 22, "eldritch") or self.fonts.get("heading")
                 self.fonts["eldritch_rune"] = _try_load_font(eld_path, 12, "eldritch_rune") or self.fonts.get("small")
-                print(f"  ✓ Victorian combat fonts loaded from {eld_path}")
+                logger.debug("Victorian combat fonts loaded from %s", eld_path)
             else:
                 # Fallback to Cinzel Decorative Bold if condensed serif unavailable
                 eld_path = decor_bold_path if os.path.exists(decor_bold_path) else None
@@ -276,15 +278,15 @@ class Assets:
                     self.fonts["eldritch_rune"] = _try_load_font(eld_path, 12, "eldritch_rune") or self.fonts.get(
                         "small"
                     )
-                    print(f"  ✓ Combat fonts loaded from {eld_path}")
+                    logger.debug("Combat fonts loaded from %s", eld_path)
                 else:
                     self._font_paths["eldritch"] = None
                     self.fonts["eldritch_crit"] = self.fonts.get("heading")
                     self.fonts["eldritch"] = self.fonts.get("heading")
                     self.fonts["eldritch_rune"] = self.fonts.get("small")
-                    print(f"  ✗ Combat fonts using heading fallback")
+                    logger.debug("Combat fonts using heading fallback")
         except Exception as e:
-            print(f"  ✗ Combat font error: {e}")
+            logger.warning("Combat font error: %s", e)
             self.fonts["eldritch_crit"] = self.fonts.get("heading")
             self.fonts["eldritch"] = self.fonts.get("heading")
             self.fonts["eldritch_rune"] = self.fonts.get("small")
