@@ -46,9 +46,10 @@ Design notes
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TYPE_CHECKING
 
-from screens.screen_enum import ScreenName
+if TYPE_CHECKING:
+    from screens.screen_enum import ScreenName
 
 
 class GameContext:
