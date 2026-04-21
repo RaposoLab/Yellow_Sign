@@ -1,446 +1,367 @@
-# Visual Overhaul Roadmap
+# The King in Yellow — Development Roadmap
 
-## Status: ✅ COMPLETE + Code Refactoring + Polish Effects
-Last updated: 2026-03-29 04:50
-
-## Workflow
-**ONE task per prompt. Save code + roadmap + memory after each step.**
-
-## Steps
-
-### ✅ Step 0: Asset download + roadmap creation
-### ✅ Step 1: Fullscreen toggle (F11 + button)
-### ✅ Step 2: Title screen text/button overlap fix
-### ✅ Step 3: Combat enemy sprite repositioning
-### ✅ Step 4: Font/text box sizing fixes
-- `fit_text()` + `draw_text_fitted()` helpers for pixel-width truncation
-- Fixed shop, inventory, class select, combat log/skills text overflow
-
-### ✅ Step 5: Additional visual polish — COMPLETE
-- Hover effects on ALL interactive screens
-- Ornate panels, gold dividers, styled buttons
-- 18 image assets verified present
-
-### ✅ Step 6: Font replacement (Session 2)
-- Replaced Nosifer → Cinzel Decorative (Victorian/occult serif)
-- Cinzel.ttf for body/UI text
-- Removed enemy type/ATK/DEF labels from combat
-- Fixed loot/event hover overlap (bigger buttons, more spacing)
-- Increased explore path box sizes (500→600px wide, 50→56px tall)
-
-### ✅ Step 7: Stat Icons (Session 3)
-- Downloaded 5 stat icons (INT/STR/AGI/WIS/LUCK)
-- Background removal + resize to 32/48px
-- Icons on stats screen (48px), combat skills (32px), level-up (32px)
-- STAT_ICONS mapping in game_data.py
-
-### ✅ Step 8: Icon Size & BG Fix (Session 4)
-- Increased sizes: stats screen 48→64px, combat/levelup 32→48px
-- Fixed Intelligence, Agility, Wisdom background removal (non-white bgs)
-- Regenerated all icons at 32/48/64px
-
-### ✅ Step 9: New Stat Icons + Asset Refresh (Session 5 — 2026-03-26)
-- User provided 5 new stat icons (1024×1024 RGBA, backgrounds already removed)
-- Generated 32/36/48/64px variants from source `_F.png` files
-- Fixed combat skill button icon overflow: 48px → 36px (fits 44px-tall buttons)
-- Fixed level-up screen icon overflow: 48px → 36px (fits 40-50px-tall buttons)
-- Stats screen keeps 64px icons
-- 16 base image assets re-downloaded and verified
-- Exploration path icons pending (user's next batch)
-
-### ✅ Step 10: Class Selection Overhaul (Session 6 — 2026-03-26)
-- Redesigned from all-5-at-once list to one-class-per-page layout
-- Large 400×400 class sprite on the left side
-- Right panel: class name, description, base stats with color coding
-- Starting abilities (lv1) shown with name, description, and ornate button
-- Hover over any ability shows damage formula in a popup tooltip
-- "Abilities Await" section shows top 3 future abilities (sorted by power)
-- Left/Right arrow keys to navigate between classes
-- "Choose" button to confirm selection
-- Primary stat icon (48px) next to class name
-- All 36 assets downloaded and verified (including Boss_F.png)
-
-### ✅ Step 11: Remove Stat Icons from Combat (Session 6 — 2026-03-26)
-- Removed stat icon rendering from combat skill buttons
-- Increased label text width (was btn.w-64, now btn.w-20) to fill the space
-- Level-up and stats screens keep their stat icons unchanged
-
-### ✅ Step 12: Parchment Text Box Overhaul (Session 7 — 2026-03-27)
-- All in-game content panels converted from dark purple to aged parchment texture
-- Procedural texture generator: warm beige base, paper grain noise, aged spots, vignette edges
-- Ornate gold frame borders with corner diamond ornaments on all panels
-- Ink-colored text (dark brown) replaces bone/white on parchment backgrounds
-- `draw_text_with_glow()` — subtle warm glow/shadow behind all text for readability
-- `draw_text_wrapped_glow()` and `draw_text_fitted_glow()` — wrapped/fitted variants
-- `draw_parchment_panel()` — new panel renderer with texture + gold frame
-- `draw_ornate_button()` — parchment-filled buttons with glow text
-- All 14+ screens updated: Explore, Combat, Inventory, Shop, Rest, Loot, Event, Trap, CombatResult, LevelUp, GameOver, Victory, Stats, Save/Load, ClassSelect
-- TitleScreen kept dark (dramatic landing page), HUD kept dark (overlay)
-- Text colors: C.INK (45,25,10), C.PARCHMENT_EDGE (90,65,35), C.INK_LIGHT (80,55,25)
-- Cached parchment textures by size for performance
-
-### ✅ Step 13: Asset Restore + Spacing Fix (Session 8 — 2026-03-27)
-- Restored all 36 image assets (class sprites, enemy sprites, stat icons, backgrounds)
-- Generated missing `transparent-Boss.png` from `Boss_F.png`
-- Downloaded Cinzel + Cinzel Decorative fonts (Google Fonts, static TTF)
-- Generated all stat icon size variants: 32/36/48/64px from `_F.png` sources (20 files)
-- Fixed Game Over screen: title overlap with divider (y=50→40, divider 110→120, panel 200→220, stats 215→235, buttons 440→460)
-- Fixed Explore screen: increased gap between narrative panel and path choices (start_y 340→350, text 318→325)
-- Fixed Shop screen: divider/items gap (y 100→102, items 115→125)
-- Fixed Event screen: result text spacing (400→425, loot 430→458, continue 470→498)
-- Fixed Loot screen: stat text inside buttons respects button bounds
-- Verified: 35/35 expected assets present, 2/2 fonts loaded, all code compiles clean
-
-### ✅ Step 21: Fix Combat → Inventory/Save Bug (Session 11 — 2026-03-28)
-- Bug: Opening inventory or save from combat immediately left combat, losing all combat state
-- Root cause: InventoryScreen defaulted `prev_screen = "explore"`, SaveScreen hardcoded "explore" return
-- Fix: InventoryScreen now tracks `self.game._current_screen_name` and checks combat state
-- Fix: SaveScreen now tracks where it was opened from and uses `_get_return_screen()` helper
-- Save/Load from combat now correctly returns to combat screen after closing
-
-### ✅ Step 22: Refactor player_use_skill() into Handler Functions (Session 11 — 2026-03-28)
-- Extracted 300-line if/elif block into three handler modules:
-  - `_handle_self_heal()` — 15 heal types via HEAL_HANDLERS registry (calc_fn + message template)
-  - `_handle_self_shield()` — 10 shield types via SHIELD_HANDLERS registry
-  - `_handle_self_buff()` — 23 buff types via BUFF_HANDLERS registry + _BUFF_MESSAGES
-- Each handler is a small function: takes (state, skill), returns effect-specific data
-- `player_use_skill()` reduced from ~300 lines to ~30 lines of dispatch
-- Adding a new skill type = one function + one registry entry (no touching the main function)
-- All 48 existing skill behaviors preserved exactly (heal, shield, buff handlers)
-- Damage-dealing path unchanged
-
-### ✅ Step 23: Cache draw_text_with_glow() — Pre-render Glow Surfaces (Session 11 — 2026-03-28)
-- Problem: Each `draw_text_with_glow()` call did ~25 `font.render()` calls (8 glow layers + main)
-- Fix: `_render_glow_surface()` pre-composites all glow offsets into one RGBA surface
-- Cache keyed by (text, font_id, color, glow_color, glow_radius) → (glow_surf, main_surf, ...)
-- Cache hit: 2 blits instead of 25 font.render() calls (12x reduction in render work)
-- Cache limited to 4096 entries, evicts 25% oldest on overflow
-- `draw_text_wrapped_glow()` and `draw_text_fitted_glow()` automatically benefit (they call the cached version per line)
-- Huge performance win on screens with lots of text (inventory, class select, shop)
-
-### ✅ Step 24: Automated Combat Simulation Tests (Session 11 — 2026-03-28)
-- Created `tests/test_combat.py` — 19 test suites, 271 assertions
-- Tests cover: state init (5 classes), damage calc, damage application, all class combat,
-  skill type validation, buff system (apply/expire), regen, debuff immunity, poison stacking,
-  cooldowns, enemy AI, boss phases, flee attempts, item generation, madness death, HP cost,
-  lifesteal, and full combat simulations (200-turn cap per class)
-- Deterministic with seed(42) for reproducibility
-- Run: `python3 tests/test_combat.py`
-- Can catch regressions in: buff logic, damage math, skill handlers, combat flow
-
-### ✅ Step 25: Split pygame_game.py Screens into Separate Modules (Session 12 — 2026-03-28)
-- Split 3,225-line monolith into 21 files:
-  - `shared.py` (892 lines) — Constants, C class, Assets, all drawing/texture/glow functions
-  - `pygame_game.py` (237 lines) — draw_hud, Game class, entry point (93% reduction!)
-  - `screens/` package (17 screen files + base + init):
-    - `base.py` (37 lines) — Screen base class
-    - `title.py` (134), `class_select.py` (200), `explore.py` (195), `combat.py` (385)
-    - `inventory.py` (119), `shop.py` (105), `rest.py` (88), `loot.py` (95)
-    - `event.py` (92), `trap_result.py` (37), `combat_result.py` (117), `levelup.py` (180)
-    - `gameover.py` (49), `victory.py` (84), `stats.py` (186), `save.py` (113)
-- Architecture: screens import from `shared` + `screens.base`, no circular deps
-- `screens/__init__.py` re-exports all screen classes
-- Fixed missing `import random` in title.py
-- All 271 combat tests pass
-- All imports verified at runtime (pygame dummy driver)
-- Game instantiates with all 17 screens correctly
-
-### ✅ Step 26: Tile-Based Obsidian Texture Caching (Session 12 — 2026-03-28)
-- Problem: Old `_obsidian_cache` generated unique procedural texture per (w,h) size — slow first render, many cache entries
-- Solution: Single 256×256 master tile generated once, tiled across any panel size
-- Master tile includes: crystalline grain noise, purple color patches, sparkle points, cracks, eldritch watermarks
-- Per-panel layer: additional eldritch symbols (unique, not tiled), edge glow, dark vignette
-- Old code: `generate_parchment_texture(w,h)` → pixel-by-pixel generation proportional to w*h
-- New code: `generate_parchment_texture(w,h)` → blit master tile in a grid, add edge effects
-- Performance: first call generates 256×256 tile (~fast), all subsequent calls just tile-blit + edge effects
-- Memory: 1 tile (256KB) vs old N textures (up to dozens, each potentially megabytes)
-- Removed `_obsidian_cache`, `_generate_obsidian_inner`; added `_generate_obsidian_tile`, `_obsidian_master_tile`
-- Helper functions moved before tile generator to fix import ordering
-- All 271 combat tests pass, Game instantiation verified
-
-### Pending
-- Further text spacing polish if needed (exploration, equipment, general cleanup)
-
-### ✅ Step 26: Fade-to-Screen Transitions (Session 13 — 2026-03-28)
-- Fade-to-black transition on all screen switches (0.3s fade-out, 0.3s fade-in)
-- Input blocked during fade-out to prevent accidental clicks mid-transition
-- Rapid switches force-complete the pending transition immediately
-- Transition overlay drawn on top of current frame with interpolated alpha
-
-### ✅ Step 27: Particle Effects (Session 13 — 2026-03-28)
-- Explore screen: 40 ambient dust motes drifting upward (brownish, low alpha, respawn on death)
-- Combat screen: 25 ambient eldritch energy particles (purple/violet, slow drift)
-- Combat blood splatter: on damage dealt, spawn blood particles at damage location
-  - Normal hit: 10 red particles, random velocity
-  - Critical hit: 16 red particles (bigger burst)
-- Particles update in screen.update(dt), drawn behind UI with screen shake offset in combat
-- Title screen already had particles (unchanged)
-
-### ✅ Step 28: Animated Hover Effects (Session 13 — 2026-03-28)
-- `draw_ornate_button()` hover now animated (was static purple tint):
-  - Pulsing purple glow: alpha oscillates 20-70 via sin(t*4), creates breathing effect
-  - Gold border pulse: alternating bright/dim gold outline synced to glow
-  - Shimmer sweep: thin golden highlight sweeps left-to-right every 3 seconds
-- Uses `pygame.time.get_ticks()` internally — no changes needed in screen files
-- All 17 screens benefit automatically (all use draw_ornate_button)
-
-### ✅ Step 14: Exploration Path Icons + Two-Line Descriptions (Session 9 — 2026-03-27)
-- Added 6 new path choice icons: Enemy_Ahead_F.png, Boss_Ahead_F.png, Shop_Ahead_F.png, Item_Ahead.png, Rest_Ahead_F.jfif, Decision_Ahead.png
-- PATH_ICON_FILES mapping in pygame_game.py: combat→Enemy, shop→Shop, rest→Rest, loot→Item, event/trap→Decision, boss→Boss
-- All 6 icons loaded at 64×64 in Assets.load() as `path_{type}` keys
-- PATH_TEMPLATES updated with `desc2` field — two-line descriptions for each path (10 templates)
-- ExploreScreen redesigned: buttons 600×56 → 620×80, spacing 68→92px
-- Each path button now shows: 64px icon (left) + path name (line 1, body font, INK) + elaborated description (line 2, small font, INK_LIGHT)
-- draw_ornate_button used for background, icon + text drawn on top
-- 41 total image assets now (36 original + 6 new path icons - 1 overlap = 41 unique)
-
-### ✅ Step 15: Side-by-Side Path Layout + Bigger Icons (Session 9 — 2026-03-27)
-- Path icons scaled from 64×64 to 150×150
-- Layout changed from stacked vertical to side-by-side (left/right cards)
-- Each card: 560×260, icon centered on top, name + wrapped description below
-- "Choose your path:" uses title_sm font for bolder header
-- Description text word-wrapped for readability
-
-### ✅ Step 16: Luck Icon Fix + Card Rendering Cleanup (Session 9 — 2026-03-27)
-- Replaced Luck_Icon_F.png with correct version from user
-- Regenerated all luck icon size variants (32/36/48/64)
-- Path cards use draw_parchment_panel directly (no draw_ornate_button with empty text)
-- Explicit gold/yellow border on hover, separate glow layer
-
-### ✅ Step 17: Code Refactoring — Package Split (Session 10 — 2026-03-28)
-- Split `game_data.py` (650 lines) → `data/` package (6 files):
-  - `constants.py` (45 lines) — MAX_ACTIVE_SKILLS, sprite/icon mappings
-  - `classes.py` (308 lines) — 5 classes + ~40 skills each
-  - `enemies.py` (86 lines) — enemy pool + boss
-  - `items.py` (65 lines) — rarity, prefixes, equipment templates
-  - `events.py` (97 lines) — floor events + traps
-  - `narratives.py` (56 lines) — floor stories + path templates
-- Split `game_engine.py` (1361 lines) → `engine/` package (3 files):
-  - `models.py` (372 lines) — Item, Skill, StatusEffect, Enemy, GameState
-  - `combat.py` (823 lines) — damage calc, item gen, status effects
-  - `world.py` (175 lines) — floor progression, events, shop
-- Both packages use `__init__.py` for backward-compatible re-exports
-- `pygame_game.py` kept as single file (splitting UI = high risk, low reward)
-- Removed `main.py` (depended on nonexistent `ui` module)
-- Removed unused imports from `pygame_game.py`: ENEMIES, PATH_TEMPLATES, get_floor_narrative
-
-### ✅ Step 18: ClassSelectScreen Crash Fix (Session 10 — 2026-03-28)
-- Fixed AttributeError: `ability_btns` and `future_btns` not initialized in `__init__`
-- These lists were created in `draw()` but accessed in `handle_event()` before first draw
-- Added `self.ability_btns = []` and `self.future_btns = []` to `__init__`
-
-### ✅ Step 19: 38 Broken Buff Types Fixed (Session 10 — 2026-03-28)
-- Buff system audit: 67 buff types defined in skills, only 13 had working logic
-- Added `_get_buff_defense_bonus(state, is_phys)` — handles 11 DEF/mDEF buffs:
-  thoughtform, ironSkin, chant, innerFire, mDefUp, wardAura, hallowed, fortress, bulwark, umbralAegis, dreamShell
-- Added `_get_buff_evasion_bonus(state)` — handles 5 EVA buffs:
-  smokeScreen, dreamVeil, evasionUp, dreamShell, umbralAegis
-- `apply_damage_to_player()` now handles:
-  - EVA buff bonuses (stacking with base evasion stat)
-  - DEF/mDEF buff bonuses (percentage increase to damage reduction)
-  - divineInterv: nullify N attacks (decrement stacks on proc)
-  - ethereal: invulnerable while buff active
-  - flicker: 50% dodge per stack (decrement on proc)
-  - mirrorImg: 30% damage reduction
-  - undyingPact: can't die while active (like undying)
-  - finalStand: invulnerable while active
-  - bloodAura: 10% lifesteal on damage taken
-  - retribAura: reflect 30% damage back to enemy
-- `calc_player_damage()`: ethereal gives 2.5x damage, consumed after attack
-- `tick_player_buffs()`: added regen5 (5% HP/turn), calmMind (-3 MAD/turn)
-- Full integration test suite passed
-
-### ✅ Step 20: Madness-Reducing Skills Fixed (Session 10 — 2026-03-28)
-- Bug: buff_duration=0 skills fell through to generic handler, stored buff as 0,
-  then tick_player_buffs decremented to -1 before effect could fire
-- Fixed 6 skills with instant-effect handlers:
-  - Leng's Whisper (Scholar, calmMind): -3 MAD instantly
-  - Eldritch Bargain (Prophet): -3 to 3 random stats, +50 gold instantly
-  - The Fool's Luck (Prophet, foolLuck): -10 MAD + divineInterv 3 stacks
-  - Reality Anchor (Prophet): maps to undying buff for 2 turns
-  - The Pallid Mask (Prophet): +50% all stats (temp) + debuff immunity 3 turns
-  - Prophet's Resilience (Prophet): +5 MAD, regen 8% for 2 turns
-- apply_status_player() now checks immunity buff before applying debuffs
-- Added pallidMask to STAT_BUFF_KEYS for proper temp_stats cleanup on expire
+> Single living document tracking architecture, completed work, and future plans.
 
 ---
 
-## Improvement Batch: Bug Fixes, UX, Code Quality
-Last updated: 2026-03-28 09:26
+## Game Identity
 
-### Pending
-- [x] **Step 29: Fix doom effect (Point 3)** — "Curse of the Pallid Mask" applies `doom` debuff but nothing processes it on expiry. Added handler in `process_status_effects()` to instant-kill enemy if <30% HP when doom expires.
-- [x] **Step 30: Implement unimplemented buff types (Point 7)** — `eldritchRebirth`, `astral`, `statSwap`, `dreadnought` are used by real skills but have no effect. Implemented all 4:
-  - `eldritchRebirth`: Auto-revive at 30% HP if killed (consumed on proc)
-  - `astral`: EVA+40%, mDEF+60% (added to buff bonus functions)
-  - `statSwap`: Swaps pDEF/mDEF when calculating damage taken
-  - `dreadnought`: Converts 50% of damage taken into STR bonus (cleaned up on expire)
-- [x] **Step 37: Screen shake on hits (Point 22)** — Already implemented: `CombatScreen.trigger_shake(intensity=8, duration=0.3)` fires on damage dealt. Shake offsets drawn in `draw()`. No action needed.
-- [x] **Step 31: Differentiate weakened debuff (Point 8)** — Fixed bug: `enemy_turn()` checked player status instead of enemy status. Added defense reduction: enemy with `weakened` now has DEF/mDEF reduced by 20% in `apply_damage_to_enemy()`, matching skill descriptions. Weakened now reduces both ATK (-20%) and DEF (-20%). All 271 tests pass.
-- [x] **Step 32: Implement accuracy stat (Point 11)** — `self.accuracy` now used as miss chance in `player_use_skill()`. Range: 2% (high AGI) to 50% (extremely low AGI). `true_strike` skills bypass miss check. All 271 tests pass.
-- [x] **Step 33: Enemy intent indicator (Point 12)** — Added `next_enemy_skill` to CombatState, pre-selects after each enemy turn. `_get_enemy_intent_message()` generates flavor text by skill type (physical/magic/debuff/heal). Intent shown in combat log before player's turn. All 271 tests pass.
-- [x] **Step 35: Split shared.py into modules (Point 17)** — Split shared.py (987 lines) into `shared/` package (937 lines across 4 files):
-  - `shared/constants.py` (98 lines) — SCREEN_W/H, FPS, dirs, C class, CLASS_COLORS, CLASS_PRIMARY_STAT, CLASS_SPRITE_FILES, PATH_ICON_FILES
-  - `shared/assets.py` (273 lines) — Assets class (image/font/cursor loading)
-  - `shared/rendering.py` (533 lines) — All draw functions, obsidian texture (tile-based), glow text (cached), HUD
-  - `shared/__init__.py` (33 lines) — Re-exports everything for backward compatibility
-  - Zero screen file changes needed — `from shared import ...` keeps working
-  - Runtime import verified: all public names accessible via package and direct submodule imports
-- [x] **Step 36: Move events/traps to JSON (Point 18)** — Moved all game content data from hardcoded Python dicts/lists to JSON files:
-  - `data/json/events.json` (6 events) — title, icon, text, outcomes with effect identifiers
-  - `data/json/traps.json` (3 traps) — name, desc, outcomes with chance/dmg_pct/madness
-  - `data/json/narratives.json` (20 floor narratives) — one string per floor
-  - `data/json/paths.json` (10 path templates) — type, icon, name, desc, desc2, hint, weight
-  - `data/events.py` — now a thin JSON loader (EVENTS + TRAPS)
-  - `data/narratives.py` — now a thin JSON loader (FLOOR_NARRATIVES + PATH_TEMPLATES)
-  - Effect logic stays in `engine/world.py` (resolve_event/resolve_trap unchanged)
-  - Adding new events/traps/narratives = edit JSON, no Python changes needed
-  - Backward compatible: `from data import EVENTS, TRAPS, ...` unchanged
+- **Title**: "The King in Yellow — A Lovecraftian Dungeon Crawler"
+- **Genre**: Turn-based dungeon crawler / text RPG (inspired by Buried Bornes)
+- **Theme**: Lovecraftian mythos, The King in Yellow / Carcosa
+- **Engine**: Python + Pygame | 1280x720 (fullscreen via F11)
+- **Visual Style**: Dark purples, golds, bone whites — ornate gothic/Victorian aesthetic with procedural parchment textures
 
 ---
 
-## Pending Steps
+## Core Architecture
 
-### ✅ Step 40: Victory Animation (Session 14 — 2026-03-28)
-**FIXED 2026-03-28 21:42** — HP drain was instant (enemy hp already ≤0 at victory start). Now starts from max_hp with accelerating drain, and added smooth fade-out phase.
-- **3-phase victory sequence** replaces the instant screen switch on combat win
-- **Phase 1 "hp_drain"** (~1s): Enemy HP bar rapidly drains to 0 with accelerating speed. Red pulsing tint on enemy sprite. Damage numbers fly off randomly. Screen shake on trigger. ~0.15 chance per frame to spawn floating damage numbers (yellow/crimson/bone colors).
-- **Phase 2 "disintegrate"** (~2s): Enemy sprite split into 8×6px fragments (vertical strips × horizontal chunks). Each fragment gets outward velocity from center, upward bias, gravity, rotation. Fragments fade out over 1.2s. Eldritch energy burst from center (60 gold/purple/amber particles). Eldritch wisps spawn during disintegration.
-- **Phase 3 "dramatic_pause"** (~1.5s): "D E F E A T E D" text fades in (heading font, gold parchment color). Growing gold underline divider. Combat log panel replaced with victory narrative text (different for boss vs regular). Fading ghost of enemy sprite (0.5s). Final golden particles drift upward. Auto-transition to combat_result/levelup screen.
-- **Input fully blocked** during all 3 phases (no clicks, no keyboard)
-- **UI hidden**: Skills panel, command buttons, player status icons, enemy status icons all hidden during animation
-- **Combat log preserved** but hidden during hp_drain/disintegrate; replaced with victory text during pause
-- **Safety**: `_finish_victory()` guarded against double-call via `self._victory_state = None` check
-- Files changed: `screens/combat.py` (only)
-  - Added: `__init__` (victory state vars), `_start_victory_animation()`, `_build_disintegration_fragments()`, `_spawn_victory_particle_burst()`, `_finish_victory()`
-  - Modified: `enter()`, `update()`, `handle_event()`, `draw()`, `_end_combat()`
-  - Added `import math`
+```
+pygame_game.py          Game class + HUD + entry point (~237 lines)
+save_system.py          JSON save/load (5 slots, version 2)
 
+shared/                 Rendering & constants
+  constants.py          Colors (C class), screen dims, paths, icon/sprite mappings
+  assets.py             Image/font/cursor loading (Assets class)
+  rendering.py          All draw functions, obsidian texture, glow text cache, HUD
+  surface_pool.py       SurfacePool (acquire/release) + RenderCache (LRU)
+  lighting.py           Full-screen scratch surface pooling
+  game_context.py       GameContext service locator (dependency injection)
+  logger.py             Logging utilities
 
-### ✅ Step 41: Split `data/classes.py` into per-class package (Session 15 — 2026-03-29)
-- **Problem**: `data/classes.py` was 74 KB / 308 dense lines with all 5 class definitions in one monolithic dict
-- **Solution**: Split into `data/classes/` package with one file per class
-- `data/classes/__init__.py` (448 bytes) — imports 5 class dicts, assembles `CLASSES` for backward compatibility
-- `data/classes/scholar.py` (14.5 KB) — SCHOLAR dict (41 skills)
-- `data/classes/brute.py` (13.7 KB) — BRUTE dict (40 skills)
-- `data/classes/warden.py` (13.8 KB) — WARDEN dict (40 skills)
-- `data/classes/shadowblade.py` (13.8 KB) — SHADOWBLADE dict (40 skills)
-- `data/classes/mad_prophet.py` (14.0 KB) — MAD_PROPHET dict (40 skills)
-- Used `repr()` to extract each class dict value — lossless, byte-identical to original
-- Zero import changes needed: `from data import CLASSES` works via `data/classes/__init__.py` re-export
-- Old `data/classes.py` deleted
-- All 271 combat tests pass
-- Commit: `3424977`
+engine/                 Game logic
+  models.py             Item, Skill (@dataclass), StatusEffect, Enemy, CombatState,
+                         GameState (composed: PlayerIdentity + PlayerProgression + CombatBuffs)
+  damage.py             _base_damage(), calc_player_damage(), calc_preview_damage(),
+                         apply_damage_to_enemy(), apply_damage_to_player(), buff defense/evasion registries
+  skills/               Skill handler package
+    _types.py           Shared type aliases (LogEntry, HealCalcFn, ShieldCalcFn, BuffApplyFn)
+    heal.py             15 heal calculation functions + HEAL_HANDLERS registry + dispatcher
+    shield.py           10 shield calculation functions + SHIELD_HANDLERS registry + dispatcher
+    buff.py             28 buff handlers + _BUFF_MESSAGES (67 entries) + BUFF_HANDLERS registry + dispatcher
+    dispatch.py         player_use_skill() — main skill usage orchestrator
+    __init__.py         Re-exports all public symbols
+  status_effects.py     Status application, DOT processing, buff ticking/expiry
+  items.py              determine_rarity(), generate_item()
+  world.py              Floor progression, events, traps, shop
 
-### ✅ Step 42: Split `engine/combat.py` into 3 modules (Session 15 — 2026-03-29)
-- **Problem**: `engine/combat.py` was 1,275 lines doing 4 unrelated jobs: item generation, damage calc, status effects, skill handlers, enemy AI
-- **Solution**: Split into 3 focused files:
-  - `engine/items.py` (83 lines) — `determine_rarity()`, `generate_item()` — zero internal deps
-  - `engine/skills.py` (525 lines) — all `_calc_heal_*` (15), `_shield_*` (10), `_buff_*` (27) handler functions + registries (HEAL_HANDLERS, SHIELD_HANDLERS, BUFF_HANDLERS) + `_handle_self_*` dispatchers + `player_use_skill()`
-  - `engine/combat.py` (692 lines, was 1275) — damage calc, damage application, status effects, enemy AI, combat init, run attempt
-- `combat.py` reduced by 46% (1275 → 692 lines)
-- Circular dependency resolved: `player_use_skill()` uses lazy `from engine.combat import calc_player_damage, apply_damage_to_enemy` inside function body
-- `engine/__init__.py` updated to re-export from all 3 new files — zero changes to screen imports
-- `engine/world.py` updated: `from engine.combat import generate_item` → `from engine.items import generate_item`
-- `tests/test_combat.py` updated: split imports across `engine.combat`, `engine.items`, `engine.skills`
-- Added `has_status` and `apply_status` utility functions to `engine/skills.py` (duplicated from combat.py to avoid circular dep — both are 1-5 lines)
-- All 271 combat tests pass
-- Commit: `18c9816`
+data/                   Game content (data-driven)
+  constants.py          60+ named combat/gameplay constants, DAMAGE_BUFF_MULTIPLIERS,
+                         DEFENSE_BUFF_TABLE, EVASION_BUFF_TABLE
+  classes/              5 class files (scholar, brute, warden, shadowblade, mad_prophet) — ~40 skills each
+  enemies.py            Enemy pool + boss definitions
+  items.py              Rarity, prefixes, equipment templates
+  events.py             JSON loader for floor events
+  narratives.py         JSON loader for floor narratives + path templates
+  buff_debuff_data.py   All buff/debuff icon/color/desc definitions
+  content.py            Misc game content
+  json/                 events.json, traps.json, narratives.json, paths.json
 
-### ✅ Step 43: Deduplicate damage calc + move status utilities (Session 15 — 2026-03-29)
-- **Fix 1**: Extracted `_base_damage(state, skill)` helper from `calc_player_damage` + `calc_preview_damage`
-  - ~50 lines of identical base damage logic consolidated (skill type dispatch, 8 buff multipliers, scaling, multihit, execute, luck_bonus)
-  - `calc_player_damage` now: calls `_base_damage()` → applies random variance, gamble, coin_flip → returns int. Reduced from 81 → 28 lines.
-  - `calc_preview_damage` now: calls `_base_damage()` → applies enemy defense reduction → returns (base, final). Reduced from 87 → 30 lines.
-  - `combat.py`: 692 → 614 lines (11% reduction)
-- **Fix 2**: Moved `has_status()` + `apply_status()` to `engine/models.py`
-  - Was duplicated 3 times: combat.py had 2 copies (one shadowed the other), skills.py had a 3rd copy to dodge circular imports
-  - Now defined once in `engine/models.py` right after `StatusEffect` class (7 lines added)
-  - `engine/combat.py`: removed all 3 copies, imports from models
-  - `engine/skills.py`: removed duplicate, imports from models
-  - `engine/__init__.py`: re-exports from models instead of combat
-  - `tests/test_combat.py`: updated import source
-  - Net -77 lines across codebase
-- All 271 combat tests pass
-- Commit: `b9e885c`
+screens/                17 screen modules (combat split into package)
+  base.py               Screen base class (hover, transitions) — accepts GameContext
+  title.py, class_select.py, explore.py, inventory.py, shop.py, rest.py
+  combat/               Combat screen package
+    __init__.py         Re-exports CombatScreen
+    particles.py        ParticleType class + PARTICLE_TYPES registry + factory functions
+    screen.py           CombatScreen class — all logic (input, combat, victory, update)
+    renderer.py         CombatRendererMixin — all draw methods (tooltips, intent, main draw)
+  loot.py, event.py, trap_result.py, combat_result.py, levelup.py
+  gameover.py, victory.py, stats.py, save.py
 
-### ✅ Step 44: Refactor Skill to @dataclass (Session 16 — 2026-03-29)
-- **Problem**: `Skill.__init__` had 42 manual `data.get()` lines. Adding a new skill property required touching `__init__`, `to_dict`, and `from_dict`.
-- **Solution**: Converted to `@dataclass` with 42 typed fields and defaults matching original `.get()` fallbacks.
-- Constructor changed: `Skill(data_dict)` → `Skill(**data_dict)` (keyword unpack)
-- `to_dict()` simplified: uses `dataclasses.asdict()`, drops `starting` field
-- `from_dict()` simplified: `cls(**d)` — no post-init field assignment needed
-- Adding a new skill field = one line (declare field with default) instead of three (init + to_dict + from_dict)
-- **Files changed**: `engine/models.py` (Skill class only)
-- **Files unchanged**: `data/classes/*.py` (still pass dicts), `engine/skills.py`, `engine/combat.py`, all screens, `save_system.py`
-- All 271 combat tests pass
-- Commit: `9e7d7c7`
+config/                 Settings
+  settings.json         User-configurable game settings
+  settings_manager.py   Settings loader/saver
 
-### ✅ Step 45: Decompose GameState into Composed Components (Session 16 — 2026-03-29)
-- **Problem**: `GameState` was a god object with 30+ fields mixing identity, progression, combat stats, and combat-ephemeral state.
-- **Solution**: Extracted 3 focused dataclasses. GameState composes them, exposes backward-compatible properties.
-- `PlayerIdentity`: `class_id`, `class_name`, `level`
-- `PlayerProgression`: `floor`, `max_floor`, `kills`, `rooms_explored`, `gold`, `xp`, `xp_next`, `madness`
-- `CombatBuffs`: `shield`, `barrier`, `rage`, `buffs`, `temp_stats`, `hits_taken`
-- GameState holds these as `self.identity`, `self.progression`, `self.combat_buffs`
-- 18 `@property` getters/setters delegate to sub-objects → screen code unchanged (137+ refs like `s.floor`, `s.gold` work as-is)
-- Combat stats (`atk`, `defense`, `crit`, etc.) stay flat on GameState — too interconnected with `recalc_stats()` to separate
-- `init_from_class()` updated to use `Skill(**dict)` (from Step 44)
-- **Save system**: Added `SAVE_VERSION = 2` and `"version"` field to save files. Backward-compatible with v1 saves.
-- `.gitignore`: Added `*.bak` pattern
-- **Files changed**: `engine/models.py` (GameState class), `save_system.py` (version field)
-- **Files unchanged**: All 17 screen files, `engine/combat.py`, `engine/skills.py`, `engine/world.py`, `tests/test_combat.py`
-- All 271 combat tests pass, import checks pass, property delegation verified
-- Commit: `9e7d7c7`
+tests/                  Test suites (1,156 total tests)
+  test_combat.py        19 suites, 271 tests — all classes, damage, buffs, debuffs, AI, boss phases
+  test_edge_cases.py    161 tests — madness clamping, HP invariants, buff edge cases, poison stacking
+  test_property_based.py 515 tests — Hypothesis-generated random inputs for 10 invariants
+  test_save_load.py     104 tests — round-trip integrity, version mismatch, corruption, multi-slot
+  test_integration.py   105 tests — combat-progression, floor advance, events, DOT, game loop
+  run_all.py            Unified test runner for CI (exit code 0/1)
 
-### ✅ Step 46: Replace Warden Class Sprite (Session 16 — 2026-03-29)
-- Replaced `images/wis-character.png` with new Wisdom Class artwork (1024×1024 RGBA PNG)
-- Old sprite backed up to `images/wis-character.png.bak`
-- Warden class (wisdom-primary) uses this sprite on class select and combat screens
-- Commit: `9d9e432`
+.github/workflows/
+  ci.yml                GitHub Actions CI pipeline (lint + test + coverage)
+```
 
+---
 
-### ✅ Step 47: Centralize Combat Constants (Session 16 — 2026-03-29)
-- **Problem**: Magic numbers scattered across `engine/combat.py` (0.06, 0.08, 1.8, 50, 0.75, etc.) and `engine/world.py` (0.1 floor heal).
-- **Solution**: Added 60+ named constants to `data/constants.py`:
-  - Combat formulas: `DEFENSE_DENOM` (50), `CRIT_BASE_MULT` (1.8), `DMG_VARIANCE_LOW/RANGE`, `LUCK_DMG_VARIANCE`
-  - Status DOT %: `BURNING_HP_PCT` (0.06), `POISON_HP_PCT` (0.04), `BLEEDING_HP_PCT` (0.05), `POISON_MAX_STACKS` (5)
-  - Debuff multipliers: `FREEZING_PHYS_MULT`, `PETRIFIED_MAGIC_MULT`, `WEAKENED_ATK_MULT`, `WEAKENED_DEF_MULT`
-  - Flee/run: `FLEE_BASE_CHANCE`, `FLEE_AGI_MULTIPLIER`, `FLEE_SUCCESS/FAIL_MADNESS`
-  - Boss phases: `BOSS_PHASE2_HP`, `BOSS_PHASE3_HP`, `BOSS_PHASE3_ATK_MULT`
-  - Rewards: `XP_BASE`, `XP_PER_FLOOR`, `GOLD_BASE`, `GOLD_PER_FLOOR`, etc.
-  - Regen: `REGEN_HP_PCT`, `REGEN5_HP_PCT`, `OATH_HP_PCT`
-  - Defense buffs: `DEFENSE_BUFF_TABLE` (12 entries), `EVASION_BUFF_TABLE` (6 entries)
-  - On-take-damage: `MIRROR_IMG_REDUCTION`, `BLOOD_AURA_LS_PCT`, `RETRIB_AURA_REFLECT_PCT`, `DREADNOUGHT_CONVERSION_PCT`, `ELDRITCH_REBIRTH_HP_PCT`
-  - UI/game: `MAX_BARRIER_STACKS`, `MADNESS_MAX`, `STAT_KEYS`, `ADVANCE_FLOOR_HEAL_PCT`
-- All constants exported via `data/__init__.py`
-- **Files changed**: `data/constants.py` (+178 lines), `data/__init__.py` (+24 lines)
+## Playable Classes (5)
 
-### ✅ Step 48: Buff Damage Multiplier Registry (#17) (Session 16 — 2026-03-29)
-- **Problem**: `_base_damage()` had 8 hardcoded `if state.buffs.get(...)` checks for damage multipliers.
-- **Solution**: Created `DAMAGE_BUFF_MULTIPLIERS` registry in `data/constants.py`:
-  ```python
-  DAMAGE_BUFF_MULTIPLIERS = {
-      "rage": 1.6, "atkCritUp": 1.4, "warpTime": 1.2, "madPower": 1.25,
-      "darkPact": 1.3, "shadowMeld": 2.0, "eclipse": 1.3, "ethereal": 2.5,
-  }
-  ```
-- `_base_damage()` now uses a single loop: `for buff_key, mult in DAMAGE_BUFF_MULTIPLIERS.items()`
-- Adding a new damage buff = one line in the registry, no touching `_base_damage()`
-- Similarly, `_get_buff_defense_bonus()` now uses `DEFENSE_BUFF_TABLE` (data-driven instead of 20+ if-chains)
-- `_get_buff_evasion_bonus()` now uses `EVASION_BUFF_TABLE` (6 entries)
-- **Files changed**: `data/constants.py`, `engine/combat.py`
+| Class | Primary Stat | Archetype |
+|-------|-------------|-----------|
+| Scholar | INT | Magic DPS + debuffs |
+| Brute | STR | Physical DPS + rage |
+| Warden | WIS | Healer + tank + shields |
+| Shadowblade | AGI | Dodge + crit + burst |
+| Mad Prophet | LUCK | Chaos + madness + gamble |
 
-### ✅ Step 49: Type Hints on Engine + Save System (#15) (Session 16 — 2026-03-29)
-- Added type annotations to all engine modules and save_system:
-  - `engine/combat.py`: all 20+ functions annotated (params + return types)
-  - `engine/skills.py`: all 30+ handler functions + registries typed (added `LogEntry`, `HealCalcFn`, `ShieldCalcFn`, `BuffApplyFn` type aliases)
-  - `engine/world.py`: all 7 functions annotated
-  - `engine/items.py`: both functions annotated
-  - `engine/models.py`: already had types from dataclass refactor
-  - `save_system.py`: all 4 functions annotated
-- Used `typing` module: `List`, `Tuple`, `Dict`, `Optional`, `Any`, `Callable`
-- No runtime behavior change — type hints are purely informational
-- **Files changed**: `engine/combat.py`, `engine/skills.py`, `engine/world.py`, `engine/items.py`, `save_system.py`
+Each class has ~40 skills spread across self-heal, self-shield, self-buff, physical, magic, and debuff types.
 
-- All 271 combat tests pass
+---
+
+## Combat System
+
+- **Turn-based**: Player picks skill -> enemy acts -> status effects tick -> repeat
+- **Damage types**: Physical (ATK-based), Magic (stat-based), Curse, Ultimate
+- **Defense**: pDEF/mDEF with percentage reduction (df / (df + 50) formula), armor pierce
+- **Crits**: Base crit + buff bonuses (critUp, atkCritUp, permCrit10, eclipse guaranteed crit)
+- **Accuracy**: Miss chance = (100 - accuracy)%, based on AGI; true_strike skills bypass
+- **Shields & Barriers**: Shield absorbs flat damage, barrier absorbs entire hits
+- **Evasion**: Base EVA + buff bonuses (smokeScreen, dreamVeil, evasionUp, etc.)
+- **Enemy Intent**: Pre-selected enemy action shown in combat log each turn
+- **Damage Preview**: Hover tooltip shows ~dmg range after enemy defense
+- **Boss Phases**: 3 phases with escalating ATK at HP thresholds
+- **Victory Animation**: 4-phase sequence (HP drain -> disintegration -> dramatic pause -> fade out)
+- **Flee**: AGI-based chance, failure adds madness
+
+---
+
+## Buff/Debuff System (67+ buff types)
+
+### Implemented & Working
+- **Defensive**: ironSkin, fortress, bulwark, chant, hallowed, wardAura, thoughtform, innerFire, mDefUp, dreamShell, umbralAegis
+- **Evasion**: smokeScreen, dreamVeil, evasionUp, dreamShell, umbralAegis, astral
+- **Damage**: rage, atkCritUp, warpTime, madPower, darkPact, shadowMeld, eclipse, ethereal, undyingPact
+- **Special**: divineInterv, flicker, mirrorImg, undying, undyingPact, finalStand, bloodAura, retribAura, bladeAura, eldritchRebirth, statSwap, dreadnought, immunity
+- **Stat Boosts**: permIntWis, permAtk2, permWisStr, permAgiLuk, permAll1, thickSkull, perseverance, shadowBless, randStat2, pallidMask, innerFire, luckyDodge
+- **Regen**: regen (8%/turn), regen5 (5%/turn), oath (10%/turn), fadeBlack (5%/turn + EVA)
+- **Instant Effects**: calmMind (-3 MAD), eldritchBargain (-3 stats, +50 gold), foolLuck (-10 MAD, divineInterv 3), realityAnchor (undying 2t), prophetRes (regen, +5 MAD)
+- **Utility**: resetCds, bloodRitual, madImmune, permCrit10, skipCombat, copyAttack, nimbleFingers, looterInst
+- **Debuffs**: burning, poisoned (stacking), bleeding, weakened (ATK -20%, DEF -20%), freezing, petrified, doom (execute at <30% HP on expiry)
+
+### Data-Driven Registries
+- `DAMAGE_BUFF_MULTIPLIERS`: buff_key -> damage multiplier (8 entries)
+- `DEFENSE_BUFF_TABLE`: buff_key -> (phys_pct, magic_pct) (12 entries)
+- `EVASION_BUFF_TABLE`: buff_key -> eva_bonus (6 entries)
+- `HEAL_HANDLERS`: 15 heal calculation functions
+- `SHIELD_HANDLERS`: 10 shield calculation functions
+- `BUFF_HANDLERS`: 36 buff application functions (28 custom + 8 fallback-only)
+
+---
+
+## Visual & UX Features
+
+- Parchment texture panels with ornate gold frames on all 17 screens
+- Cinzel Decorative (titles) + Cinzel (body) Victorian fonts
+- Cached glow text rendering (12x faster than naive)
+- Tile-based obsidian texture caching (256x256 master tile)
+- Fade-to-black screen transitions (0.3s each direction)
+- Particle effects: dust (explore), eldritch energy (combat), blood splatter (damage)
+- Animated hover effects: pulsing glow, gold border, shimmer sweep
+- Side-by-side exploration path cards (150x150 icons, two-line descriptions)
+- One-class-per-page class selection with ability tooltips
+- Stat icons on stats + level-up screens (64px / 36px)
+- 6 path choice icons (enemy, boss, shop, item, rest, decision)
+- Screen shake on hits, enemy intent indicator, damage preview on hover
+- Typewriter text effect, madness vignette overlay, eldritch aura on sprites
+- Floating combat damage numbers with Victorian styling
+- **Surface pooling**: all per-frame Surface allocations eliminated from draw paths
+- **Parchment texture full caching**: zero per-frame allocation for all parchment panels
+
+---
+
+## Completed Improvements
+
+### Phase 1 — Visual Overhaul (Steps 0-49)
+
+| Step | Description | Commit |
+|------|-------------|--------|
+| 0 | Asset download + roadmap creation | — |
+| 1 | Fullscreen toggle (F11 + button) | — |
+| 2 | Title screen text/button overlap fix | — |
+| 3 | Combat enemy sprite repositioning | — |
+| 4 | Font/text box sizing fixes (fit_text helpers) | — |
+| 5 | Hover effects on all interactive screens | — |
+| 6 | Font replacement (Nosidian -> Cinzel Decorative) | — |
+| 7 | Stat icons (INT/STR/AGI/WIS/LUCK, 32/48px) | — |
+| 8 | Icon size & background fixes | — |
+| 9 | New stat icons + asset refresh (1024x1024 sources) | — |
+| 10 | Class selection overhaul (one-class-per-page) | — |
+| 11 | Remove stat icons from combat | — |
+| 12 | Parchment text box overhaul (all 14+ screens) | — |
+| 13 | Asset restore + spacing fixes | — |
+| 14 | Exploration path icons + two-line descriptions | — |
+| 15 | Side-by-side path layout + bigger icons | — |
+| 16 | Luck icon fix + card rendering cleanup | — |
+| 17 | Package split (game_data.py -> data/, game_engine.py -> engine/) | — |
+| 18 | ClassSelectScreen crash fix | — |
+| 19 | 38 broken buff types fixed | — |
+| 20 | Madness-reducing skills fixed (6 instant-effect handlers) | — |
+| 21 | Fix combat -> inventory/save bug | — |
+| 22 | Refactor player_use_skill() into handler functions | — |
+| 23 | Cache draw_text_with_glow() (12x faster) | — |
+| 24 | Automated combat simulation tests (271 tests) | — |
+| 25 | Split pygame_game.py screens into separate modules (21 files) | — |
+| 26 | Tile-based obsidian texture caching | — |
+| 26b | Fade-to-screen transitions | — |
+| 27 | Particle effects (dust, eldritch, blood) | — |
+| 28 | Animated hover effects (pulsing glow, shimmer) | — |
+| 29 | Fix doom effect (instant-kill at <30% HP on expiry) | — |
+| 30 | Implement unimplemented buff types (eldritchRebirth, astral, statSwap, dreadnought) | — |
+| 31 | Differentiate weakened debuff (ATK -20%, DEF -20%) | — |
+| 32 | Implement accuracy stat | — |
+| 33 | Enemy intent indicator | — |
+| 35 | Split shared.py into modules (4 files) | — |
+| 36 | Move events/traps/narratives to JSON | — |
+| 37 | Screen shake on hits (already done) | — |
+| 40 | Victory animation (3-phase: drain, disintegrate, pause) | — |
+| 41 | Split data/classes.py into per-class package | 3424977 |
+| 42 | Split engine/combat.py into 3 modules | 18c9816 |
+| 43 | Deduplicate damage calc + move status utilities | b9e885c |
+| 44 | Refactor Skill to @dataclass | 9e7d7c7 |
+| 45 | Decompose GameState into composed components (v2 saves) | 9e7d7c7 |
+| 46 | Replace Warden class sprite | 9d9e432 |
+| 47 | Centralize combat constants (60+ named constants) | — |
+| 48 | Buff damage multiplier registry | — |
+| 49 | Type hints on engine + save system | — |
+
+### Phase 2 — Code Quality (Priority 1-3)
+
+| Priority | Description | Commit |
+|----------|-------------|--------|
+| P1 | Division-by-zero fixes in damage.py and skills.py | e7e2d1e |
+| P2 | 100% docstring coverage in engine/skills.py (57/57 functions) | — |
+| P3 | Automated linting (black, flake8), 302 flake8 warnings resolved | 81092fb |
+
+### Phase 3 — Architecture & Performance Improvements (#5-#9)
+
+| # | Improvement | Commit | Description |
+|---|-------------|--------|-------------|
+| #5 | Dependency Injection / Service Locator | d14ffdc | Created GameContext service locator in shared/game_context.py. Replaced 145 self.game.* references with self.ctx.* across all 17 screen files + CombatRendererMixin. Screens fully decoupled from Game class — unit testing now possible without Pygame. |
+| #5-fix | Circular import fix | 311d5e1 | Fixed ImportError from circular dependency between shared and screens packages. Moved ScreenName import behind TYPE_CHECKING guard. |
+| #6 | Surface Pooling & Caching | 61b1114 | Eliminated all per-frame pygame.Surface allocations from draw paths across 9 files. Created SurfacePool (acquire/release) for temporary surfaces and RenderCache (LRU) for static outputs. ~21 MB/frame saved in worst case (lighting). |
+| #6-fix | Visual bug fix (static particles) | 6c50178 | Fixed parchment symbols frozen at fixed positions by caching only the base texture (tiling + edge glow + vignette) and drawing random symbols per frame. Fixed surface leak in combat glitch_vanish. |
+| #7 | Full Parchment Texture Caching | b962f2e | Upgraded to single-level full cache by (width, height). Eliminates per-frame Surface.copy() and redundant symbol drawing for all parchment textures. Zero per-frame allocation on cache hit. |
+| #8 | Test Coverage Expansion | f986516 | Expanded from 271 to 1,156 tests (4.3x increase). Added 4 new test suites: test_save_load.py (104), test_edge_cases.py (161), test_property_based.py (515 with Hypothesis), test_integration.py (105). New dependency: hypothesis. |
+| #9 | CI/CD Pipeline (GitHub Actions) | 1583f99 | Created .github/workflows/ci.yml with 3-job pipeline: lint (black + flake8), test (Python 3.10/3.11/3.12 matrix), coverage report (PR comment). Concurrency groups cancel redundant runs. pytest-cov added to dev dependencies. |
+
+---
+
+## Systems To Build (Prioritized)
+
+### P1 — Core Combat Expansion
+
+#### Limb Loss System
+- [ ] Create `engine/limbs.py` — Limb enum, limb slot definitions, debuff mappings per limb loss
+- [ ] Extend `GameState` with `lost_limbs: Dict[str, bool]` + limb-related debuffs
+- [ ] Modify `player_use_skill()` to check limb availability before skill use
+- [ ] Modify `recalc_stats()` to apply limb-loss debuffs
+- [ ] Add combat events that can cause limb loss (specific enemy attacks, traps, curse effects)
+- [ ] Add visual representation on stats screen (limb indicators)
+- [ ] Save/load compatibility (SAVE_VERSION bump)
+- [ ] Tests for limb-loss combat scenarios
+
+#### Madness Overhaul
+- [ ] Create `engine/madness.py` — Madness threshold system with escalating effects
+- [ ] Define madness tiers: 0-25 (stable), 25-50 (unstable), 50-75 (delirious), 75-100 (madness)
+- [ ] Per-tier effects: hallucination chance, random debuff application, stat distortion, forced actions
+- [ ] Class-specific madness interactions (Mad Prophet benefits, Scholar knowledge at a cost, etc.)
+- [ ] Visual distortion handlers — screen warping, color shifts, text corruption at high madness
+- [ ] Slow build/decay mechanics — madness naturally decays between combats
+- [ ] Integrate with existing madness vignette overlay (expand thresholds)
+
+#### Curse System
+- [ ] Create `engine/curses.py` — Curse types: limb curse, body curse, essence curse
+- [ ] Curse application/removal logic with warning signs (1-2 turns before full effect)
+- [ ] Counterplay mechanics — specific actions/items that can break curses
+- [ ] Integration with doom debuff (expand existing mechanic)
+- [ ] Curse-themed skills for Mad Prophet class
+
+### P2 — New Systems
+
+#### Eight-God Religion System
+- [ ] Create `data/religion_data.py` — 8 god definitions with names, domains, mechanics
+- [ ] Create `engine/religion.py` — Faith tracking, god-specific mechanic handlers, discovery/unlock system
+- [ ] Extend `GameState` with `faith: Dict[str, int]` and `patron_god: Optional[str]`
+- [ ] Domain-specific bonuses/penalties that interact with existing buff system
+- [ ] Shrine events on exploration floors (discover gods, make offerings)
+- [ ] UI: religion tab on stats screen
+
+#### Skill Evolution / Mastery
+- [ ] Skill experience system — skills level up with use (upgrade damage/healing/shield values)
+- [ ] Skill branching — at certain levels, choose between two upgrade paths
+- [ ] Visual skill tree on a dedicated screen
+- [ ] Persist skill mastery in save system
+
+### P3 — Polish & Content
+
+#### Audio System
+- [ ] Create `shared/audio.py` — AudioManager class with SFX/music/ambient layers
+- [ ] UI sounds: hover, click, confirm, cancel
+- [ ] Combat audio: hit, crit, spell cast, block, enemy death
+- [ ] Ambient soundscapes per floor type
+- [ ] Dynamic music layers that intensify during combat or at low HP
+
+#### Visual Enhancements
+- [ ] Dynamic lighting — HP bars/status icons emit subtle light, flickering torches
+- [ ] Vignette effect — darken screen edges at low HP or high madness (expand existing)
+- [ ] Screen transitions — context-aware (red for danger, purple for eldritch, slide for explore->combat)
+- [ ] Enemy presence effects — boss intimidation aura distorting screen edges
+- [ ] Character expression variants — attack, hurt, idle breathing animation
+- [ ] Progressive blur — background blurs when modal panels open
+
+#### Content Expansion
+- [ ] More enemy variety (currently 6 + boss) — add floor-specific enemies
+- [ ] More events and traps (currently 6 events, 3 traps in JSON)
+- [ ] Floor-specific narratives and atmosphere changes
+- [ ] Item set bonuses
+- [ ] Additional class skills at higher levels
+
+### P4 — Technical Debt & Infrastructure
+
+#### Code Refactoring — Completed
+- [x] Split `engine/skills.py` (~1,347 lines) into `engine/skills/` package (6 files)
+- [x] Split `screens/combat.py` (~1,415 lines) into `screens/combat/` package (4 files)
+- [x] Add TypedDict definitions for rarity data, event/trap structures (mypy 0 errors)
+- [x] Add input validation in skill handlers (None checks before registry lookup)
+- [x] Extract magic numbers to `data/constants.py` (60+ named constants)
+- [x] Dependency Injection / Service Locator (GameContext decouples screens from Game)
+- [x] Surface pooling & caching (all per-frame allocations eliminated)
+
+#### Testing — Completed
+- [x] 271 combat tests (all classes, damage, buffs, debuffs, AI, boss phases)
+- [x] Edge case tests: 0 HP, 0 stats, buff stacking, poison, doom, boss phases (161 tests)
+- [x] Save/load integrity tests: round-trip, version mismatch, corruption, multi-slot (104 tests)
+- [x] Property-based testing for combat balance via Hypothesis (515 tests)
+- [x] Integration tests: combat-progression, floor advance, events, DOT, game loop (105 tests)
+- [ ] Performance benchmarks for particle systems and glow text cache
+
+#### DevOps — Completed
+- [x] Pre-commit hooks (black + flake8 via .pre-commit-config.yaml)
+- [x] CI/CD pipeline (GitHub Actions: lint + test across Python 3.10/3.11/3.12)
+- [x] Coverage reporting (coverage.xml artifact + PR comment via pytest-cov)
+- [ ] Consider `ruff` as faster linter replacement
+
+---
+
+## Quality Baseline
+
+- **1,156 tests passing** — combat (271) + edge cases (161) + property-based (515) + save/load (104) + integration (105)
+- **0 flake8 errors** (strict checks)
+- **0 mypy errors** (all 17 warnings resolved with TypedDict + cast)
+- **60+ named constants** in `data/constants.py`
+- **Pre-commit hooks** configured (black + flake8)
+- **CI/CD pipeline** via GitHub Actions (lint + test matrix + coverage)
+- **100% docstring coverage** in `engine/skills/` package and `engine/damage.py`
+- **All engine functions type-annotated**
+- **Save system v2** with backward compatibility
+- **Surface pooling** — zero per-frame allocations in draw paths
+- **Dependency injection** — screens decoupled from Game via GameContext
+
+---
+
+## Development Guidelines
+
+1. **One system per commit** — keep changes focused and testable
+2. **Registry pattern** — new effects = one function + one dict entry (no engine changes)
+3. **Data-driven** — new content goes in JSON/Python data files, not engine code
+4. **Test before merge** — run `python tests/run_all.py` after every change
+5. **Lint before commit** — `black --check` + `flake8` (or use pre-commit hooks)
+6. **No breaking save compatibility** — bump SAVE_VERSION when adding new fields
+7. **Backward-compatible imports** — `__init__.py` re-exports for all packages
+8. **CI runs automatically** — GitHub Actions runs lint + tests on every push/PR to main
+
+---
+
+*Last updated: 2026-04-22 (Improvements #5-#9 complete: DI, surface pooling, test expansion, CI/CD)*
