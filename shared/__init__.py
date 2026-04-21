@@ -4,11 +4,12 @@ Re-exports everything for backward compatibility. Existing code using
 `from shared import ...` continues to work unchanged.
 
 Submodules:
-  constants  — Screen dimensions, colors, class mappings
-  assets     — Asset loader (images, fonts, cursor)
-  rendering  — Drawing helpers, textures, glow text, HUD
-  lighting   — Dynamic lighting system (vignette, torch flicker, status glow)
-  logger     — Centralized logging system (replaces print() calls)
+  constants    — Screen dimensions, colors, class mappings
+  assets       — Asset loader (images, fonts, cursor)
+  rendering    — Drawing helpers, textures, glow text, HUD
+  lighting     — Dynamic lighting system (vignette, torch flicker, status glow)
+  logger       — Centralized logging system (replaces print() calls)
+  game_context — Service locator / dependency injection for screen decoupling
 """
 
 # Constants
@@ -78,6 +79,9 @@ from shared.lighting import (
 
 # Logging system — available for all modules
 from shared.logger import get_logger, configure_logging, set_level, shutdown as shutdown_logging
+
+# Service locator / dependency injection
+from shared.game_context import GameContext
 
 # Also re-export data imports that were previously in shared.py's namespace
 # (screens import these from shared, not from data directly)

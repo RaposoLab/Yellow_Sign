@@ -22,34 +22,36 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 
 
 class InventoryScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.back_btn = None
         self.item_buttons = []
         self.prev_screen = ScreenName.EXPLORE
 
     def enter(self):
-        # Read where we came from (set by switch_screen before enter() is called)
-        self.prev_screen = getattr(self.game, "_prev_screen_name", ScreenName.EXPLORE)
+        # Read where we came from (set by navigate before enter() is called)
+        prev = self.ctx.prev_screen_name
+        self.prev_screen = prev if prev is not None else ScreenName.EXPLORE
         # If we were just in combat, go back to combat
-        if self.game.state and self.game.state.combat:
+        if self.ctx.state and self.ctx.state.combat:
             self.prev_screen = ScreenName.COMBAT
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         all_btns = self.item_buttons + ([self.back_btn] if self.back_btn else [])
         self.update_hover(event, all_btns)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
-                self.game.switch_screen(self.prev_screen)
+                self.ctx.navigate(self.prev_screen)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.back_btn and self.back_btn.collidepoint(event.pos):
-                self.game.switch_screen(self.prev_screen)
+                self.ctx.navigate(self.prev_screen)
             for i, btn in enumerate(self.item_buttons):
                 if btn.collidepoint(event.pos) and i < len(s.inventory):
                     item = s.inventory[i]
@@ -59,7 +61,7 @@ class InventoryScreen(Screen):
                         s.inventory.append(prev)
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
 
         draw_parchment_panel(surface, 15, 10, SCREEN_W - 30, SCREEN_H - 80)
         draw_text_with_glow(

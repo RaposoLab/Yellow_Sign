@@ -22,6 +22,7 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from data import RARITY_DATA
@@ -29,8 +30,8 @@ from engine import advance_floor
 
 
 class CombatResultScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.equip_btn = None
         self.backpack_btn = None
         self.chosen = False
@@ -39,16 +40,16 @@ class CombatResultScreen(Screen):
         self.chosen = False
 
     def handle_event(self, event):
-        s = self.game.state
-        r = self.game.combat_result
+        s = self.ctx.state
+        r = self.ctx.screen_data["combat_result"]
         if self.chosen:
             if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN):
                 if r["is_boss"]:
-                    self.game.switch_screen(ScreenName.VICTORY)
+                    self.ctx.navigate(ScreenName.VICTORY)
                 elif advance_floor(s):
-                    self.game.switch_screen(ScreenName.VICTORY)
+                    self.ctx.navigate(ScreenName.VICTORY)
                 else:
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
             return
 
         btns = []
@@ -70,22 +71,22 @@ class CombatResultScreen(Screen):
                 self._store_loot()
 
     def _equip_loot(self):
-        s = self.game.state
-        r = self.game.combat_result
+        s = self.ctx.state
+        r = self.ctx.screen_data["combat_result"]
         prev = s.equip_item(r["loot"])
         if prev:
             s.inventory.append(prev)
         self.chosen = True
 
     def _store_loot(self):
-        s = self.game.state
-        r = self.game.combat_result
+        s = self.ctx.state
+        r = self.ctx.screen_data["combat_result"]
         if len(s.inventory) < 20:
             s.inventory.append(r["loot"])
         self.chosen = True
 
     def draw(self, surface):
-        r = self.game.combat_result
+        r = self.ctx.screen_data["combat_result"]
 
         loot = r["loot"]
         # Taller panel for cursed items with debuffs

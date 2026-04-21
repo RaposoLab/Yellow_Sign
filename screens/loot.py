@@ -22,6 +22,7 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 import random
 from screens.base import Screen
 from screens.screen_enum import ScreenName
@@ -30,15 +31,15 @@ from engine import generate_item
 
 
 class LootScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.items = []
         self.gold_found = 0
         self.pick_buttons = []
         self.leave_btn = None
 
     def enter(self):
-        s = self.game.state
+        s = self.ctx.state
         count = 1 + (1 if random.random() < 0.3 else 0)
         self.items = [generate_item(s.floor, luck=s.luck, buffs=s.buffs) for _ in range(count)]
         self.gold_found = 5 + random.randint(0, 10) + s.floor * 2
@@ -54,7 +55,7 @@ class LootScreen(Screen):
         self.leave_btn = pygame.Rect(cx - 100, y + 8, 200, 40)
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         all_btns = self.pick_buttons + ([self.leave_btn] if self.leave_btn else [])
         self.update_hover(event, all_btns)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -66,10 +67,10 @@ class LootScreen(Screen):
                         prev = s.equip_item(self.items[i])
                         if prev:
                             s.inventory.append(prev)
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
                     return
             if self.leave_btn and self.leave_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.EXPLORE)
+                self.ctx.navigate(ScreenName.EXPLORE)
 
     def draw(self, surface):
         # Dynamic panel height based on actual button positions

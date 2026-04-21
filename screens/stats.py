@@ -22,6 +22,7 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from shared import CLASS_COLORS, CLASS_ICONS
@@ -29,8 +30,8 @@ from data import MAX_ACTIVE_SKILLS
 
 
 class StatsScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.back_btn = None
         self.skill_buttons = []
 
@@ -39,13 +40,13 @@ class StatsScreen(Screen):
         self.update_hover(event, all_btns)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
-                self.game.switch_screen(ScreenName.EXPLORE)
+                self.ctx.navigate(ScreenName.EXPLORE)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.back_btn and self.back_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.EXPLORE)
+                self.ctx.navigate(ScreenName.EXPLORE)
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
         color = CLASS_COLORS.get(s.class_id, C.PARCHMENT_EDGE)
 
         draw_parchment_panel(surface, 30, 10, SCREEN_W - 60, SCREEN_H - 80)

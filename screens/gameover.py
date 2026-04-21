@@ -22,13 +22,14 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 
 
 class GameOverScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.restart_btn = None
         self.menu_btn = None
 
@@ -41,14 +42,14 @@ class GameOverScreen(Screen):
         self.update_hover(event, btns)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.restart_btn and self.restart_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.CLASS_SELECT)
+                self.ctx.navigate(ScreenName.CLASS_SELECT)
             elif self.menu_btn and self.menu_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
-                self.game.switch_screen(ScreenName.CLASS_SELECT)
+                self.ctx.navigate(ScreenName.CLASS_SELECT)
             elif event.key == pygame.K_q:
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
 
     def draw(self, surface):
         # The Game_Over_Screen background is already drawn by main loop
@@ -57,7 +58,7 @@ class GameOverScreen(Screen):
         )
         draw_gold_divider(surface, SCREEN_W // 2 - 180, 120, 360)
         draw_text_wrapped_glow(
-            surface, self.game.gameover_msg, self.assets.fonts["body"], C.INK, SCREEN_W // 2 - 300, 140, 600
+            surface, self.ctx.screen_data["gameover_msg"], self.assets.fonts["body"], C.INK, SCREEN_W // 2 - 300, 140, 600
         )
 
         cx = SCREEN_W // 2

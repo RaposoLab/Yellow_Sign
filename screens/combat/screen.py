@@ -27,6 +27,7 @@ from shared import (
     draw_status_icons_row,
     draw_status_tooltip,
 )
+from shared.game_context import GameContext
 from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from screens.base import Screen
 from screens.screen_enum import ScreenName
@@ -59,8 +60,8 @@ from data import (
 
 
 class CombatScreen(CombatRendererMixin, Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.skill_buttons = []
         self.cmd_buttons = {}
         self.damage_numbers = []  # [text, x, y, color, timer, vy]
@@ -162,7 +163,7 @@ class CombatScreen(CombatRendererMixin, Screen):
                 )
             )
         # Pre-select enemy's first action and show intent
-        s = self.game.state
+        s = self.ctx.state
         if s.combat:
             s.combat.next_enemy_skill = random.choice(s.combat.enemy.skills)
             intent_msg = _get_enemy_intent_message(s.combat.next_enemy_skill)
@@ -187,7 +188,7 @@ class CombatScreen(CombatRendererMixin, Screen):
 
     def _get_intent_particle_type(self):
         """Get the appropriate particle type based on enemy intent."""
-        s = self.game.state
+        s = self.ctx.state
         if not s or not s.combat or not s.combat.next_enemy_skill:
             return "eldritch"
         skill = s.combat.next_enemy_skill
@@ -217,7 +218,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         self.particles.extend(create_particle("shield", x, y, count=count, spread=15, base_vy=-10))
 
     def _build_buttons(self):
-        s = self.game.state
+        s = self.ctx.state
         if not s.combat:
             return
         bw, bh = 280, 44
@@ -460,7 +461,7 @@ class CombatScreen(CombatRendererMixin, Screen):
                 # Add combat log horror message
                 if self._victory_timer > 0.3 and not hasattr(self, "_afterimage_logged"):
                     self._afterimage_logged = True
-                    s = self.game.state
+                    s = self.ctx.state
                     c = s.combat
                     if c:
                         msg = self._get_death_message(c.is_boss, c.enemy.name)
@@ -547,7 +548,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         self.particles = [p for p in self.particles if p["life"] > 0 and p["alpha"] > 0]
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             # During victory animation, s.combat is cleared only at the very end
@@ -572,9 +573,9 @@ class CombatScreen(CombatRendererMixin, Screen):
                     if name == "run":
                         self._try_run()
                     elif name == "inventory":
-                        self.game.switch_screen(ScreenName.INVENTORY)
+                        self.ctx.navigate(ScreenName.INVENTORY)
                     elif name == "save":
-                        self.game.switch_screen(ScreenName.SAVE)
+                        self.ctx.navigate(ScreenName.SAVE)
         elif event.type == pygame.KEYDOWN:
             if pygame.K_1 <= event.key <= pygame.K_9:
                 idx = event.key - pygame.K_1
@@ -583,12 +584,12 @@ class CombatScreen(CombatRendererMixin, Screen):
             elif event.key == pygame.K_r:
                 self._try_run()
             elif event.key == pygame.K_i:
-                self.game.switch_screen(ScreenName.INVENTORY)
+                self.ctx.navigate(ScreenName.INVENTORY)
             elif event.key == pygame.K_s:
-                self.game.switch_screen(ScreenName.SAVE)
+                self.ctx.navigate(ScreenName.SAVE)
 
     def _use_skill(self, idx):
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c or c.turn != "player":
             return
@@ -633,7 +634,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         self._do_enemy_turn()
 
     def _do_enemy_turn(self):
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             return
@@ -694,7 +695,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         self._build_buttons()
 
     def _try_run(self):
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c or c.is_boss:
             self.turn_message = "Cannot flee from the Spiral!"
@@ -703,7 +704,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         if combat_run_attempt(s):
             s.combat = None
             advance_floor(s)
-            self.game.switch_screen(ScreenName.EXPLORE)
+            self.ctx.navigate(ScreenName.EXPLORE)
         else:
             self.turn_message = "Failed to escape!"
             self.turn_msg_timer = 1.5
@@ -712,7 +713,7 @@ class CombatScreen(CombatRendererMixin, Screen):
 
     def _end_combat(self, victory):
         """End combat. On victory, start animation sequence. On defeat, go to game over."""
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             return
@@ -721,14 +722,14 @@ class CombatScreen(CombatRendererMixin, Screen):
             self._start_victory_animation()
         else:
             s.combat = None
-            self.game.gameover_msg = (
+            self.ctx.screen_data["gameover_msg"] = (
                 "Your body crumples. The last thing you see is the Yellow Sign, burning brighter than ever."
             )
-            self.game.switch_screen(ScreenName.GAMEOVER)
+            self.ctx.navigate(ScreenName.GAMEOVER)
 
     def _start_victory_animation(self):
         """Begin the multi-phase horror death animation."""
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         self._victory_is_boss = c.is_boss
         self._victory_timer = 0.0
@@ -753,7 +754,7 @@ class CombatScreen(CombatRendererMixin, Screen):
 
     def _corrupt_enemy_name(self):
         """Progressively replace characters in the enemy name with eldritch symbols."""
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             return
@@ -770,7 +771,7 @@ class CombatScreen(CombatRendererMixin, Screen):
 
     def _build_afterimage(self):
         """Create a dark silhouette surface from the enemy sprite for the afterimage phase."""
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             return
@@ -826,7 +827,7 @@ class CombatScreen(CombatRendererMixin, Screen):
 
     def _finish_victory(self):
         """Actually compute rewards and switch to result screen."""
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             return
@@ -849,7 +850,7 @@ class CombatScreen(CombatRendererMixin, Screen):
         loot = generate_item(s.floor, luck=s.luck, buffs=s.buffs)
         leveled = s.check_level_up()
 
-        self.game.combat_result = {
+        self.ctx.screen_data["combat_result"] = {
             "victory": True,
             "xp": xp_g,
             "gold": gold_g,
@@ -861,6 +862,6 @@ class CombatScreen(CombatRendererMixin, Screen):
         s.combat = None
         self._victory_state = None
         if leveled:
-            self.game.switch_screen(ScreenName.LEVELUP)
+            self.ctx.navigate(ScreenName.LEVELUP)
         else:
-            self.game.switch_screen(ScreenName.COMBAT_RESULT)
+            self.ctx.navigate(ScreenName.COMBAT_RESULT)

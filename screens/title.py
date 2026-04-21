@@ -23,13 +23,14 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 
 
 class TitleScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.particles = []
         self.selected = 0
         self.options = ["New Adventure", "Load Game", "Fullscreen", "Quit"]
@@ -91,13 +92,13 @@ class TitleScreen(Screen):
 
     def _select(self, idx):
         if idx == 0:
-            self.game.switch_screen(ScreenName.CLASS_SELECT)
+            self.ctx.navigate(ScreenName.CLASS_SELECT)
         elif idx == 1:
-            self.game.switch_screen(ScreenName.LOAD)
+            self.ctx.navigate(ScreenName.LOAD)
         elif idx == 2:
-            self.game.toggle_fullscreen()
+            self.ctx.toggle_fullscreen()
         elif idx == 3:
-            self.game.running = False
+            self.ctx.quit_game()
 
     def draw(self, surface):
         # Particles
@@ -150,7 +151,7 @@ class TitleScreen(Screen):
         for i, btn in enumerate(self.buttons):
             label = self.options[i]
             if i == 2:  # Fullscreen button
-                state = "[ON]" if self.game.fullscreen else "[OFF]"
+                state = "[ON]" if self.ctx.fullscreen else "[OFF]"
                 label = f"Fullscreen {state}"
             color = C.MIST if i == 2 else C.PARCHMENT_EDGE
             draw_ornate_button(surface, btn, label, self.assets.fonts["body"], hover=(i == self.selected), color=color)

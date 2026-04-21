@@ -2,14 +2,14 @@
 Screen name enum for type-safe screen transitions.
 
 All screen identifiers are defined here as members of ``ScreenName``.
-Every call to ``Game.switch_screen()`` should use these enum values instead
+Every call to ``GameContext.navigate()`` should use these enum values instead
 of raw strings, which prevents typos and enables IDE autocompletion.
 
 Usage::
 
     from screens import ScreenName
 
-    self.game.switch_screen(ScreenName.EXPLORE)
+    self.ctx.navigate(ScreenName.EXPLORE)
 """
 
 from enum import Enum

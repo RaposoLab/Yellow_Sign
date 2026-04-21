@@ -22,10 +22,13 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
+
+
 class Screen:
-    def __init__(self, game):
-        self.game = game
-        self.assets = game.assets
+    def __init__(self, ctx: GameContext):
+        self.ctx = ctx
+        self.assets = ctx.assets
         self.hover_idx = -1  # which button/option is currently hovered (-1 = none)
 
     def enter(self):

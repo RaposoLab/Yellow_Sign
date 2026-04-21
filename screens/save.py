@@ -22,26 +22,27 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from save_system import save_game, load_game, list_saves
 
 
 class SaveScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.slot_buttons = []
         self.back_btn = None
         self.mode = "save"
         self.prev_screen = ScreenName.EXPLORE
 
     def enter(self):
-        self.mode = "save" if self.game.state else "load"
-        # Track where we came from (set by switch_screen before enter() is called)
-        self.prev_screen = getattr(self.game, "_prev_screen_name", ScreenName.EXPLORE)
-        if self.game.state and self.game.state.combat:
+        self.mode = "save" if self.ctx.state else "load"
+        # Track where we came from (set by navigate before enter() is called)
+        self.prev_screen = self.ctx.prev_screen_name
+        if self.ctx.state and self.ctx.state.combat:
             self.prev_screen = ScreenName.COMBAT
-        elif not self.game.state:
+        elif not self.ctx.state:
             self.prev_screen = ScreenName.TITLE
         bw, bh = 400, 50
         cx = SCREEN_W // 2
@@ -50,7 +51,7 @@ class SaveScreen(Screen):
 
     def _get_return_screen(self):
         """Return to the correct screen after save/load actions."""
-        if self.game.state and self.game.state.combat:
+        if self.ctx.state and self.ctx.state.combat:
             return ScreenName.COMBAT
         return self.prev_screen
 
@@ -59,25 +60,25 @@ class SaveScreen(Screen):
         self.update_hover(event, all_btns)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.game.switch_screen(self._get_return_screen())
+                self.ctx.navigate(self._get_return_screen())
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.back_btn and self.back_btn.collidepoint(event.pos):
-                self.game.switch_screen(self._get_return_screen())
+                self.ctx.navigate(self._get_return_screen())
                 return
             for i, btn in enumerate(self.slot_buttons):
                 if btn.collidepoint(event.pos):
                     self._do_slot(i)
 
     def _do_slot(self, slot):
-        s = self.game.state
+        s = self.ctx.state
         if self.mode == "save" and s:
             save_game(s, slot)
-            self.game.switch_screen(self._get_return_screen())
+            self.ctx.navigate(self._get_return_screen())
         else:
             loaded = load_game(slot)
             if loaded:
-                self.game.state = loaded
-                self.game.switch_screen(ScreenName.EXPLORE)
+                self.ctx.state = loaded
+                self.ctx.navigate(ScreenName.EXPLORE)
 
     def draw(self, surface):
         saves = list_saves()
@@ -126,10 +127,10 @@ class LoadScreen(SaveScreen):
         self.update_hover(event, all_btns)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.back_btn and self.back_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
                 return
             for i, btn in enumerate(self.slot_buttons):
                 if btn.collidepoint(event.pos):

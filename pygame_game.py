@@ -14,6 +14,7 @@ import pygame
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from shared.logger import configure_logging, get_logger, shutdown as shutdown_logging
+from shared.game_context import GameContext
 from config import get_settings
 
 # ═══════════════════════════════════════════
@@ -138,39 +139,42 @@ class Game:
 
         self.state = None
 
-        # Shared state between screens
-        self.gameover_msg = ""
-        self.combat_result = {}
-        self.pending_event = None
-        self.shop_items = []
-        self.shop_prices = []
-        self.shop_sold = []
-        self.shop_message = ""
-        self.shop_msg_ok = True
-        self.shop_msg_timer = 0
-        self.trap_msg = ""
-        self.trap_name = ""
-        self.trap_desc = ""
+        # ── Service Locator / Dependency Injection ─────────────────────────
+        # Create a GameContext that decouples screens from this Game class.
+        # Screens receive the context instead of a direct Game reference,
+        # enabling unit testing without instantiating the full game.
+        self.ctx = GameContext(
+            get_state=lambda: self.state,
+            set_state=lambda s: setattr(self, "state", s),
+            assets=self.assets,
+            navigate_callback=self.switch_screen,
+            toggle_fullscreen_callback=self.toggle_fullscreen,
+            quit_callback=lambda: setattr(self, "running", False),
+            get_prev_screen=lambda: getattr(self, "_prev_screen_name", None),
+            get_time_seconds=lambda: self.time_seconds,
+            get_fullscreen=lambda: self.fullscreen,
+        )
 
         # Screens — keyed by ScreenName enum for type safety
+        # Each screen now receives the GameContext instead of the Game instance
         self.screens = {
-            ScreenName.TITLE: TitleScreen(self),
-            ScreenName.CLASS_SELECT: ClassSelectScreen(self),
-            ScreenName.EXPLORE: ExploreScreen(self),
-            ScreenName.COMBAT: CombatScreen(self),
-            ScreenName.INVENTORY: InventoryScreen(self),
-            ScreenName.SHOP: ShopScreen(self),
-            ScreenName.REST: RestScreen(self),
-            ScreenName.LOOT: LootScreen(self),
-            ScreenName.EVENT: EventScreen(self),
-            ScreenName.TRAP_RESULT: TrapResultScreen(self),
-            ScreenName.COMBAT_RESULT: CombatResultScreen(self),
-            ScreenName.LEVELUP: LevelUpScreen(self),
-            ScreenName.GAMEOVER: GameOverScreen(self),
-            ScreenName.VICTORY: VictoryScreen(self),
-            ScreenName.SAVE: SaveScreen(self),
-            ScreenName.LOAD: LoadScreen(self),
-            ScreenName.STATS: StatsScreen(self),
+            ScreenName.TITLE: TitleScreen(self.ctx),
+            ScreenName.CLASS_SELECT: ClassSelectScreen(self.ctx),
+            ScreenName.EXPLORE: ExploreScreen(self.ctx),
+            ScreenName.COMBAT: CombatScreen(self.ctx),
+            ScreenName.INVENTORY: InventoryScreen(self.ctx),
+            ScreenName.SHOP: ShopScreen(self.ctx),
+            ScreenName.REST: RestScreen(self.ctx),
+            ScreenName.LOOT: LootScreen(self.ctx),
+            ScreenName.EVENT: EventScreen(self.ctx),
+            ScreenName.TRAP_RESULT: TrapResultScreen(self.ctx),
+            ScreenName.COMBAT_RESULT: CombatResultScreen(self.ctx),
+            ScreenName.LEVELUP: LevelUpScreen(self.ctx),
+            ScreenName.GAMEOVER: GameOverScreen(self.ctx),
+            ScreenName.VICTORY: VictoryScreen(self.ctx),
+            ScreenName.SAVE: SaveScreen(self.ctx),
+            ScreenName.LOAD: LoadScreen(self.ctx),
+            ScreenName.STATS: StatsScreen(self.ctx),
         }
         self.current_screen = self.screens[ScreenName.TITLE]
         self.current_screen.enter()

@@ -23,14 +23,15 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from engine import advance_floor
 
 
 class RestScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.options = [
             ("REST", "Heal 40% HP", "rest"),
             ("MEDITATE", "Reduce Madness by 15", "meditate"),
@@ -48,7 +49,7 @@ class RestScreen(Screen):
         self.result_timer = 0
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         # Don't accept new inputs while showing result
         if self.result_timer > 0:
             return
@@ -62,7 +63,7 @@ class RestScreen(Screen):
                 self._do_rest(event.key - pygame.K_1)
 
     def _do_rest(self, idx):
-        s = self.game.state
+        s = self.ctx.state
         if idx == 0:
             h = int(s.max_hp * 0.4)
             s.hp = min(s.max_hp, s.hp + h)
@@ -81,13 +82,13 @@ class RestScreen(Screen):
         if self.result_timer > 0:
             self.result_timer -= dt
             if self.result_timer <= 0:
-                if advance_floor(self.game.state):
-                    self.game.switch_screen(ScreenName.VICTORY)
+                if advance_floor(self.ctx.state):
+                    self.ctx.navigate(ScreenName.VICTORY)
                 else:
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
 
     def draw(self, surface):
-        draw_hud(surface, self.game.state, self.assets)
+        draw_hud(surface, self.ctx.state, self.assets)
 
         panel_w, panel_h = 500, 200
         panel_x = SCREEN_W // 2 - panel_w // 2

@@ -22,6 +22,7 @@ from shared import (
     generate_parchment_texture,
     draw_hud,
 )
+from shared.game_context import GameContext
 from shared.rendering import ease_out_cubic, ease_in_cubic, ease_in_quad
 from engine import calc_preview_damage, _get_enemy_intent_message
 from screens.combat.particles import create_particle, PARTICLE_TYPES
@@ -31,7 +32,7 @@ class CombatRendererMixin:
     """Mixin providing all draw/render methods for CombatScreen.
 
     This mixin assumes ``self`` has the full CombatScreen attribute set
-    (game, assets, particles, damage_numbers, etc.) so it can be mixed
+    (ctx, assets, particles, damage_numbers, etc.) so it can be mixed
     into CombatScreen without changing its public interface.
     """
 
@@ -60,7 +61,7 @@ class CombatRendererMixin:
         # Formula line
         lines.append(sk.formula)
         # Damage preview line (only for damage-dealing skills)
-        base_dmg, final_dmg = calc_preview_damage(self.game.state, sk)
+        base_dmg, final_dmg = calc_preview_damage(self.ctx.state, sk)
         if final_dmg > 0:
             # Show range: center ± 25% accounts for the 0.85-1.15 random variance
             lo = max(1, int(final_dmg * 0.75))
@@ -119,7 +120,7 @@ class CombatRendererMixin:
 
         Position: Above the enemy info panel for clear visibility.
         """
-        c = self.game.state.combat
+        c = self.ctx.state.combat
         skill = c.next_enemy_skill
         if not skill:
             return
@@ -217,7 +218,7 @@ class CombatRendererMixin:
     # ── Main draw method ───────────────────────────────────────────────────────
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
         c = s.combat
         if not c:
             return

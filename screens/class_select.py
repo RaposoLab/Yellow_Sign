@@ -24,6 +24,7 @@ from shared import (
     CLASS_COLORS,
     CLASS_PRIMARY_STAT,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from data import CLASSES
@@ -31,8 +32,8 @@ from engine import GameState
 
 
 class ClassSelectScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.class_ids = list(CLASSES.keys())
         self.selected = 0
         self.hovered_ability = -1
@@ -69,13 +70,13 @@ class ClassSelectScreen(Screen):
             elif event.key == pygame.K_RETURN:
                 self._pick_class()
             elif event.key == pygame.K_ESCAPE:
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
 
     def _pick_class(self):
         state = GameState()
         state.init_from_class(self.class_ids[self.selected])
-        self.game.state = state
-        self.game.switch_screen(ScreenName.EXPLORE)
+        self.ctx.state = state
+        self.ctx.navigate(ScreenName.EXPLORE)
 
     def _draw_ability_tooltip(self, surface, formula, btn_rect):
         """Draw a tooltip popup above an ability button showing its damage formula."""

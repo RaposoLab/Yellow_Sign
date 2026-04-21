@@ -22,6 +22,7 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from data import RARITY_DATA
@@ -29,42 +30,46 @@ from engine import generate_shop, buy_shop_item, advance_floor
 
 
 class ShopScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.buy_buttons = []
         self.leave_btn = None
 
     def update(self, dt):
-        if self.game.shop_msg_timer > 0:
-            self.game.shop_msg_timer -= dt
+        if self.ctx.screen_data.get("shop_msg_timer", 0) > 0:
+            self.ctx.screen_data["shop_msg_timer"] -= dt
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         # Track hover
         all_btns = self.buy_buttons + ([self.leave_btn] if self.leave_btn else [])
         self.update_hover(event, all_btns)
 
+        shop_items = self.ctx.screen_data.get("shop_items", [])
+        shop_prices = self.ctx.screen_data.get("shop_prices", [])
+        shop_sold = self.ctx.screen_data.get("shop_sold", [])
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 if advance_floor(s):
-                    self.game.switch_screen(ScreenName.VICTORY)
+                    self.ctx.navigate(ScreenName.VICTORY)
                 else:
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for i, btn in enumerate(self.buy_buttons):
-                if btn.collidepoint(event.pos) and i < len(self.game.shop_items):
-                    ok, msg = buy_shop_item(s, self.game.shop_items, self.game.shop_prices, self.game.shop_sold, i)
-                    self.game.shop_message = msg
-                    self.game.shop_msg_ok = ok
-                    self.game.shop_msg_timer = 1.5
+                if btn.collidepoint(event.pos) and i < len(shop_items):
+                    ok, msg = buy_shop_item(s, shop_items, shop_prices, shop_sold, i)
+                    self.ctx.screen_data["shop_message"] = msg
+                    self.ctx.screen_data["shop_msg_ok"] = ok
+                    self.ctx.screen_data["shop_msg_timer"] = 1.5
             if self.leave_btn and self.leave_btn.collidepoint(event.pos):
                 if advance_floor(s):
-                    self.game.switch_screen(ScreenName.VICTORY)
+                    self.ctx.navigate(ScreenName.VICTORY)
                 else:
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
 
         draw_parchment_panel(surface, 30, 10, SCREEN_W - 60, SCREEN_H - 80)
         draw_text_with_glow(
@@ -87,13 +92,17 @@ class ShopScreen(Screen):
         self.buy_buttons = []
         y = 125
         card_h = 90
-        for i, item in enumerate(self.game.shop_items):
+        shop_items = self.ctx.screen_data.get("shop_items", [])
+        shop_prices = self.ctx.screen_data.get("shop_prices", [])
+        shop_sold = self.ctx.screen_data.get("shop_sold", [])
+
+        for i, item in enumerate(shop_items):
             color = rarity_color(item.rarity)
             rd = RARITY_DATA[item.rarity]
             btn = pygame.Rect(55, y, SCREEN_W - 120, card_h)
             self.buy_buttons.append(btn)
 
-            sold = self.game.shop_sold[i]
+            sold = shop_sold[i]
             draw_panel(
                 surface, 55, y, SCREEN_W - 120, card_h, C.PANEL_BG, C.CRIMSON if sold else C.GOLD_DIM, 1 if sold else 2
             )
@@ -120,7 +129,7 @@ class ShopScreen(Screen):
             # Price on the right (vertically centered in card)
             draw_text_with_glow(
                 surface,
-                f"{self.game.shop_prices[i]}g",
+                f"{shop_prices[i]}g",
                 self.assets.fonts["body"],
                 C.PARCHMENT_EDGE,
                 SCREEN_W - 75,
@@ -135,8 +144,8 @@ class ShopScreen(Screen):
             surface, self.leave_btn, "Leave Shop", self.assets.fonts["body"], hover=leave_hover, color=C.PARCHMENT_EDGE
         )
 
-        if hasattr(self.game, "shop_msg_timer") and self.game.shop_msg_timer > 0:
-            color = C.MIST if self.game.shop_msg_ok else C.CRIMSON
+        if self.ctx.screen_data.get("shop_msg_timer", 0) > 0:
+            color = C.MIST if self.ctx.screen_data.get("shop_msg_ok", False) else C.CRIMSON
             draw_text_with_glow(
-                surface, self.game.shop_message, self.assets.fonts["body"], color, SCREEN_W // 2, y + 75, align="center"
+                surface, self.ctx.screen_data.get("shop_message", ""), self.assets.fonts["body"], color, SCREEN_W // 2, y + 75, align="center"
             )

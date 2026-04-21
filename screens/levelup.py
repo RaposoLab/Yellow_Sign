@@ -22,14 +22,15 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 from data import MAX_ACTIVE_SKILLS
 
 
 class LevelUpScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.skill_buttons = []
         self.skip_btn = None
         self.replace_mode = False
@@ -40,7 +41,7 @@ class LevelUpScreen(Screen):
         self._build_skill_buttons()
 
     def _build_skill_buttons(self):
-        s = self.game.state
+        s = self.ctx.state
         bw, bh = 500, 50
         cx = SCREEN_W // 2
         skills = s.pending_levelup_skills
@@ -48,10 +49,10 @@ class LevelUpScreen(Screen):
         self.skip_btn = pygame.Rect(cx - 100, 200 + len(skills) * 80 + 10, 200, 40)
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         if not s.pending_levelup_skills:
             if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN):
-                self.game.switch_screen(ScreenName.EXPLORE)
+                self.ctx.navigate(ScreenName.EXPLORE)
             return
 
         if self.replace_mode:
@@ -91,7 +92,7 @@ class LevelUpScreen(Screen):
                     self._pick_skill(i)
             if self.skip_btn and self.skip_btn.collidepoint(event.pos):
                 s.pending_levelup_skills = []
-                self.game.switch_screen(ScreenName.EXPLORE)
+                self.ctx.navigate(ScreenName.EXPLORE)
         elif event.type == pygame.KEYDOWN:
             if pygame.K_1 <= event.key <= pygame.K_9:
                 idx = event.key - pygame.K_1
@@ -99,10 +100,10 @@ class LevelUpScreen(Screen):
                     self._pick_skill(idx)
                 elif idx == len(s.pending_levelup_skills):
                     s.pending_levelup_skills = []
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
 
     def _pick_skill(self, idx):
-        s = self.game.state
+        s = self.ctx.state
         chosen = s.pending_levelup_skills[idx]
         if len(s.active_skills) >= MAX_ACTIVE_SKILLS:
             self.replace_mode = True
@@ -115,7 +116,7 @@ class LevelUpScreen(Screen):
         else:
             s.active_skills.append(chosen)
             s.pending_levelup_skills = []
-            self.game.switch_screen(ScreenName.EXPLORE)
+            self.ctx.navigate(ScreenName.EXPLORE)
 
     def _draw_skill_tooltip(self, surface, sk, btn_rect):
         """Draw a popup tooltip showing skill description and formula."""
@@ -151,7 +152,7 @@ class LevelUpScreen(Screen):
             draw_text_with_glow(surface, l, font, lc, tip_x + padding, tip_y + padding + i * line_h)
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
 
         panel_w, panel_h = 600, 400
         panel_x = SCREEN_W // 2 - panel_w // 2

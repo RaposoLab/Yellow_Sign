@@ -23,6 +23,7 @@ from shared import (
     draw_text_fitted_glow,
     TypewriterText,
 )
+from shared.game_context import GameContext
 import random
 from screens.base import Screen
 from screens.screen_enum import ScreenName
@@ -31,8 +32,8 @@ from engine import resolve_event
 
 
 class EventScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.outcome_buttons = []
         self.result_msg = ""
         self.result_loot = None
@@ -45,7 +46,7 @@ class EventScreen(Screen):
         self.result_msg = ""
         self.narrative_complete = False
         # Initialize typewriter effect for narrative text
-        event = self.game.pending_event
+        event = self.ctx.screen_data["pending_event"]
         self.typewriter = TypewriterText(event["text"], reveal_speed=42.0)
 
         n = len(event["outcomes"])
@@ -63,14 +64,14 @@ class EventScreen(Screen):
             self.narrative_complete = True
 
     def handle_event(self, event):
-        s = self.game.state
+        s = self.ctx.state
         if self.showing_result:
             if event.type == pygame.KEYDOWN or (event.type == pygame.MOUSEBUTTONDOWN):
                 if s.hp <= 0:
-                    self.game.gameover_msg = "The asylum claims another victim."
-                    self.game.switch_screen(ScreenName.GAMEOVER)
+                    self.ctx.screen_data["gameover_msg"] = "The asylum claims another victim."
+                    self.ctx.navigate(ScreenName.GAMEOVER)
                 else:
-                    self.game.switch_screen(ScreenName.EXPLORE)
+                    self.ctx.navigate(ScreenName.EXPLORE)
             return
 
         # Allow skipping typewriter animation with any input
@@ -80,7 +81,7 @@ class EventScreen(Screen):
                 return  # Consume the event
 
         self.update_hover(event, self.outcome_buttons)
-        pe = self.game.pending_event
+        pe = self.ctx.screen_data["pending_event"]
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Only allow button clicks when narrative is complete
             if self.narrative_complete:
@@ -96,8 +97,8 @@ class EventScreen(Screen):
                         self._resolve(idx)
 
     def _resolve(self, idx):
-        s = self.game.state
-        pe = self.game.pending_event
+        s = self.ctx.state
+        pe = self.ctx.screen_data["pending_event"]
         msg, loot = resolve_event(s, EVENTS.index(pe), idx)
         self.result_msg = msg
         self.result_loot = loot
@@ -106,7 +107,7 @@ class EventScreen(Screen):
         self.showing_result = True
 
     def draw(self, surface):
-        pe = self.game.pending_event
+        pe = self.ctx.screen_data["pending_event"]
 
         panel_w, panel_h = 600, 280
         panel_x = SCREEN_W // 2 - panel_w // 2

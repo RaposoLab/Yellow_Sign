@@ -22,13 +22,14 @@ from shared import (
     draw_text_wrapped_glow,
     draw_text_fitted_glow,
 )
+from shared.game_context import GameContext
 from screens.base import Screen
 from screens.screen_enum import ScreenName
 
 
 class VictoryScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx):
+        super().__init__(ctx)
         self.restart_btn = None
         self.menu_btn = None
 
@@ -41,17 +42,17 @@ class VictoryScreen(Screen):
         self.update_hover(event, btns)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.restart_btn and self.restart_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.CLASS_SELECT)
+                self.ctx.navigate(ScreenName.CLASS_SELECT)
             elif self.menu_btn and self.menu_btn.collidepoint(event.pos):
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
-                self.game.switch_screen(ScreenName.CLASS_SELECT)
+                self.ctx.navigate(ScreenName.CLASS_SELECT)
             elif event.key == pygame.K_q:
-                self.game.switch_screen(ScreenName.TITLE)
+                self.ctx.navigate(ScreenName.TITLE)
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
 
         # Boss sprite
         boss_sprite = self.assets.get_sprite("Hastur, The Spiral Beyond")

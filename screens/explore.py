@@ -25,6 +25,7 @@ from shared import (
     TypewriterText,
     draw_madness_vignette,
 )
+from shared.game_context import GameContext
 import random
 from screens.base import Screen
 from screens.screen_enum import ScreenName
@@ -33,8 +34,8 @@ from engine import start_combat, generate_paths, resolve_trap, generate_shop, ad
 
 
 class ExploreScreen(Screen):
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, ctx: GameContext):
+        super().__init__(ctx)
         self.paths = []
         self.path_buttons = []
         self.cmd_buttons = {}
@@ -44,7 +45,7 @@ class ExploreScreen(Screen):
         self.narrative_complete = False
 
     def enter(self):
-        s = self.game.state
+        s = self.ctx.state
         self.narrative = FLOOR_NARRATIVES[min(s.floor - 1, len(FLOOR_NARRATIVES) - 1)]
         # Initialize typewriter effect for floor narrative
         self.typewriter = TypewriterText(self.narrative, reveal_speed=48.0)
@@ -54,7 +55,7 @@ class ExploreScreen(Screen):
         if is_boss:
             self.paths = []
             start_combat(s, is_boss=True)
-            self.game.switch_screen(ScreenName.COMBAT)
+            self.ctx.navigate(ScreenName.COMBAT)
             return
         # Only generate new paths if we don't have any (don't regenerate on inventory/stats visit)
         if not self.paths:
@@ -138,13 +139,13 @@ class ExploreScreen(Screen):
                 for name, btn in self.cmd_buttons.items():
                     if btn.collidepoint(event.pos):
                         if name == "inventory":
-                            self.game.switch_screen(ScreenName.INVENTORY)
+                            self.ctx.navigate(ScreenName.INVENTORY)
                         elif name == "stats":
-                            self.game.switch_screen(ScreenName.STATS)
+                            self.ctx.navigate(ScreenName.STATS)
                         elif name == "save":
-                            self.game.switch_screen(ScreenName.SAVE)
+                            self.ctx.navigate(ScreenName.SAVE)
                         elif name == "menu":
-                            self.game.switch_screen(ScreenName.TITLE)
+                            self.ctx.navigate(ScreenName.TITLE)
         elif event.type == pygame.KEYDOWN:
             # Only allow keyboard interaction when narrative is complete
             if self.narrative_complete:
@@ -153,21 +154,21 @@ class ExploreScreen(Screen):
                     if idx < len(self.paths):
                         self._choose_path(idx)
                 elif event.key == pygame.K_i:
-                    self.game.switch_screen(ScreenName.INVENTORY)
+                    self.ctx.navigate(ScreenName.INVENTORY)
                 elif event.key == pygame.K_t:
-                    self.game.switch_screen(ScreenName.STATS)
+                    self.ctx.navigate(ScreenName.STATS)
                 elif event.key == pygame.K_s:
-                    self.game.switch_screen(ScreenName.SAVE)
+                    self.ctx.navigate(ScreenName.SAVE)
 
     def _choose_path(self, idx):
-        s = self.game.state
+        s = self.ctx.state
         path = self.paths[idx]
         # Clear paths so next room generates fresh ones
         self.paths = []
         s.rooms_explored += 1
         if s.add_madness(2):
-            self.game.gameover_msg = "Your mind shatters. The Yellow Sign consumes your last rational thought."
-            self.game.switch_screen(ScreenName.GAMEOVER)
+            self.ctx.screen_data["gameover_msg"] = "Your mind shatters. The Yellow Sign consumes your last rational thought."
+            self.ctx.navigate(ScreenName.GAMEOVER)
             return
 
         ptype = path["type"]
@@ -175,39 +176,39 @@ class ExploreScreen(Screen):
             if s.buffs.get("skipCombat", 0) > 0:
                 s.buffs["skipCombat"] = 0
                 # Skip this combat, generate a loot room instead
-                self.game.switch_screen(ScreenName.LOOT)
+                self.ctx.navigate(ScreenName.LOOT)
             else:
                 start_combat(s, is_boss=False)
-                self.game.switch_screen(ScreenName.COMBAT)
+                self.ctx.navigate(ScreenName.COMBAT)
         elif ptype == "event":
             event = random.choice(EVENTS)
-            self.game.pending_event = event
-            self.game.switch_screen(ScreenName.EVENT)
+            self.ctx.screen_data["pending_event"] = event
+            self.ctx.navigate(ScreenName.EVENT)
         elif ptype == "loot":
-            self.game.switch_screen(ScreenName.LOOT)
+            self.ctx.navigate(ScreenName.LOOT)
         elif ptype == "rest":
-            self.game.switch_screen(ScreenName.REST)
+            self.ctx.navigate(ScreenName.REST)
         elif ptype == "shop":
             items, prices = generate_shop(s)
-            self.game.shop_items = items
-            self.game.shop_prices = prices
-            self.game.shop_sold = [False] * len(items)
-            self.game.switch_screen(ScreenName.SHOP)
+            self.ctx.screen_data["shop_items"] = items
+            self.ctx.screen_data["shop_prices"] = prices
+            self.ctx.screen_data["shop_sold"] = [False] * len(items)
+            self.ctx.navigate(ScreenName.SHOP)
         elif ptype == "trap":
             trap = random.choice(TRAPS)
             trap_idx = TRAPS.index(trap)
             msg, game_over = resolve_trap(s, trap_idx)
-            self.game.trap_msg = msg
-            self.game.trap_name = trap["name"]
-            self.game.trap_desc = trap["desc"]
+            self.ctx.screen_data["trap_msg"] = msg
+            self.ctx.screen_data["trap_name"] = trap["name"]
+            self.ctx.screen_data["trap_desc"] = trap["desc"]
             if game_over:
-                self.game.gameover_msg = "The trap claims your life."
-                self.game.switch_screen(ScreenName.GAMEOVER)
+                self.ctx.screen_data["gameover_msg"] = "The trap claims your life."
+                self.ctx.navigate(ScreenName.GAMEOVER)
             else:
-                self.game.switch_screen(ScreenName.TRAP_RESULT)
+                self.ctx.navigate(ScreenName.TRAP_RESULT)
 
     def draw(self, surface):
-        s = self.game.state
+        s = self.ctx.state
         draw_hud(surface, s, self.assets)
 
         # Dust particles (drawn behind UI)
@@ -305,4 +306,4 @@ class ExploreScreen(Screen):
             )
 
         # Draw madness vignette effect (darkness at screen edges based on madness level)
-        draw_madness_vignette(surface, s.madness, 0.016, self.game.time_seconds)
+        draw_madness_vignette(surface, s.madness, 0.016, self.ctx.time_seconds)
