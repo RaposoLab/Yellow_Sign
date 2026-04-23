@@ -16,7 +16,7 @@ Sound palette (BNA horror UI + Unholy Souls — Lovecraftian selection):
   loot        — BNA_UI11  |  Dice & coin clatter, loot chest opening
   equip       — Unholy_Souls_13  |  Metallic blade shing, weapon equipping
   purchase    — BNA_UI12  |  Bubbly rising chime, shop transaction
-  combat_start — Monster_Mech  |  Guttural beast growl, menacing pre-combat dread
+  combat_start — mixkit-horror-swish-1495  |  Horror swish, eerie pre-combat dread
   event_mystery — Creepy_ambience_3  |  Eerie ascending shimmer, unsettling discovery
   trap_trigger — Stinger  |  Heavy stone slam, ominous trap activation
 
@@ -67,7 +67,7 @@ _SOUND_FILES: Dict[str, str] = {
     "loot":          "BNA_UI11.wav",
     "equip":         "Unholy_Souls_13.wav",
     "purchase":      "BNA_UI12.wav",
-    "combat_start":  "Monster_Mech.wav",
+    "combat_start":  "mixkit-horror-swish-1495.wav",
     "event_mystery": "Creepy_ambience_3.wav",
     "trap_trigger":  "Stinger.wav",
 }
