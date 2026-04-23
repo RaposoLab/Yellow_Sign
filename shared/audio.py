@@ -5,8 +5,8 @@ Plays UI sound effects from WAV assets in assets/audio/ui/.
 Falls back to procedural synthesis when audio files are missing.
 
 Sound palette (BNA horror UI pack — Lovecraftian selection):
-  click       — BNA_UI45  |  Metallic ding, clean button press
-  confirm     — BNA_UI51  |  Soft thud → bloop, weighty confirmation
+  click       — BNA_UI28  |  Quick digital tick, clean button press
+  confirm     — BNA_UI40  |  Crisp metallic chime, positive confirmation
   cancel      — BNA_UI44  |  Descending bloop, back/dismiss
   error       — BNA_UI9   |  Deep metallic thud, ominous invalid action
   game_over   — BNA_UI29  |  Heavy cinematic slam, final dread
@@ -53,8 +53,8 @@ _UI_AUDIO_DIR = os.path.join(
 
 # Sound file mapping: sound_name -> filename
 _SOUND_FILES: Dict[str, str] = {
-    "click":      "BNA_UI45.wav",
-    "confirm":    "BNA_UI51.wav",
+    "click":      "BNA_UI28.wav",
+    "confirm":    "BNA_UI40.wav",
     "cancel":     "BNA_UI44.wav",
     "error":      "BNA_UI9.wav",
     "game_over":  "BNA_UI29.wav",

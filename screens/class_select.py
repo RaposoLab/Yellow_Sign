@@ -66,8 +66,10 @@ class ClassSelectScreen(Screen):
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 self.selected = (self.selected - 1) % len(self.class_ids)
+                self.play_click()
             elif event.key == pygame.K_RIGHT:
                 self.selected = (self.selected + 1) % len(self.class_ids)
+                self.play_click()
             elif event.key == pygame.K_RETURN:
                 self.play_confirm()
                 self._pick_class()
