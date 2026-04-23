@@ -94,6 +94,14 @@ class Screen:
         """Play the shop purchase/transaction sound."""
         self._play_sound("purchase")
 
+    def play_combat_start(self) -> None:
+        """Play the ominous combat encounter sound."""
+        self._play_sound("combat_start")
+
+    def play_event_mystery(self) -> None:
+        """Play the mysterious event discovery sound."""
+        self._play_sound("event_mystery")
+
     # ── Hover tracking ────────────────────────────────────────────────────────
 
     def update_hover(self, event, buttons):

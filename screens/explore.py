@@ -183,7 +183,7 @@ class ExploreScreen(Screen):
 
         ptype = path["type"]
         if ptype == "combat":
-            self.play_click()
+            self.play_combat_start()  # heavy stone thud — ominous
             if s.buffs.get("skipCombat", 0) > 0:
                 s.buffs["skipCombat"] = 0
                 # Skip this combat, generate a loot room instead
@@ -192,7 +192,7 @@ class ExploreScreen(Screen):
                 start_combat(s, is_boss=False)
                 self.ctx.navigate(ScreenName.COMBAT)
         elif ptype == "event":
-            self.play_click()
+            self.play_event_mystery()  # deep hollow resonance — mysterious
             event = random.choice(EVENTS)
             self.ctx.screen_data["pending_event"] = event
             self.ctx.navigate(ScreenName.EVENT)

@@ -4,7 +4,7 @@ THE KING IN YELLOW — Audio Manager
 Plays UI sound effects from WAV assets in assets/audio/ui/.
 Falls back to procedural synthesis when audio files are missing.
 
-Sound palette (BNA horror UI pack — Lovecraftian selection):
+Sound palette (BNA horror UI + Unholy Souls — Lovecraftian selection):
   click       — BNA_UI28  |  Quick digital tick, clean button press
   confirm     — BNA_UI40  |  Crisp metallic chime, positive confirmation
   cancel      — BNA_UI44  |  Descending bloop, back/dismiss
@@ -14,8 +14,10 @@ Sound palette (BNA horror UI pack — Lovecraftian selection):
   transition  — BNA_UI13_Long3  |  Stone door whoosh, atmospheric passage
   boss_start  — BNA_UI13_Long4  |  Cinematic drone → metallic reveal
   loot        — BNA_UI11  |  Dice & coin clatter, loot chest opening
-  equip       — BNA_UI15  |  Blade unsheath, weapon equipping
+  equip       — Unholy_Souls_13  |  Metallic blade shing, weapon equipping
   purchase    — BNA_UI12  |  Bubbly rising chime, shop transaction
+  combat_start — Unholy_Souls_16  |  Heavy stone thud, ominous dungeon impact
+  event_mystery — Unholy_Souls_10  |  Deep hollow resonance, eldritch mystery
 
 Architecture:
   - AudioManager is created once in Game and passed via GameContext
@@ -53,32 +55,36 @@ _UI_AUDIO_DIR = os.path.join(
 
 # Sound file mapping: sound_name -> filename
 _SOUND_FILES: Dict[str, str] = {
-    "click":      "BNA_UI28.wav",
-    "confirm":    "BNA_UI40.wav",
-    "cancel":     "BNA_UI44.wav",
-    "error":      "BNA_UI9.wav",
-    "game_over":  "BNA_UI29.wav",
-    "level_up":   "BNA_UI25.wav",
-    "transition": "BNA_UI13_Long3.wav",
-    "boss_start": "BNA_UI13_Long4.wav",
-    "loot":       "BNA_UI11.wav",
-    "equip":      "BNA_UI15.wav",
-    "purchase":   "BNA_UI12.wav",
+    "click":         "BNA_UI28.wav",
+    "confirm":       "BNA_UI40.wav",
+    "cancel":        "BNA_UI44.wav",
+    "error":         "BNA_UI9.wav",
+    "game_over":     "BNA_UI29.wav",
+    "level_up":      "BNA_UI25.wav",
+    "transition":    "BNA_UI13_Long3.wav",
+    "boss_start":    "BNA_UI13_Long4.wav",
+    "loot":          "BNA_UI11.wav",
+    "equip":         "Unholy_Souls_13.wav",
+    "purchase":      "BNA_UI12.wav",
+    "combat_start":  "Unholy_Souls_16.wav",
+    "event_mystery": "Unholy_Souls_10.wav",
 }
 
 # Procedural fallback parameters: (frequency_hz, duration_sec, sweep_factor)
 _FALLBACK_PARAMS: Dict[str, tuple] = {
-    "click":      (800, 0.05, 1.0),
-    "confirm":    (400, 0.10, 0.9),
-    "cancel":     (300, 0.08, 0.6),
-    "error":      (120, 0.20, 0.5),
-    "game_over":  (80, 0.50, 0.4),
-    "level_up":   (600, 0.35, 1.8),
-    "transition": (200, 0.30, 1.5),
-    "boss_start": (60, 0.60, 0.3),
-    "loot":       (800, 0.10, 1.2),
-    "equip":      (1200, 0.15, 0.9),
-    "purchase":   (700, 0.12, 1.4),
+    "click":         (800, 0.05, 1.0),
+    "confirm":       (400, 0.10, 0.9),
+    "cancel":        (300, 0.08, 0.6),
+    "error":         (120, 0.20, 0.5),
+    "game_over":     (80, 0.50, 0.4),
+    "level_up":      (600, 0.35, 1.8),
+    "transition":    (200, 0.30, 1.5),
+    "boss_start":    (60, 0.60, 0.3),
+    "loot":          (800, 0.10, 1.2),
+    "equip":         (1200, 0.15, 0.9),
+    "purchase":      (700, 0.12, 1.4),
+    "combat_start":  (80, 0.25, 0.4),
+    "event_mystery": (150, 0.30, 0.7),
 }
 
 
@@ -134,7 +140,7 @@ class AudioManager:
             Sound name: ``"click"``, ``"confirm"``, ``"cancel"``,
             ``"error"``, ``"game_over"``, ``"level_up"``,
             ``"transition"``, ``"boss_start"``, ``"loot"``, ``"equip"``,
-            or ``"purchase"``.
+            ``"purchase"``, ``"combat_start"``, or ``"event_mystery"``.
         volume : float, optional
             Per-play volume override (0.0 to 1.0). If None, uses master volume.
         """
