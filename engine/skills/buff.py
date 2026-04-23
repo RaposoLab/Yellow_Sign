@@ -27,9 +27,11 @@ def _buff_rage(state: GameState, skill: Skill) -> Dict[str, Any]:
     The player channels their fury at the cost of their own vitality.
     Returns hp_loss for message formatting.
     """
+    from data import BUFF_RAGE_HP_PCT
+
     state.rage = True
     state.buffs["rage"] = skill.buff_duration
-    hp_loss = int(state.max_hp * 0.12)
+    hp_loss = int(state.max_hp * BUFF_RAGE_HP_PCT)
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
 
@@ -40,57 +42,71 @@ def _buff_warlord(state: GameState, skill: Skill) -> Dict[str, Any]:
     A devastating self-buff that activates rage, critical hit chance, and
     iron skin simultaneously, but drains a fifth of max HP.
     """
+    from data import BUFF_WARLORD_HP_PCT
+
     state.rage = True
     state.buffs["rage"] = skill.buff_duration
     state.buffs["atkCritUp"] = skill.buff_duration
     state.buffs["ironSkin"] = skill.buff_duration
-    hp_loss = int(state.max_hp * 0.20)
+    hp_loss = int(state.max_hp * BUFF_WARLORD_HP_PCT)
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
 
 
 def _buff_permIntWis(state: GameState, skill: Skill) -> None:
     """Forbidden Text: INT+6, WIS+4 for duration."""
-    state.temp_stats["int"] = state.temp_stats.get("int", 0) + 6
-    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
+    from data import BUFF_STAT_BOOST_LARGE, BUFF_STAT_BOOST_SMALL
+
+    state.temp_stats["int"] = state.temp_stats.get("int", 0) + BUFF_STAT_BOOST_LARGE
+    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + BUFF_STAT_BOOST_SMALL
     state.buffs["permIntWis"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_permAtk2(state: GameState, skill: Skill) -> None:
     """Warpaint: STR+5 for duration."""
-    state.temp_stats["str"] = state.temp_stats.get("str", 0) + 5
+    from data import BUFF_STAT_BOOST_MEDIUM
+
+    state.temp_stats["str"] = state.temp_stats.get("str", 0) + BUFF_STAT_BOOST_MEDIUM
     state.buffs["permAtk2"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_permWisStr(state: GameState, skill: Skill) -> None:
     """Oath of the Warden: WIS+6, STR+4 for duration."""
-    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 6
-    state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
+    from data import BUFF_STAT_BOOST_LARGE, BUFF_STAT_BOOST_SMALL
+
+    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + BUFF_STAT_BOOST_LARGE
+    state.temp_stats["str"] = state.temp_stats.get("str", 0) + BUFF_STAT_BOOST_SMALL
     state.buffs["permWisStr"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_permAgiLuk(state: GameState, skill: Skill) -> None:
     """Perfect Assassin: AGI+7, LUCK+4 for duration."""
-    state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 7
-    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 4
+    from data import BUFF_STAT_BOOST_MAJOR, BUFF_STAT_BOOST_SMALL
+
+    state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + BUFF_STAT_BOOST_MAJOR
+    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + BUFF_STAT_BOOST_SMALL
     state.buffs["permAgiLuk"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_innerFire(state: GameState, skill: Skill) -> None:
     """Inner Fire / Lucky Coin Toss / Threshold Sense: WIS+3, LUCK+5."""
-    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 3
-    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 5
+    from data import BUFF_STAT_BOOST_MINOR, BUFF_STAT_BOOST_MEDIUM
+
+    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + BUFF_STAT_BOOST_MINOR
+    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + BUFF_STAT_BOOST_MEDIUM
     state.buffs["innerFire"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_luckyDodge(state: GameState, skill: Skill) -> None:
     """Lucky Dodge / Unreliable Fortune: LUCK+3."""
-    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 3
+    from data import BUFF_STAT_BOOST_MINOR
+
+    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + BUFF_STAT_BOOST_MINOR
     state.buffs["luckyDodge"] = skill.buff_duration
     state.recalc_stats()
 
@@ -114,8 +130,10 @@ def _buff_permCrit10(state: GameState, skill: Skill) -> None:
 
 def _buff_permAll1(state: GameState, skill: Skill) -> None:
     """Vision of the End: All stats +4 for duration."""
+    from data import BUFF_STAT_BOOST_SMALL
+
     for stat in ("int", "str", "agi", "wis", "luck"):
-        state.temp_stats[stat] = state.temp_stats.get(stat, 0) + 4
+        state.temp_stats[stat] = state.temp_stats.get(stat, 0) + BUFF_STAT_BOOST_SMALL
     state.buffs["permAll1"] = skill.buff_duration
     state.recalc_stats()
 
@@ -128,7 +146,9 @@ def _buff_resetCds(state: GameState, skill: Skill) -> None:
 
 def _buff_bloodRitual(state: GameState, skill: Skill) -> None:
     """Blood Ritual: -15% HP for 50 XP."""
-    state.hp = max(1, state.hp - int(state.max_hp * 0.15))
+    from data import BUFF_BLOOD_RITUAL_HP_PCT
+
+    state.hp = max(1, state.hp - int(state.max_hp * BUFF_BLOOD_RITUAL_HP_PCT))
     state.xp += 50
 
 
@@ -148,8 +168,10 @@ def _buff_randStat2(state: GameState, skill: Skill) -> Dict[str, Any]:
 
 def _buff_madImmune(state: GameState, skill: Skill) -> None:
     """Madness Mastery: immunity to madness death, +15 MAD."""
+    from data import MADNESS_COST_MEDIUM
+
     state.buffs["madImmune"] = 999
-    state.madness = min(MADNESS_MAX, state.madness + 15)
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_MEDIUM)
 
 
 def _buff_calmMind(state: GameState, skill: Skill) -> None:
@@ -189,8 +211,10 @@ def _buff_pallidMask(state: GameState, skill: Skill) -> None:
     The most powerful buff in the game — adds 50% of base stats as temp
     bonuses and grants complete debuff immunity.
     """
+    from data import BUFF_STAT_SWAP_FACTOR
+
     for stat in ("int", "str", "agi", "wis", "luck"):
-        state.temp_stats[stat] = state.temp_stats.get(stat, 0) + int(state.base_stats.get(stat, 5) * 0.5)
+        state.temp_stats[stat] = state.temp_stats.get(stat, 0) + int(state.base_stats.get(stat, 5) * BUFF_STAT_SWAP_FACTOR)
     state.buffs["pallidMask"] = skill.buff_duration
     state.buffs["immunity"] = skill.buff_duration
     state.recalc_stats()
@@ -198,30 +222,38 @@ def _buff_pallidMask(state: GameState, skill: Skill) -> None:
 
 def _buff_prophetRes(state: GameState, skill: Skill) -> None:
     """Prophet's Resilience: regen 6%/turn, +5 MAD."""
-    state.madness = min(MADNESS_MAX, state.madness + 5)
+    from data import MADNESS_COST_MINOR
+
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_MINOR)
     state.buffs["regen"] = skill.buff_duration
 
 
 def _buff_thickSkull(state: GameState, skill: Skill) -> None:
     """Thick Skull: STR+4, WIS+3 for duration."""
-    state.temp_stats["str"] = state.temp_stats.get("str", 0) + 4
-    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 3
+    from data import BUFF_STAT_BOOST_SMALL, BUFF_STAT_BOOST_MINOR
+
+    state.temp_stats["str"] = state.temp_stats.get("str", 0) + BUFF_STAT_BOOST_SMALL
+    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + BUFF_STAT_BOOST_MINOR
     state.buffs["thickSkull"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_perseverance(state: GameState, skill: Skill) -> None:
     """Perseverance: WIS+4, STR+3 for duration."""
-    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + 4
-    state.temp_stats["str"] = state.temp_stats.get("str", 0) + 3
+    from data import BUFF_STAT_BOOST_SMALL, BUFF_STAT_BOOST_MINOR
+
+    state.temp_stats["wis"] = state.temp_stats.get("wis", 0) + BUFF_STAT_BOOST_SMALL
+    state.temp_stats["str"] = state.temp_stats.get("str", 0) + BUFF_STAT_BOOST_MINOR
     state.buffs["perseverance"] = skill.buff_duration
     state.recalc_stats()
 
 
 def _buff_shadowBless(state: GameState, skill: Skill) -> None:
     """Shadow's Blessing: AGI+4, LUCK+3 for duration."""
-    state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + 4
-    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + 3
+    from data import BUFF_STAT_BOOST_SMALL, BUFF_STAT_BOOST_MINOR
+
+    state.temp_stats["agi"] = state.temp_stats.get("agi", 0) + BUFF_STAT_BOOST_SMALL
+    state.temp_stats["luck"] = state.temp_stats.get("luck", 0) + BUFF_STAT_BOOST_MINOR
     state.buffs["shadowBless"] = skill.buff_duration
     state.recalc_stats()
 
@@ -254,8 +286,10 @@ def _buff_dreadnought(state: GameState, skill: Skill) -> None:
 
 def _buff_madPower(state: GameState, skill: Skill) -> None:
     """Empower Madness: +25% DMG, +15 MAD."""
+    from data import MADNESS_COST_MEDIUM
+
     state.buffs["madPower"] = skill.buff_duration
-    state.madness = min(MADNESS_MAX, state.madness + 15)
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_MEDIUM)
 
 
 def _buff_darkPact(state: GameState, skill: Skill) -> Dict[str, Any]:
@@ -264,8 +298,10 @@ def _buff_darkPact(state: GameState, skill: Skill) -> Dict[str, Any]:
     A dangerous pact that amplifies offense at the cost of health and
     debuff vulnerability. Returns hp_loss for message formatting.
     """
+    from data import BUFF_DARK_PACT_HP_PCT
+
     state.buffs["darkPact"] = skill.buff_duration
-    hp_loss = int(state.max_hp * 0.15)
+    hp_loss = int(state.max_hp * BUFF_DARK_PACT_HP_PCT)
     state.hp = max(1, state.hp - hp_loss)
     return {"hp_loss": hp_loss}
 

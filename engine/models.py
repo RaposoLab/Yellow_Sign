@@ -3,7 +3,7 @@
 import random
 import math
 from dataclasses import dataclass, field, asdict
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TypedDict
 from data import (
     CLASSES,
     MAX_ACTIVE_SKILLS,
@@ -35,6 +35,73 @@ from data import (
     ACC_AGI_MULT,
     HP_STR_MULT,
 )
+
+
+# ═══════════════════════════════════════════
+# TypedDicts for data structures
+# ═══════════════════════════════════════════
+
+
+class ClassSkillData(TypedDict, total=False):
+    """TypedDict for skill entries in CLASSES dict."""
+
+    name: str
+    icon: str
+    unlock_lv: int
+    desc: str
+    formula: str
+    type: str
+    power: float
+    stat: str
+    stat2: Optional[str]
+    stat2_mult: float
+    cost: int
+    cd: int
+    tags: List[str]
+    effect: Optional[str]
+    effect2: Optional[str]
+    effect3: Optional[str]
+    duration: int
+    armor_pierce: float
+    lifesteal: float
+    multihit: int
+    scaling_low_hp: bool
+    def_scaling: bool
+    shield_calc: Optional[str]
+    heal_calc: Optional[str]
+    buff_type: Optional[str]
+    buff_duration: int
+    barrier_stacks: int
+    consume_shield: bool
+    shield_scaling: float
+    hp_cost: float
+    madness_scaling: bool
+    madness_cost: int
+    coin_flip: bool
+    gamble: bool
+    execute_bonus: bool
+    guaranteed_crit: bool
+    flat_crit_bonus: int
+    luck_bonus: bool
+    true_strike: bool
+    extend_debuffs: bool
+    random_effect: bool
+    tier: int
+    category: str
+    stat_priority: List[str]
+    starting: bool
+
+
+class ClassData(TypedDict):
+    """TypedDict for CLASSES dict entries."""
+
+    name: str
+    icon: str
+    desc: str
+    base_stats: Dict[str, int]
+    hp_base: int
+    hp_per_level: int
+    skills: List[ClassSkillData]
 
 
 class Item:

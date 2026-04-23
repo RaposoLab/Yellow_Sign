@@ -45,7 +45,7 @@ def _calc_heal_missing_hp(state: GameState, skill: Skill) -> int:
     """
     if state.max_hp <= 0:
         return 0
-    missing = 1 - state.hp / state.max_hp
+    missing = 1 - (state.hp / state.max_hp if state.max_hp > 0 else 1.0)
     return int(missing * state.max_hp * 0.6)
 
 
@@ -88,8 +88,10 @@ def _calc_heal_wis2_luck1(state: GameState, skill: Skill) -> int:
     Side Effects:
         Increases madness by 5
     """
+    from data import MADNESS_COST_MINOR
+
     h = int(state.stats["wis"] * 2.5 + state.luck * 1)
-    state.madness = min(MADNESS_MAX, state.madness + 5)
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_MINOR)
     return h
 
 
@@ -106,8 +108,10 @@ def _calc_heal_full_heal(state: GameState, skill: Skill) -> int:
     Side Effects:
         Sets HP to max, increases madness by 25
     """
+    from data import MADNESS_COST_HEAVY
+
     state.hp = state.max_hp
-    state.madness = min(MADNESS_MAX, state.madness + 25)
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_HEAVY)
     return 0
 
 
@@ -134,10 +138,12 @@ def _calc_heal_devour15(state: GameState, skill: Skill) -> int:
     Returns:
         Amount of HP healed
     """
-    return int(state.max_hp * 0.15)
+    from data import HEAL_DEVOUR_FRAC
+
+    return int(state.max_hp * HEAL_DEVOUR_FRAC)
 
 
-def _calc_heal_titanResil(state: GameState, skill: Skill) -> int:
+def _calc_heal_titan_resil(state: GameState, skill: Skill) -> int:
     """Calculate healing as 40% of max HP, cleanses all debuffs.
 
     Args:
@@ -150,11 +156,13 @@ def _calc_heal_titanResil(state: GameState, skill: Skill) -> int:
     Side Effects:
         Clears all status effects
     """
+    from data import HEAL_TITAN_RESIL_FRAC
+
     state.statuses.clear()
-    return int(state.max_hp * 0.40)
+    return int(state.max_hp * HEAL_TITAN_RESIL_FRAC)
 
 
-def _calc_heal_layOnHands(state: GameState, skill: Skill) -> int:
+def _calc_heal_lay_on_hands(state: GameState, skill: Skill) -> int:
     """Calculate healing as 3x WIS, cleanses all debuffs.
 
     Args:
@@ -184,11 +192,13 @@ def _calc_heal_meditation(state: GameState, skill: Skill) -> int:
     Side Effects:
         Reduces madness by 10
     """
+    from data import HEAL_MEDITATION_FRAC
+
     state.madness = max(0, state.madness - 10)
-    return int(state.max_hp * 0.20)
+    return int(state.max_hp * HEAL_MEDITATION_FRAC)
 
 
-def _calc_heal_darkRegen(state: GameState, skill: Skill) -> int:
+def _calc_heal_dark_regen(state: GameState, skill: Skill) -> int:
     """Calculate healing as 30% of max HP, adds dark regen buff.
 
     Args:
@@ -201,11 +211,13 @@ def _calc_heal_darkRegen(state: GameState, skill: Skill) -> int:
     Side Effects:
         Adds darkRegenBuff for 2 turns
     """
+    from data import HEAL_DARK_REGEN_FRAC
+
     state.buffs["darkRegenBuff"] = 2
-    return int(state.max_hp * 0.30)
+    return int(state.max_hp * HEAL_DARK_REGEN_FRAC)
 
 
-def _calc_heal_hasturEmbrace(state: GameState, skill: Skill) -> int:
+def _calc_heal_hastur_embrace(state: GameState, skill: Skill) -> int:
     """Full heal with immunity buff, adds 20 madness.
 
     Args:
@@ -218,13 +230,15 @@ def _calc_heal_hasturEmbrace(state: GameState, skill: Skill) -> int:
     Side Effects:
         Sets HP to max, adds immunity buff for 2 turns, increases madness by 20
     """
+    from data import MADNESS_COST_MAJOR
+
     state.hp = state.max_hp
-    state.madness = min(MADNESS_MAX, state.madness + 20)
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_MAJOR)
     state.buffs["immunity"] = 2
     return 0
 
 
-def _calc_heal_secondWind(state: GameState, skill: Skill) -> int:
+def _calc_heal_second_wind(state: GameState, skill: Skill) -> int:
     """Calculate healing as 20% of max HP, adds regen buff.
 
     Args:
@@ -237,11 +251,13 @@ def _calc_heal_secondWind(state: GameState, skill: Skill) -> int:
     Side Effects:
         Adds regen buff for 2 turns
     """
+    from data import HEAL_SECOND_WIND_FRAC
+
     state.buffs["regen"] = 2
-    return int(state.max_hp * 0.20)
+    return int(state.max_hp * HEAL_SECOND_WIND_FRAC)
 
 
-def _calc_heal_nimbleRecov(state: GameState, skill: Skill) -> int:
+def _calc_heal_nimble_recov(state: GameState, skill: Skill) -> int:
     """Calculate healing as 25% of max HP, adds evasion buff.
 
     Args:
@@ -254,8 +270,10 @@ def _calc_heal_nimbleRecov(state: GameState, skill: Skill) -> int:
     Side Effects:
         Adds evasionUp buff for 2 turns
     """
+    from data import HEAL_NIMBLE_RECOV_FRAC
+
     state.buffs["evasionUp"] = 2
-    return int(state.max_hp * 0.25)
+    return int(state.max_hp * HEAL_NIMBLE_RECOV_FRAC)
 
 
 def _calc_heal_default(state: GameState, skill: Skill) -> int:
@@ -286,19 +304,19 @@ HEAL_HANDLERS: Dict[str, Tuple[HealCalcFn, str]] = {
     "int2_mend": (_calc_heal_int2_mend, "Abyssal Mend heals {h} HP!"),
     "devour15": (_calc_heal_devour15, "Devour heals {h} HP!"),
     "titanResil": (
-        _calc_heal_titanResil,
+        _calc_heal_titan_resil,
         "Titanic Resilience heals {h} HP and cleanses all debuffs!",
     ),
-    "layOnHands": (_calc_heal_layOnHands, "Lay on Hands heals {h} HP and cleanses!"),
+    "layOnHands": (_calc_heal_lay_on_hands, "Lay on Hands heals {h} HP and cleanses!"),
     "meditation": (_calc_heal_meditation, "Blessed Meditation heals {h} HP! -10 MAD!"),
-    "darkRegen": (_calc_heal_darkRegen, "Dark Regeneration heals {h} HP! EVA+20% 2t!"),
+    "darkRegen": (_calc_heal_dark_regen, "Dark Regeneration heals {h} HP! EVA+20% 2t!"),
     "hasturEmbrace": (
-        _calc_heal_hasturEmbrace,
+        _calc_heal_hastur_embrace,
         "Hastur's Embrace: Full heal! Immune debuffs 2t! (+20 MAD)",
     ),
-    "secondWind": (_calc_heal_secondWind, "Second Wind heals {h} HP! Regen 3% 2t!"),
+    "secondWind": (_calc_heal_second_wind, "Second Wind heals {h} HP! Regen 3% 2t!"),
     "nimbleRecov": (
-        _calc_heal_nimbleRecov,
+        _calc_heal_nimble_recov,
         "Nimble Recovery heals {h} HP! EVA+15% 2t!",
     ),
 }

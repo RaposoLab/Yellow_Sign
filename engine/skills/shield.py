@@ -55,13 +55,15 @@ def _shield_glyph_1(state: GameState, skill: Skill) -> Optional[int]:
     return None
 
 
-def _shield_fracSan(state: GameState, skill: Skill) -> int:
+def _shield_frac_san(state: GameState, skill: Skill) -> int:
     """Fractured Sanity: 3x INT shield, adds 10 madness.
 
     Trading mental stability for raw arcane protection — the shield
     grows with INT but at the cost of significant madness.
     """
-    state.madness = min(MADNESS_MAX, state.madness + 10)
+    from data import MADNESS_COST_STANDARD
+
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_STANDARD)
     return int(state.stats["int"] * 3)
 
 
@@ -80,8 +82,10 @@ def _shield_madShell(state: GameState, skill: Skill) -> int:
     Shield is calculated BEFORE adding madness so the value reflects
     the player's current madness state, not the post-cost madness.
     """
+    from data import MADNESS_COST_STANDARD
+
     shield_val = int(state.stats["wis"] * 2 + state.madness)
-    state.madness = min(MADNESS_MAX, state.madness + 10)
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_STANDARD)
     return shield_val
 
 
@@ -96,7 +100,9 @@ def _shield_madEndur(state: GameState, skill: Skill) -> int:
     A sustainable defensive skill that provides ongoing regeneration
     alongside the immediate shield, at a moderate madness cost.
     """
-    state.madness = min(MADNESS_MAX, state.madness + 8)
+    from data import MADNESS_COST_LIGHT
+
+    state.madness = min(MADNESS_MAX, state.madness + MADNESS_COST_LIGHT)
     state.buffs["regen"] = 2
     return int(state.stats["wis"] * 2)
 
@@ -114,7 +120,7 @@ SHIELD_HANDLERS: Dict[str, Tuple[ShieldCalcFn, str]] = {
         _shield_glyph_1,
         "Warding Glyph! Barrier absorbs next hit! ({v} stacks)",
     ),
-    "fracSan": (_shield_fracSan, "Fractured Sanity! Shield {v}! (+10 MAD)"),
+    "fracSan": (_shield_frac_san, "Fractured Sanity! Shield {v}! (+10 MAD)"),
     "str3_hits": (_shield_str3_hits, "Bone Armor: {v} shield!"),
     "madShell": (_shield_madShell, "Madness Shell: {v} shield! (+10 MAD)"),
     "madBarrier": (_shield_madBarrier, "Madness Barrier: {v} shield!"),
