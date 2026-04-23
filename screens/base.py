@@ -99,16 +99,13 @@ class Screen:
     def update_hover(self, event, buttons):
         """Track hover state from a list of pygame.Rect buttons. Call in handle_event().
 
-        Automatically plays a hover sound when the hovered button changes.
+        Updates visual hover state only — no sound on hover.
         """
         if event.type == pygame.MOUSEMOTION:
-            old_idx = self.hover_idx
             self.hover_idx = -1
             for i, btn in enumerate(buttons):
                 if btn.collidepoint(event.pos):
                     self.hover_idx = i
                     break
-            if self.hover_idx != old_idx and self.hover_idx >= 0:
-                self._play_sound("hover")
         elif event.type == pygame.WINDOWLEAVE:
             self.hover_idx = -1

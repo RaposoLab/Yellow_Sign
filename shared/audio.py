@@ -5,10 +5,9 @@ Plays UI sound effects from WAV assets in assets/audio/ui/.
 Falls back to procedural synthesis when audio files are missing.
 
 Sound palette (BNA horror UI pack — Lovecraftian selection):
-  hover       — BNA_UI8   |  Crisp digital blip, precise navigation feedback
-  click       — BNA_UI28  |  Quick digital tick, clean button press
-  confirm     — BNA_UI4   |  Solid low-frequency thud, weighty confirmation
-  cancel      — BNA_UI10  |  Soft muted thud, grounded back/dismiss
+  click       — BNA_UI45  |  Metallic ding, clean button press
+  confirm     — BNA_UI51  |  Soft thud → bloop, weighty confirmation
+  cancel      — BNA_UI44  |  Descending bloop, back/dismiss
   error       — BNA_UI9   |  Deep metallic thud, ominous invalid action
   game_over   — BNA_UI29  |  Heavy cinematic slam, final dread
   level_up    — BNA_UI25  |  Ethereal shimmering sweep, dark reward
@@ -24,6 +23,7 @@ Architecture:
   - Sounds are loaded lazily on first use
   - Master volume and mute are configurable
   - Graceful fallback when pygame.mixer is unavailable
+  - No hover sounds — only action-based audio (clicks, confirms, etc.)
 """
 
 from __future__ import annotations
@@ -53,10 +53,9 @@ _UI_AUDIO_DIR = os.path.join(
 
 # Sound file mapping: sound_name -> filename
 _SOUND_FILES: Dict[str, str] = {
-    "hover":      "BNA_UI8.wav",
-    "click":      "BNA_UI28.wav",
-    "confirm":    "BNA_UI4.wav",
-    "cancel":     "BNA_UI10.wav",
+    "click":      "BNA_UI45.wav",
+    "confirm":    "BNA_UI51.wav",
+    "cancel":     "BNA_UI44.wav",
     "error":      "BNA_UI9.wav",
     "game_over":  "BNA_UI29.wav",
     "level_up":   "BNA_UI25.wav",
@@ -69,10 +68,9 @@ _SOUND_FILES: Dict[str, str] = {
 
 # Procedural fallback parameters: (frequency_hz, duration_sec, sweep_factor)
 _FALLBACK_PARAMS: Dict[str, tuple] = {
-    "hover":      (900, 0.04, 1.3),
-    "click":      (600, 0.06, 1.0),
-    "confirm":    (300, 0.15, 0.8),
-    "cancel":     (250, 0.10, 0.6),
+    "click":      (800, 0.05, 1.0),
+    "confirm":    (400, 0.10, 0.9),
+    "cancel":     (300, 0.08, 0.6),
     "error":      (120, 0.20, 0.5),
     "game_over":  (80, 0.50, 0.4),
     "level_up":   (600, 0.35, 1.8),
@@ -133,8 +131,8 @@ class AudioManager:
         Parameters
         ----------
         name : str
-            Sound name: ``"hover"``, ``"click"``, ``"confirm"``,
-            ``"cancel"``, ``"error"``, ``"game_over"``, ``"level_up"``,
+            Sound name: ``"click"``, ``"confirm"``, ``"cancel"``,
+            ``"error"``, ``"game_over"``, ``"level_up"``,
             ``"transition"``, ``"boss_start"``, ``"loot"``, ``"equip"``,
             or ``"purchase"``.
         """
