@@ -125,7 +125,7 @@ class AudioManager:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    def play(self, name: str) -> None:
+    def play(self, name: str, volume: Optional[float] = None) -> None:
         """Play a named sound effect.
 
         Parameters
@@ -135,6 +135,8 @@ class AudioManager:
             ``"error"``, ``"game_over"``, ``"level_up"``,
             ``"transition"``, ``"boss_start"``, ``"loot"``, ``"equip"``,
             or ``"purchase"``.
+        volume : float, optional
+            Per-play volume override (0.0 to 1.0). If None, uses master volume.
         """
         if self._muted or not self._mixer_ready:
             return
@@ -149,7 +151,8 @@ class AudioManager:
         try:
             channel = _mixer.find_channel()
             if channel:
-                channel.set_volume(self._master_volume)
+                vol = volume if volume is not None else self._master_volume
+                channel.set_volume(max(0.0, min(1.0, vol)))
                 channel.play(snd)
         except Exception as e:
             logger.debug("play(%s) failed: %s", name, e)

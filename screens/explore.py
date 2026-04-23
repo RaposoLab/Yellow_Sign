@@ -183,6 +183,7 @@ class ExploreScreen(Screen):
 
         ptype = path["type"]
         if ptype == "combat":
+            self.play_click()
             if s.buffs.get("skipCombat", 0) > 0:
                 s.buffs["skipCombat"] = 0
                 # Skip this combat, generate a loot room instead
@@ -191,20 +192,25 @@ class ExploreScreen(Screen):
                 start_combat(s, is_boss=False)
                 self.ctx.navigate(ScreenName.COMBAT)
         elif ptype == "event":
+            self.play_click()
             event = random.choice(EVENTS)
             self.ctx.screen_data["pending_event"] = event
             self.ctx.navigate(ScreenName.EVENT)
         elif ptype == "loot":
+            self.play_loot()
             self.ctx.navigate(ScreenName.LOOT)
         elif ptype == "rest":
+            self._play_sound("cancel")  # soft descending bloop — calming
             self.ctx.navigate(ScreenName.REST)
         elif ptype == "shop":
+            self.play_purchase()
             items, prices = generate_shop(s)
             self.ctx.screen_data["shop_items"] = items
             self.ctx.screen_data["shop_prices"] = prices
             self.ctx.screen_data["shop_sold"] = [False] * len(items)
             self.ctx.navigate(ScreenName.SHOP)
         elif ptype == "trap":
+            self.play_error()  # ominous thud — danger ahead
             trap = random.choice(TRAPS)
             trap_idx = TRAPS.index(trap)
             msg, game_over = resolve_trap(s, trap_idx)

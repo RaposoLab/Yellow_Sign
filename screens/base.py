@@ -45,10 +45,10 @@ class Screen:
 
     # ── Audio helpers ─────────────────────────────────────────────────────────
 
-    def _play_sound(self, name: str) -> None:
+    def _play_sound(self, name: str, volume: float = None) -> None:
         """Play a UI sound effect via the audio manager (no-op if unavailable)."""
         if self.ctx.audio:
-            self.ctx.audio.play(name)
+            self.ctx.audio.play(name, volume=volume)
 
     def play_click(self) -> None:
         """Play the button click sound."""

@@ -66,15 +66,15 @@ class ClassSelectScreen(Screen):
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 self.selected = (self.selected - 1) % len(self.class_ids)
-                self.play_click()
+                self._play_sound("click", volume=0.8)
             elif event.key == pygame.K_RIGHT:
                 self.selected = (self.selected + 1) % len(self.class_ids)
-                self.play_click()
+                self._play_sound("click", volume=0.8)
             elif event.key == pygame.K_RETURN:
-                self.play_confirm()
+                self._play_sound("confirm", volume=0.8)
                 self._pick_class()
             elif event.key == pygame.K_ESCAPE:
-                self.play_cancel()
+                self._play_sound("cancel", volume=0.8)
                 self.ctx.navigate(ScreenName.TITLE)
 
     def _pick_class(self):
