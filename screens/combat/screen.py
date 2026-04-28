@@ -171,7 +171,7 @@ class CombatScreen(CombatRendererMixin, Screen):
             # Spawn intent particles to draw attention
             self._spawn_intent_particles()
             # Start combat music — boss gets dedicated track, normal gets shuffled
-            if s.combat.enemy.is_boss:
+            if c.is_boss:
                 self.play_music("boss", fade_ms=2500)
             else:
                 self.play_music("combat", fade_ms=1500)
